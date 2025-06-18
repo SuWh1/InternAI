@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   return (
     <footer className="bg-gray-900 text-white py-12">
-      <div className="max-w-5xl mx-auto px-6 sm:px-35 lg:px-35">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1">
@@ -59,7 +59,7 @@ const Footer = () => {
           
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
             <a href="#" className="text-gray-400 hover:text-white hover:scale-125 transition-all duration-200">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-x-twitter"> 
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-twitter"> 
                 <path d="M8,2H3L16.7,22h5.1L8,2z"/> 
                 <line x1="2.3" y1="22.1" x2="10.2" y2="12.8"/> 
                 <line x1="19.8" y1="2" x2="13.3" y2="9.6"/> 

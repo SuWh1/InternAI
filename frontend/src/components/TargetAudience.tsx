@@ -21,7 +21,7 @@ const audiences = [
 const TargetAudience = () => {
   return (
     <section className="py-20 bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-35 lg:px-35">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Who Is This For?
@@ -33,7 +33,7 @@ const TargetAudience = () => {
 
         <div className="grid md:grid-cols-3 gap-8">
           {audiences.map((audience, index) => (
-            <div key={index} className="bg-white rounded-xl p-8 shadow-sm hover:shadow-lg transition-shadow border border-gray-100">
+            <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col items-center text-center">
               <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center mb-6">
                 <audience.icon className="h-6 w-6 text-purple-600" />
               </div>

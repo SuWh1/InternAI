@@ -37,7 +37,7 @@ const FAQ = () => {
 
   return (
     <section className="py-20 bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-80 lg:px-80">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Frequently Asked Questions
@@ -52,7 +52,7 @@ const FAQ = () => {
             <div key={index} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-4 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-all duration-200"
               >
                 <span className="font-semibold text-gray-900">{faq.question}</span>
                 {openIndex === index ? (

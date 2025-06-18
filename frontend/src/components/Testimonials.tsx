@@ -44,7 +44,7 @@ const Testimonials = () => {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-35 lg:px-35">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Success Stories
           </h2>
@@ -77,7 +77,7 @@ const Testimonials = () => {
           <div className="flex items-center justify-center mt-8 space-x-4">
             <button
               onClick={prevTestimonial}
-              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-colors"
+              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-all duration-200"
             >
               <ChevronLeft className="h-5 w-5 text-gray-600" />
             </button>
@@ -87,7 +87,7 @@ const Testimonials = () => {
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
+                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
                     index === currentIndex ? 'bg-blue-500' : 'bg-gray-300'
                   }`}
                 />
@@ -96,7 +96,7 @@ const Testimonials = () => {
             
             <button
               onClick={nextTestimonial}
-              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-colors"
+              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-all duration-200"
             >
               <ChevronRight className="h-5 w-5 text-gray-600" />
             </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import AuthModal from './AuthModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 
@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  fallbackMessage = "Please sign in to access this page" 
+  fallbackMessage = "Please sign in to access this page"
 }) => {
   const { isAuthenticated, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -21,6 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [loading, isAuthenticated]);
 
+  // Show loading spinner while checking auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -29,6 +30,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // If not authenticated, show auth modal
   if (!isAuthenticated) {
     return (
       <>

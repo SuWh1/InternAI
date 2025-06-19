@@ -5,6 +5,8 @@ import type { AuthResponse, User } from '../types/api';
 
 
 class AuthService {
+  private initializationPromise: Promise<void> | null = null;
+  
   private getStore() {
     return useAuthStore.getState();
   }
@@ -56,6 +58,8 @@ class AuthService {
       
       // Update store
       setUser(user);
+      
+      // Note: Onboarding redirect will be handled by OnboardingWrapper
     } catch (error: any) {
       setError(error.message || 'Registration failed');
       throw error;
@@ -113,7 +117,25 @@ class AuthService {
     return response.data;
   }
 
+  async refreshUserData(): Promise<void> {
+    const { setUser } = this.getStore();
+    
+    try {
+      // Don't set loading for internal refresh - this was causing infinite loops
+      const user = await this.getCurrentUser();
+      setUser(user);
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      throw error;
+    }
+  }
+
   async initializeAuth(): Promise<void> {
+    // Prevent multiple simultaneous initialization calls
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
     const { setLoading, setUser } = this.getStore();
     
     const token = localStorage.getItem('auth_token');
@@ -122,16 +144,26 @@ class AuthService {
       return;
     }
 
+    this.initializationPromise = (async () => {
+      try {
+        setLoading(true);
+        // Always fetch fresh user data on app initialization
+        const user = await this.getCurrentUser();
+        setUser(user);
+      } catch (error) {
+        // Token is invalid, clear it
+        localStorage.removeItem('auth_token');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+
     try {
-      setLoading(true);
-      const user = await this.getCurrentUser();
-      setUser(user);
-    } catch (error) {
-      // Token is invalid, clear it
-      localStorage.removeItem('auth_token');
-      setUser(null);
+      await this.initializationPromise;
     } finally {
-      setLoading(false);
+      // Reset the promise so future calls can run
+      this.initializationPromise = null;
     }
   }
 }

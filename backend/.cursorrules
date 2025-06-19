@@ -1,0 +1,422 @@
+# InternAI Backend Development Rules
+
+## Project Overview
+InternAI is a personalized AI assistant helping users land their first internship through:
+- **MVP**: Roadmap Generator (tailored learning paths)
+- **Future**: Internship Matcher, Resume Analyzer, Mock Interviews, Skill Gap Detection
+
+Built on **multi-agent AI architecture** with:
+- Main Agent (Coordinator): manages context, delegates tasks, integrates responses
+- Specialized Agents: RoadmapAgent, ResumeAgent, JobMatchAgent, InterviewAgent
+
+## Architecture Principles
+
+### 1. Multi-Agent Structure
+```
+backend/
+├── app/
+│   ├── agents/                 # Core AI agents
+│   │   ├── __init__.py
+│   │   ├── base/              # Base agent classes
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py       # BaseAgent abstract class
+│   │   │   └── coordinator.py # MainAgent coordinator
+│   │   ├── roadmap/           # RoadmapAgent
+│   │   │   ├── __init__.py
+│   │   │   ├── agent.py
+│   │   │   ├── prompts.py
+│   │   │   └── schemas.py
+│   │   ├── resume/            # ResumeAgent
+│   │   ├── job_match/         # JobMatchAgent
+│   │   └── interview/         # InterviewAgent (future)
+│   ├── services/              # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── agent_service.py   # Agent orchestration
+│   │   ├── roadmap_service.py
+│   │   ├── resume_service.py
+│   │   └── job_service.py
+│   ├── workers/               # Background job processors
+│   │   ├── __init__.py
+│   │   ├── celery_app.py      # Celery configuration
+│   │   ├── tasks/
+│   │   │   ├── __init__.py
+│   │   │   ├── roadmap_tasks.py
+│   │   │   ├── resume_tasks.py
+│   │   │   └── job_tasks.py
+│   └── integrations/          # Third-party API integrations
+       ├── __init__.py
+       ├── openai_client.py
+       ├── job_boards/
+       │   ├── indeed.py
+       │   ├── linkedin.py
+       │   └── greenhouse.py
+       └── resume_parsers/
+           ├── pyresparser.py
+           └── textract.py
+```
+
+### 2. Agent Development Rules
+
+#### Base Agent Class
+- All agents MUST inherit from `BaseAgent`
+- Implement required methods: `process()`, `validate_input()`, `format_output()`
+- Use dependency injection for LLM clients, databases, external services
+- Include structured logging with agent context
+
+#### Agent Naming Convention
+- Agent classes: `{Domain}Agent` (e.g., `RoadmapAgent`)
+- Agent files: `{domain}_agent.py`
+- Service files: `{domain}_service.py`
+- Schema files: `{domain}_schemas.py`
+
+#### Agent Communication
+- Use message passing through Redis/Celery for async operations
+- Implement agent-to-agent communication via coordinator
+- Store agent states in Redis for multi-step workflows
+
+### 3. API Design Standards
+
+#### Versioning Strategy
+```python
+# Current: /api/v1/{resource}
+# Future: /api/v2/{resource}
+API_V1_STR = "/api/v1"
+API_V2_STR = "/api/v2"  # For breaking changes
+```
+
+#### Endpoint Organization
+```
+/api/v1/
+├── auth/                      # Authentication
+├── users/                     # User management
+├── roadmaps/                  # Roadmap generation & management
+│   ├── POST /generate         # Generate new roadmap
+│   ├── GET /{roadmap_id}      # Get roadmap
+│   ├── PUT /{roadmap_id}      # Update roadmap
+│   └── GET /user/{user_id}    # Get user's roadmaps
+├── resumes/                   # Resume analysis
+│   ├── POST /upload           # Upload resume
+│   ├── POST /analyze          # Analyze resume
+│   └── GET /{resume_id}       # Get analysis
+├── jobs/                      # Job matching
+│   ├── POST /search           # Search jobs
+│   ├── GET /recommendations   # Get recommendations
+│   └── POST /save             # Save job
+├── profiles/                  # User profiles
+└── admin/                     # Admin endpoints
+```
+
+#### Response Standards
+```python
+# Success Response
+{
+    "success": true,
+    "data": {...},
+    "message": "Optional success message",
+    "meta": {
+        "timestamp": "2024-01-01T00:00:00Z",
+        "request_id": "uuid",
+        "agent_used": "RoadmapAgent"  # For AI responses
+    }
+}
+
+# Error Response
+{
+    "success": false,
+    "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Human readable message",
+        "details": {...}
+    },
+    "meta": {
+        "timestamp": "2024-01-01T00:00:00Z",
+        "request_id": "uuid"
+    }
+}
+```
+
+### 4. Database Schema Guidelines
+
+#### Model Organization
+```python
+# Models structure
+models/
+├── __init__.py
+├── user.py                    # User & authentication
+├── profile.py                 # User profile & preferences
+├── roadmap.py                 # Roadmaps & learning paths
+├── resume.py                  # Resume data & analysis
+├── job.py                     # Job postings & matches
+├── application.py             # Job applications tracking
+├── skill.py                   # Skills & competencies
+├── progress.py                # Learning progress tracking
+└── agent_log.py               # Agent execution logs
+```
+
+#### Required Fields for All Models
+```python
+class BaseModel(Base):
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    metadata = Column(JSON, default={})  # For flexible data storage
+```
+
+#### Key Relationships
+- User -> UserProfile (1:1)
+- User -> Roadmaps (1:many)
+- User -> Resumes (1:many)
+- User -> JobApplications (1:many)
+- Roadmap -> RoadmapSteps (1:many)
+- Job -> JobApplications (1:many)
+
+### 5. Service Layer Patterns
+
+#### Service Class Structure
+```python
+class BaseService:
+    def __init__(self, db: Session, redis_client: Redis):
+        self.db = db
+        self.redis = redis_client
+    
+    async def execute_with_agent(self, agent_class, input_data):
+        # Standard agent execution pattern
+        pass
+```
+
+#### Dependency Injection
+```python
+# Use dependency injection for services
+@router.post("/roadmaps/generate")
+async def generate_roadmap(
+    request: RoadmapRequest,
+    service: RoadmapService = Depends(get_roadmap_service),
+    current_user: User = Depends(get_current_user)
+):
+    return await service.generate_roadmap(request, current_user)
+```
+
+### 6. Background Jobs & Queues
+
+#### Celery Task Organization
+```python
+# Use Celery for long-running AI tasks
+@celery_app.task(bind=True, name="generate_roadmap")
+def generate_roadmap_task(self, user_id: str, preferences: dict):
+    # Task implementation
+    pass
+
+# Task naming: {domain}_{action}_task
+# Queue routing: route tasks by domain/priority
+```
+
+#### Task Categories
+- **Immediate** (< 5s): Simple data retrieval, basic validation
+- **Background** (5s-2min): AI generation, analysis, external API calls
+- **Scheduled** (periodic): Data sync, cleanup, report generation
+
+### 7. External API Integration
+
+#### Client Organization
+```python
+# integrations/base_client.py
+class BaseAPIClient:
+    def __init__(self, api_key: str, base_url: str):
+        self.session = httpx.AsyncClient()
+        self.api_key = api_key
+        self.base_url = base_url
+    
+    async def make_request(self, endpoint: str, **kwargs):
+        # Standard request handling with retries, logging
+        pass
+```
+
+#### Configuration Management
+```python
+# Add to core/config.py
+class Settings(BaseSettings):
+    # AI Services
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    
+    # Job Board APIs
+    INDEED_API_KEY: str = ""
+    LINKEDIN_CLIENT_ID: str = ""
+    GREENHOUSE_API_KEY: str = ""
+    
+    # Resume Parsing
+    TEXTRACT_ACCESS_KEY: str = ""
+    
+    # Background Jobs
+    REDIS_URL: str = "redis://localhost:6379"
+    CELERY_BROKER_URL: str = "redis://localhost:6379"
+```
+
+### 8. Error Handling & Logging
+
+#### Structured Logging
+```python
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+# Log format
+logger.info(
+    "agent_execution_completed",
+    agent_name="RoadmapAgent",
+    user_id=user.id,
+    execution_time_ms=1250,
+    tokens_used=1500,
+    success=True
+)
+```
+
+#### Exception Handling
+```python
+# Custom exceptions
+class InternAIException(Exception):
+    def __init__(self, message: str, code: str, details: dict = None):
+        self.message = message
+        self.code = code
+        self.details = details or {}
+
+class AgentExecutionError(InternAIException):
+    pass
+
+class ExternalAPIError(InternAIException):
+    pass
+```
+
+### 9. Testing Standards
+
+#### Test Organization
+```
+tests/
+├── unit/
+│   ├── agents/               # Agent unit tests
+│   ├── services/             # Service layer tests
+│   └── models/               # Model tests
+├── integration/
+│   ├── api/                  # API endpoint tests
+│   └── agents/               # Agent integration tests
+└── fixtures/
+    ├── users.py
+    ├── roadmaps.py
+    └── jobs.py
+```
+
+#### Testing Patterns
+```python
+# Use pytest with async support
+@pytest.mark.asyncio
+async def test_roadmap_generation():
+    # Arrange
+    user = create_test_user()
+    preferences = create_test_preferences()
+    
+    # Act
+    roadmap = await roadmap_service.generate(user, preferences)
+    
+    # Assert
+    assert roadmap.steps is not None
+    assert len(roadmap.steps) > 0
+```
+
+### 10. Deployment & CI/CD
+
+#### Environment Configuration
+```python
+# Use environment-specific configs
+class DevelopmentConfig(Settings):
+    DEBUG: bool = True
+    DATABASE_URL: str = "postgresql://localhost/internai_dev"
+
+class ProductionConfig(Settings):
+    DEBUG: bool = False
+    # Production-specific settings
+```
+
+#### Docker Configuration
+```dockerfile
+# Use multi-stage builds
+FROM python:3.11-slim as base
+# Base image setup
+
+FROM base as worker
+# Celery worker configuration
+
+FROM base as api
+# FastAPI application
+```
+
+#### Health Checks
+```python
+@router.get("/health")
+async def health_check():
+    # Check database, redis, external services
+    return {
+        "status": "healthy",
+        "services": {
+            "database": "up",
+            "redis": "up",
+            "openai": "up"
+        }
+    }
+```
+
+### 11. Security Guidelines
+
+#### Data Protection
+- Never log sensitive user data (passwords, tokens, PII)
+- Encrypt sensitive data at rest (resumes, personal info)
+- Use environment variables for all secrets
+- Implement rate limiting on AI endpoints
+
+#### AI Safety
+- Validate and sanitize all AI inputs
+- Implement content filtering for generated responses
+- Set reasonable token limits and timeouts
+- Monitor for prompt injection attempts
+
+### 12. Performance Optimization
+
+#### Caching Strategy
+```python
+# Use Redis for caching
+@cache(expire=3600, key="roadmap:{user_id}:{hash}")
+async def get_cached_roadmap(user_id: str, preferences: dict):
+    # Implementation
+    pass
+```
+
+#### Database Optimization
+- Use database indexes on frequently queried fields
+- Implement pagination for list endpoints
+- Use connection pooling
+- Consider read replicas for heavy queries
+
+## Development Workflow
+
+1. **Feature Development**: Create feature branch, implement with agents/services/APIs
+2. **Testing**: Write unit and integration tests
+3. **Documentation**: Update API docs, add inline comments
+4. **Review**: Code review focusing on agent patterns, security, performance
+5. **Deployment**: Deploy to staging, run integration tests, deploy to production
+
+## Code Quality Standards
+
+- Use type hints throughout
+- Follow PEP 8 style guide
+- Maximum function complexity: 10
+- Test coverage: minimum 80%
+- All AI operations must be async
+- Use dataclasses/Pydantic for structured data
+
+## Monitoring & Observability
+
+- Log all agent executions with metrics
+- Monitor API response times and error rates
+- Track AI token usage and costs
+- Set up alerts for system health
+- Implement distributed tracing for agent workflows

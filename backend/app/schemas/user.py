@@ -37,7 +37,7 @@ class UserInDB(UserBase):
 
 # Schema for user response
 class User(UserInDB):
-    pass
+    has_completed_onboarding: Optional[bool] = None
 
 # Schema for login
 class UserLogin(BaseModel):

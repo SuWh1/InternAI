@@ -1,7 +1,8 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth
+from app.api.endpoints import auth, onboarding
 
 api_router = APIRouter()
 
-# Include auth route module only
-api_router.include_router(auth.router, prefix="/auth", tags=["auth"]) 
+# Include route modules
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"]) 

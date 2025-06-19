@@ -12,9 +12,9 @@ const HeroSection = () => {
 
   const handleGetRoadmap = () => {
     if (isAuthenticated) {
-      navigate('/roadmap');
+      navigate('/my-roadmap');
     } else {
-      setAuthModalMode('login'); 
+      setAuthModalMode('register'); 
       setAuthModalOpen(true);
     }
   };

@@ -36,6 +36,11 @@ export const useAuth = () => {
     await authService.logout();
   };
 
+  const refreshUserData = async () => {
+    clearError();
+    await authService.refreshUserData();
+  };
+
   return {
     user,
     isAuthenticated,
@@ -45,5 +50,6 @@ export const useAuth = () => {
     register,
     googleLoginWithToken,
     logout,
+    refreshUserData,
   };
 }; 

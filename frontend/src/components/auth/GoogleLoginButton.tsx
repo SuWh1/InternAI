@@ -11,6 +11,19 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   onError 
 }) => {
   const { googleLoginWithToken } = useAuth();
+  
+  // Check if Google OAuth is configured
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (!clientId || clientId === 'undefined') {
+    return (
+      <div className="w-full p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600 text-sm font-medium">Google OAuth Not Configured</p>
+        <p className="text-red-500 text-xs mt-1">
+          Please create <code>frontend/.env</code> file with your Google Client ID
+        </p>
+      </div>
+    );
+  }
 
   const handleGoogleLogin = async (credential: string) => {
     try {

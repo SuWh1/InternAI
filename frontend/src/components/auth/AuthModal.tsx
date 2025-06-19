@@ -30,6 +30,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   const { login, register, loading, error } = useAuth();
 
+  // Sync internal mode with defaultMode prop
+  useEffect(() => {
+    if (isOpen) {
+      setMode(defaultMode);
+      setFormError(null);
+      setResetSent(false);
+      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+    }
+  }, [defaultMode, isOpen]);
+
   // Prevent body scrolling when modal is open
   useEffect(() => {
     if (isOpen) {

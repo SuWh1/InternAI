@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Boolean
+from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 
@@ -12,4 +13,7 @@ class User(Base):
     hashed_password = Column(String, nullable=True)  # Nullable for social logins
     is_active = Column(Boolean, default=True)
     google_id = Column(String, unique=True, nullable=True, index=True)
-    profile_picture = Column(String, nullable=True) 
+    profile_picture = Column(String, nullable=True)
+    
+    # Relationship to onboarding data
+    onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False) 

@@ -6,6 +6,7 @@ export interface User {
   createdAt: string;
   profile_picture?: string;
   google_id?: string;
+  has_completed_onboarding?: boolean;
 }
 
 export interface AuthResponse {

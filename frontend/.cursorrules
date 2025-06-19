@@ -1,0 +1,751 @@
+# InternAI Frontend Development Rules
+
+## Project Overview
+InternAI frontend is a React/TypeScript application helping users land their first internship through:
+- **MVP**: Roadmap Generator with AI-generated learning paths
+- **Future**: Internship Matcher, Resume Analyzer, Mock Interviews, Progress Tracking
+
+Built with **React 19 + TypeScript + Vite + TailwindCSS 4 + Zustand** architecture.
+
+## Current Tech Stack Analysis
+- **Framework**: React 19 with TypeScript
+- **Build Tool**: Vite with SWC plugin
+- **Styling**: TailwindCSS 4 with @tailwindcss/vite
+- **State Management**: Zustand with persistence and devtools
+- **Routing**: React Router DOM 7
+- **HTTP Client**: Axios
+- **Authentication**: @react-oauth/google + JWT
+- **Icons**: Lucide React
+- **Linting**: ESLint 9 with TypeScript support
+
+## Architecture Principles
+
+### 1. Current Folder Structure (Maintain & Extend)
+```
+src/
+├── components/                 # Reusable UI components
+│   ├── auth/                  # Authentication components
+│   │   ├── AuthModal.tsx      # Login/Register modal
+│   │   ├── GoogleLoginButton.tsx
+│   │   ├── GoogleProviderWrapper.tsx
+│   │   └── ProtectedRoute.tsx
+│   ├── common/                # Shared UI components
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── ErrorMessage.tsx
+│   │   └── [future common components]
+│   ├── features/              # Feature-specific components (NEW)
+│   │   ├── roadmap/
+│   │   │   ├── RoadmapGenerator.tsx
+│   │   │   ├── RoadmapProgress.tsx
+│   │   │   └── RoadmapSteps.tsx
+│   │   ├── resume/
+│   │   ├── jobs/
+│   │   └── dashboard/
+│   ├── layout/                # Layout components (NEW)
+│   │   ├── AppLayout.tsx
+│   │   ├── DashboardLayout.tsx
+│   │   └── PublicLayout.tsx
+│   └── [landing page components] # Keep existing
+├── pages/                     # Page-level components
+│   ├── public/                # Public pages (NEW organization)
+│   │   ├── LandingPage.tsx
+│   │   ├── RoadmapInfoPage.tsx
+│   │   ├── ResumeReviewInfoPage.tsx
+│   │   └── InternshipsInfoPage.tsx
+│   ├── dashboard/             # Protected dashboard pages (NEW)
+│   │   ├── DashboardPage.tsx
+│   │   ├── MyRoadmapPage.tsx
+│   │   ├── MyResumePage.tsx
+│   │   └── MyInternshipsPage.tsx
+│   └── auth/                  # Auth pages (NEW)
+│       ├── LoginPage.tsx
+│       └── RegisterPage.tsx
+├── hooks/                     # Custom React hooks
+│   ├── useAuth.ts            # Keep existing
+│   ├── useApi.ts             # Keep existing
+│   ├── agents/               # Agent-specific hooks (NEW)
+│   │   ├── useRoadmapAgent.ts
+│   │   ├── useResumeAgent.ts
+│   │   └── useJobMatchAgent.ts
+│   └── [domain hooks]
+├── services/                  # API and external services
+│   ├── api.ts                # Keep existing
+│   ├── authService.ts        # Keep existing
+│   ├── apiService.ts         # Keep existing
+│   ├── agents/               # Agent communication services (NEW)
+│   │   ├── roadmapAgentService.ts
+│   │   ├── resumeAgentService.ts
+│   │   └── jobMatchAgentService.ts
+│   └── external/             # Third-party integrations (NEW)
+│       ├── googleService.ts
+│       └── fileUploadService.ts
+├── stores/                    # Zustand state stores
+│   ├── authStore.ts          # Keep existing
+│   ├── roadmapStore.ts       # NEW
+│   ├── resumeStore.ts        # NEW
+│   ├── jobsStore.ts          # NEW
+│   └── uiStore.ts            # NEW - for UI state
+├── types/                     # TypeScript type definitions
+│   ├── api.ts                # Keep existing, extend
+│   ├── agents.ts             # NEW - agent types
+│   ├── roadmap.ts            # NEW
+│   ├── resume.ts             # NEW
+│   ├── jobs.ts               # NEW
+│   └── common.ts             # NEW - shared types
+├── lib/                       # Utility libraries
+│   ├── axios.ts              # Keep existing
+│   ├── utils.ts              # NEW - utility functions
+│   ├── constants.ts          # NEW - app constants
+│   └── validators.ts         # NEW - form validation
+├── contexts/                  # React contexts (optional, prefer Zustand)
+└── assets/                    # Static assets (NEW)
+    ├── images/
+    └── icons/
+```
+
+### 2. Naming Conventions
+
+#### Components
+- **PascalCase** for all components: `RoadmapGenerator.tsx`
+- **Descriptive names**: `UserProfileSettings.tsx` not `Settings.tsx`
+- **Feature prefixes** for complex features: `RoadmapStepCard.tsx`
+
+#### Files & Folders
+- **camelCase** for non-component files: `authService.ts`, `useRoadmapAgent.ts`
+- **kebab-case** for assets: `hero-background.png`
+- **Descriptive folder names**: `features/roadmap/` not `roadmap/`
+
+#### Functions & Variables
+- **camelCase**: `handleSubmitRoadmap`, `isLoadingRoadmap`
+- **Boolean prefixes**: `is*`, `has*`, `can*`, `should*`
+- **Handler prefixes**: `handle*`, `on*`
+
+### 3. Component Architecture
+
+#### Smart vs Dumb Components
+```typescript
+// Smart Component (Container)
+const RoadmapPage = () => {
+  const { roadmap, loading, error, generateRoadmap } = useRoadmapAgent();
+  const { user } = useAuthStore();
+  
+  return (
+    <RoadmapContainer>
+      <RoadmapGenerator onGenerate={generateRoadmap} />
+      <RoadmapDisplay roadmap={roadmap} loading={loading} error={error} />
+    </RoadmapContainer>
+  );
+};
+
+// Dumb Component (Presentational)
+interface RoadmapDisplayProps {
+  roadmap: Roadmap | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const RoadmapDisplay: React.FC<RoadmapDisplayProps> = ({ roadmap, loading, error }) => {
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!roadmap) return <EmptyState />;
+  
+  return <RoadmapSteps steps={roadmap.steps} />;
+};
+```
+
+#### Component Structure Template
+```typescript
+import React from 'react';
+import { type ComponentProps } from '../types/common';
+
+interface ComponentNameProps {
+  // Props interface
+}
+
+const ComponentName: React.FC<ComponentNameProps> = ({
+  // Destructured props
+}) => {
+  // Hooks (in order: React hooks, custom hooks, stores)
+  const [localState, setLocalState] = useState();
+  const customHook = useCustomHook();
+  const { storeData } = useStore();
+  
+  // Event handlers
+  const handleClick = () => {
+    // Implementation
+  };
+  
+  // Early returns
+  if (loading) return <LoadingSpinner />;
+  
+  // Main render
+  return (
+    <div className="component-container">
+      {/* JSX */}
+    </div>
+  );
+};
+
+export default ComponentName;
+```
+
+### 4. State Management with Zustand
+
+#### Store Structure Template
+```typescript
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+
+interface DomainState {
+  // State
+  data: DomainData | null;
+  loading: boolean;
+  error: string | null;
+  
+  // Actions
+  setData: (data: DomainData) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  reset: () => void;
+}
+
+export const useDomainStore = create<DomainState>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        // Initial state
+        data: null,
+        loading: false,
+        error: null,
+
+        // Actions
+        setData: (data) => set(
+          { data, error: null },
+          false,
+          'domain/setData'
+        ),
+        
+        setLoading: (loading) => set(
+          { loading },
+          false,
+          'domain/setLoading'
+        ),
+        
+        setError: (error) => set(
+          { error, loading: false },
+          false,
+          'domain/setError'
+        ),
+        
+        clearError: () => set(
+          { error: null },
+          false,
+          'domain/clearError'
+        ),
+        
+        reset: () => set(
+          { data: null, loading: false, error: null },
+          false,
+          'domain/reset'
+        ),
+      }),
+      {
+        name: 'domain-storage',
+        partialize: (state) => ({ data: state.data }),
+      }
+    ),
+    { name: 'domain-store' }
+  )
+);
+```
+
+#### Store Organization Rules
+- **One store per domain**: `authStore`, `roadmapStore`, `resumeStore`
+- **UI state store**: Global UI state (modals, sidebars, themes)
+- **Persist critical data**: User auth, user preferences, draft forms
+- **Use devtools**: Enable Redux DevTools for debugging
+
+### 5. API Integration with Multi-Agent Backend
+
+#### Agent Service Pattern
+```typescript
+// services/agents/roadmapAgentService.ts
+import { apiClient } from '../api';
+import type { RoadmapRequest, RoadmapResponse } from '../../types/agents';
+
+export class RoadmapAgentService {
+  async generateRoadmap(request: RoadmapRequest): Promise<RoadmapResponse> {
+    const response = await apiClient.post('/api/v1/roadmaps/generate', request);
+    return response.data;
+  }
+  
+  async updateProgress(roadmapId: string, stepId: string, completed: boolean) {
+    return apiClient.patch(`/api/v1/roadmaps/${roadmapId}/steps/${stepId}`, {
+      completed
+    });
+  }
+}
+
+export const roadmapAgentService = new RoadmapAgentService();
+```
+
+#### Custom Hook for Agent Communication
+```typescript
+// hooks/agents/useRoadmapAgent.ts
+import { useState, useCallback } from 'react';
+import { roadmapAgentService } from '../../services/agents/roadmapAgentService';
+import { useRoadmapStore } from '../../stores/roadmapStore';
+
+export const useRoadmapAgent = () => {
+  const { setData, setLoading, setError } = useRoadmapStore();
+  
+  const generateRoadmap = useCallback(async (preferences: RoadmapPreferences) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const roadmap = await roadmapAgentService.generateRoadmap({
+        preferences,
+        userId: user.id
+      });
+      
+      setData(roadmap);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [setData, setLoading, setError]);
+  
+  return {
+    generateRoadmap,
+    // ... other methods
+  };
+};
+```
+
+### 6. Loading States & Error Handling
+
+#### Loading State Patterns
+```typescript
+// Skeleton loading for content
+const RoadmapSkeleton = () => (
+  <div className="animate-pulse space-y-4">
+    <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="h-4 bg-gray-200 rounded"></div>
+      ))}
+    </div>
+  </div>
+);
+
+// Button loading state
+const GenerateButton = ({ loading, onClick }) => (
+  <button
+    onClick={onClick}
+    disabled={loading}
+    className="btn-primary"
+  >
+    {loading && <LoadingSpinner size="sm" className="mr-2" />}
+    {loading ? 'Generating...' : 'Generate Roadmap'}
+  </button>
+);
+```
+
+#### Error Handling Strategy
+```typescript
+// Global error boundary
+const ErrorBoundary = ({ children, fallback: Fallback }) => {
+  // Implementation
+};
+
+// Agent-specific error handling
+const handleAgentError = (error: AgentError) => {
+  switch (error.type) {
+    case 'RATE_LIMIT':
+      return 'Too many requests. Please try again in a few minutes.';
+    case 'AGENT_TIMEOUT':
+      return 'AI agent is taking longer than expected. Please try again.';
+    case 'VALIDATION_ERROR':
+      return error.message;
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+};
+```
+
+### 7. TailwindCSS Patterns
+
+#### Design System Setup
+```typescript
+// tailwind.config.js extensions
+export default {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',
+          600: '#2563eb',
+          // ... full palette
+        },
+        agent: {
+          roadmap: '#10b981',
+          resume: '#f59e0b',
+          jobs: '#8b5cf6',
+        }
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+      }
+    }
+  }
+};
+```
+
+#### Component Class Patterns
+```typescript
+// Utility classes for consistency
+const styles = {
+  button: {
+    primary: 'bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors',
+    secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors',
+  },
+  card: 'bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow',
+  input: 'border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+};
+```
+
+### 8. Routing & Navigation
+
+#### Route Organization
+```typescript
+// App.tsx routing structure
+const App = () => (
+  <Router>
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<PublicLayout />}>
+        <Route index element={<LandingPage />} />
+        <Route path="features/roadmap" element={<RoadmapInfoPage />} />
+        <Route path="features/resume" element={<ResumeReviewInfoPage />} />
+        <Route path="features/jobs" element={<InternshipsInfoPage />} />
+      </Route>
+      
+      {/* Auth routes */}
+      <Route path="/auth" element={<AuthLayout />}>
+        <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} />
+      </Route>
+      
+      {/* Protected dashboard routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+        <Route index element={<DashboardPage />} />
+        <Route path="roadmap" element={<MyRoadmapPage />} />
+        <Route path="resume" element={<MyResumePage />} />
+        <Route path="jobs" element={<MyInternshipsPage />} />
+      </Route>
+    </Routes>
+  </Router>
+);
+```
+
+#### Lazy Loading Pattern
+```typescript
+import { lazy, Suspense } from 'react';
+
+const LazyRoadmapPage = lazy(() => import('./pages/dashboard/MyRoadmapPage'));
+
+const RoadmapRoute = () => (
+  <Suspense fallback={<PageSkeleton />}>
+    <LazyRoadmapPage />
+  </Suspense>
+);
+```
+
+### 9. TypeScript Best Practices
+
+#### Type Organization
+```typescript
+// types/common.ts - Shared types
+export interface BaseEntity {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  meta?: {
+    timestamp: string;
+    requestId: string;
+    agentUsed?: string;
+  };
+}
+
+// types/agents.ts - Agent-specific types
+export interface AgentRequest {
+  userId: string;
+  preferences: Record<string, any>;
+}
+
+export interface AgentResponse<T> {
+  result: T;
+  agentMetadata: {
+    executionTime: number;
+    tokensUsed: number;
+    agentVersion: string;
+  };
+}
+```
+
+#### Component Props Patterns
+```typescript
+// Extend HTML element props
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+}
+
+// Generic component props
+interface ListProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+  emptyState?: React.ReactNode;
+}
+```
+
+### 10. Performance Optimization
+
+#### Memoization Strategy
+```typescript
+// Memoize expensive components
+const RoadmapStepCard = React.memo(({ step, onToggle }) => {
+  return (
+    <div className="roadmap-step-card">
+      {/* Implementation */}
+    </div>
+  );
+});
+
+// Memoize callback functions
+const RoadmapContainer = () => {
+  const handleStepToggle = useCallback((stepId: string) => {
+    // Implementation
+  }, []);
+  
+  return (
+    <div>
+      {steps.map(step => (
+        <RoadmapStepCard 
+          key={step.id} 
+          step={step} 
+          onToggle={handleStepToggle} 
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+#### Bundle Optimization
+```typescript
+// vite.config.ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['lucide-react'],
+          auth: ['@react-oauth/google'],
+        }
+      }
+    }
+  }
+});
+```
+
+### 11. Testing Strategy
+
+#### Test Organization
+```
+src/
+├── __tests__/
+│   ├── components/
+│   ├── hooks/
+│   ├── services/
+│   └── stores/
+├── __mocks__/
+│   ├── agents/
+│   └── api/
+└── test-utils/
+    ├── renderWithProviders.tsx
+    └── mockData.ts
+```
+
+#### Testing Patterns
+```typescript
+// Component testing
+import { render, screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../test-utils/renderWithProviders';
+
+describe('RoadmapGenerator', () => {
+  it('should generate roadmap when form is submitted', async () => {
+    const mockGenerate = jest.fn();
+    
+    renderWithProviders(
+      <RoadmapGenerator onGenerate={mockGenerate} />
+    );
+    
+    fireEvent.click(screen.getByText('Generate Roadmap'));
+    
+    expect(mockGenerate).toHaveBeenCalled();
+  });
+});
+
+// Hook testing
+import { renderHook, act } from '@testing-library/react';
+import { useRoadmapAgent } from '../hooks/agents/useRoadmapAgent';
+
+describe('useRoadmapAgent', () => {
+  it('should handle roadmap generation', async () => {
+    const { result } = renderHook(() => useRoadmapAgent());
+    
+    await act(async () => {
+      await result.current.generateRoadmap(mockPreferences);
+    });
+    
+    expect(result.current.roadmap).toBeDefined();
+  });
+});
+```
+
+### 12. Environment & Build Configuration
+
+#### Environment Variables
+```bash
+# .env.development
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+VITE_APP_ENV=development
+VITE_ENABLE_DEVTOOLS=true
+
+# .env.production
+VITE_API_BASE_URL=https://api.internai.com/api/v1
+VITE_GOOGLE_CLIENT_ID=your_prod_google_client_id
+VITE_APP_ENV=production
+VITE_ENABLE_DEVTOOLS=false
+```
+
+#### Build Scripts
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build:staging": "tsc -b && vite build --mode staging",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui"
+  }
+}
+```
+
+### 13. Deployment & CI/CD
+
+#### Vercel Configuration
+```json
+// vercel.json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "env": {
+    "VITE_API_BASE_URL": "@api-base-url",
+    "VITE_GOOGLE_CLIENT_ID": "@google-client-id"
+  }
+}
+```
+
+#### GitHub Actions
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Vercel
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+```
+
+## Development Workflow
+
+1. **Feature Development**:
+   - Create feature branch: `feature/roadmap-generation`
+   - Implement in order: types → service → hook → component → page
+   - Test locally with backend integration
+
+2. **Code Review Checklist**:
+   - TypeScript types are properly defined
+   - Components follow smart/dumb pattern
+   - Loading and error states are handled
+   - Tests are written for complex logic
+   - TailwindCSS classes follow design system
+
+3. **Testing Strategy**:
+   - Unit tests for utility functions and hooks
+   - Integration tests for agent communication
+   - E2E tests for critical user flows
+   - Visual regression tests for UI components
+
+## Future Scalability Considerations
+
+### Multi-Agent Dashboard
+- Agent status indicators
+- Agent performance metrics
+- Agent switching/selection UI
+
+### Advanced Features
+- Real-time notifications
+- Offline support with service workers
+- Advanced caching strategies
+- Micro-frontend architecture for teams
+
+### Performance Monitoring
+- Bundle size monitoring
+- Core Web Vitals tracking
+- Agent response time metrics
+- User interaction analytics
+
+## Code Quality Standards
+
+- **TypeScript strict mode**: Enabled
+- **ESLint rules**: Extended with React and TypeScript rules
+- **Prettier integration**: For consistent formatting
+- **Pre-commit hooks**: Lint and type check before commits
+- **Bundle size limits**: Monitor and alert on size increases
+- **Test coverage**: Minimum 80% for critical paths

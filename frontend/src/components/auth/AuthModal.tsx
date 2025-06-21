@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, GitBranch, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import { GoogleLoginButton } from './GoogleLoginButton';
@@ -29,6 +30,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [resetSent, setResetSent] = useState(false);
 
   const { login, register, loading, error } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Sync internal mode with defaultMode prop
   useEffect(() => {
@@ -54,6 +57,24 @@ const AuthModal: React.FC<AuthModalProps> = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handlePostAuthSuccess = (authMode: 'login' | 'register') => {
+    // Only redirect for login, not for register (register goes through onboarding)
+    if (authMode === 'login') {
+      // Check if user was redirected from a protected route
+      const redirectPath = location.state?.redirectAfterLogin;
+      if (redirectPath) {
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+      
+      // If user was on /roadmap, redirect to /my-roadmap
+      if (location.pathname === '/roadmap') {
+        navigate('/my-roadmap', { replace: true });
+      }
+    }
+    // For register, OnboardingWrapper will handle the redirection
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +125,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
       
       onClose();
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      
+      // Handle post-authentication routing
+      handlePostAuthSuccess(mode);
     } catch (error) {
       // Error is handled by the auth context
     }
@@ -112,6 +136,19 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSuccess = () => {
     onClose();
     setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+    
+    // Check if user was redirected from a protected route
+    const redirectPath = location.state?.redirectAfterLogin;
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true });
+      return;
+    }
+    
+    // For Google auth, we don't know if it's login or register, but we can assume
+    // if user was on /roadmap and successfully authenticated, redirect to /my-roadmap
+    if (location.pathname === '/roadmap') {
+      navigate('/my-roadmap', { replace: true });
+    }
   };
 
   const handleGoogleError = (error: string) => {

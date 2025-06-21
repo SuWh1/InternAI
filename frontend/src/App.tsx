@@ -9,6 +9,7 @@ import MyInternshipsPage from './pages/MyInternshipsPage';
 import OnboardingPage from './pages/OnboardingPage';
 import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
@@ -18,13 +19,41 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route 
+              path="/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/roadmap" element={<RoadmapInfoPage />} />
             <Route path="/resume-review" element={<ResumeReviewInfoPage />} />
             <Route path="/internships" element={<InternshipsInfoPage />} />
-            <Route path="/my-roadmap" element={<MyRoadmapPage />} />
-            <Route path="/my-resume" element={<MyResumePage />} />
-            <Route path="/my-internships" element={<MyInternshipsPage />} />
+            <Route 
+              path="/my-roadmap" 
+              element={
+                <ProtectedRoute>
+                  <MyRoadmapPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/my-resume" 
+              element={
+                <ProtectedRoute>
+                  <MyResumePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/my-internships" 
+              element={
+                <ProtectedRoute>
+                  <MyInternshipsPage />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </OnboardingWrapper>
       </div>

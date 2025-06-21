@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitBranch, Menu, X, LogOut, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -11,6 +11,16 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
+
+  // Handle redirect from protected routes
+  useEffect(() => {
+    if (location.state?.showLoginModal && !isAuthenticated) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      // Clear the state to prevent modal from opening again on navigation
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, isAuthenticated, navigate, location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -32,7 +42,9 @@ const Navbar = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2 hover:scale-105 transition-all duration-200">
-                <GitBranch className="h-10 w-10 text-blue-500" />
+                <div className="h-12 w-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <GitBranch className="h-8 w-8 text-white" />
+                </div>
                 <span className="text-2xl font-bold text-gray-900">InternAI</span>
               </Link>
             </div>

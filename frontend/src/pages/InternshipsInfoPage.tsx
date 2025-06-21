@@ -2,7 +2,7 @@ import { Briefcase, Search, Target } from 'lucide-react';
 
 const InternshipsInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-slate-50">
+    <div className="min-h-screen pt-16 bg-slate-50 animate-slide-up-lg">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <Briefcase className="h-16 w-16 text-purple-500 mx-auto mb-6" />

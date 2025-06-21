@@ -2,7 +2,7 @@ import { CheckCircle, MapPin, TrendingUp } from 'lucide-react';
 
 const RoadmapInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-slate-50">
+    <div className="min-h-screen pt-16 bg-slate-50 animate-slide-up-lg">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <MapPin className="h-16 w-16 text-blue-500 mx-auto mb-6" />

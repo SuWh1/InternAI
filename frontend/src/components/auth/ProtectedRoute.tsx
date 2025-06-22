@@ -5,12 +5,10 @@ import LoadingSpinner from '../common/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  fallbackMessage?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  fallbackMessage = "Please sign in to access this page"
+  children
 }) => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();

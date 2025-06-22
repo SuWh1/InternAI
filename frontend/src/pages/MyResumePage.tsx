@@ -7,7 +7,7 @@ const MyResumePage = () => {
         <div className="text-center mb-12">
           <FileText className="h-16 w-16 text-green-500 mx-auto mb-6" />
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            My Resume Dashboard
+            Coming soon...
           </h1>
           <p className="text-xl text-gray-600">
             Manage, optimize, and track your resume performance

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, User, Code, Briefcase, Target, Rocket, Sparkles } from 'lucide-react';
 import { useOnboarding } from '../hooks/useOnboarding';
@@ -9,8 +9,8 @@ import type { OnboardingFormData, OnboardingOptions } from '../types/onboarding'
 
 const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
-  const { createOnboarding, getOnboardingOptions, loading, error, clearError } = useOnboarding();
+  const { isAuthenticated } = useAuth();
+  const { createOnboarding, getOnboardingOptions, loading, error } = useOnboarding();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [options, setOptions] = useState<OnboardingOptions | null>(null);

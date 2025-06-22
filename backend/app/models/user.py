@@ -16,4 +16,7 @@ class User(Base):
     profile_picture = Column(String, nullable=True)
     
     # Relationship to onboarding data
-    onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False) 
+    onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False)
+    
+    # Relationship to roadmap
+    roadmap = relationship("Roadmap", back_populates="user", uselist=False) 

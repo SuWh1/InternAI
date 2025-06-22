@@ -7,6 +7,7 @@ import MyRoadmapPage from './pages/MyRoadmapPage';
 import MyResumePage from './pages/MyResumePage';
 import MyInternshipsPage from './pages/MyInternshipsPage';
 import OnboardingPage from './pages/OnboardingPage';
+import WeekDetailPage from './pages/WeekDetailPage';
 import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -35,6 +36,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MyRoadmapPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/roadmap/week/:weekNumber" 
+              element={
+                <ProtectedRoute>
+                  <WeekDetailPage />
                 </ProtectedRoute>
               } 
             />

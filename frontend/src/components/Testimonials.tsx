@@ -42,44 +42,44 @@ const Testimonials = () => {
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-theme-primary transition-colors duration-300">
       <div className="max-w-5xl mx-auto px-4 sm:px-35 lg:px-35">
         <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             Success Stories
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-theme-secondary transition-colors duration-300">
             Join thousands of students who've landed their dream internships
           </p>
         </div>
 
-        <div className="relative bg-gray-50 rounded-2xl p-8 lg:p-12">
+        <div className="relative bg-theme-secondary rounded-2xl p-8 lg:p-12 border border-theme transition-colors duration-300">
           <div className="flex items-center justify-center mb-6">
             {[...Array(currentTestimonial.rating)].map((_, i) => (
               <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
             ))}
           </div>
 
-          <blockquote className="text-xl text-gray-700 text-center mb-8 leading-relaxed">
+          <blockquote className="text-xl text-theme-secondary text-center mb-8 leading-relaxed transition-colors duration-300">
             "{currentTestimonial.content}"
           </blockquote>
 
           <div className="text-center">
-            <div className="bg-blue-500 text-white rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 font-semibold">
+            <div className="bg-theme-accent text-white rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 font-semibold">
               {currentTestimonial.avatar}
             </div>
-            <div className="font-semibold text-gray-900">{currentTestimonial.name}</div>
-            <div className="text-gray-600">{currentTestimonial.role}</div>
-            <div className="text-blue-600 font-medium mt-1">{currentTestimonial.company}</div>
+            <div className="font-semibold text-theme-primary transition-colors duration-300">{currentTestimonial.name}</div>
+            <div className="text-theme-secondary transition-colors duration-300">{currentTestimonial.role}</div>
+            <div className="text-theme-accent font-medium mt-1">{currentTestimonial.company}</div>
           </div>
 
           {/* Navigation */}
           <div className="flex items-center justify-center mt-8 space-x-4">
             <button
               onClick={prevTestimonial}
-              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-all duration-200"
+              className="bg-theme-primary border border-theme rounded-full p-2 hover:bg-theme-hover transition-all duration-300"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
+              <ChevronLeft className="h-5 w-5 text-theme-secondary transition-colors duration-300" />
             </button>
             
             <div className="flex space-x-2">
@@ -87,8 +87,8 @@ const Testimonials = () => {
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    index === currentIndex ? 'bg-blue-500' : 'bg-gray-300'
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === currentIndex ? 'bg-theme-accent' : 'bg-theme-secondary/50'
                   }`}
                 />
               ))}
@@ -96,9 +96,9 @@ const Testimonials = () => {
             
             <button
               onClick={nextTestimonial}
-              className="bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-all duration-200"
+              className="bg-theme-primary border border-theme rounded-full p-2 hover:bg-theme-hover transition-all duration-300"
             >
-              <ChevronRight className="h-5 w-5 text-gray-600" />
+              <ChevronRight className="h-5 w-5 text-theme-secondary transition-colors duration-300" />
             </button>
           </div>
         </div>

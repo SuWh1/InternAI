@@ -116,7 +116,17 @@ export const useRoadmap = (): UseRoadmapReturn => {
           }
           
           const completedTasksArray = Array.from(completedTasks);
-          const completionPercentage = (completedTasksArray.length / weekProgress.total_tasks) * 100;
+          
+          // Determine if we're using subtopics or tasks
+          const hasSubtopics = completedTasksArray.some(id => id.startsWith('subtopic-'));
+          const totalItems = hasSubtopics ? 6 : weekProgress.total_tasks; // 6 subtopics or original task count
+          
+          // Only count relevant items for completion percentage
+          const relevantCompletedItems = hasSubtopics 
+            ? completedTasksArray.filter(id => id.startsWith('subtopic-')).length
+            : completedTasksArray.filter(id => id.startsWith('task-')).length;
+          
+          const completionPercentage = totalItems > 0 ? (relevantCompletedItems / totalItems) * 100 : 0;
           
           return {
             ...weekProgress,

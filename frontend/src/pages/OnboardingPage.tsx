@@ -147,8 +147,8 @@ const OnboardingPage: React.FC = () => {
           <div className={`
             relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-500 ease-out transform
             ${i + 1 <= currentStep 
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-110' 
-              : 'bg-white border-gray-300 text-gray-400 hover:border-gray-400 hover:scale-105'
+              ? 'bg-theme-accent border-theme-accent text-white shadow-lg scale-110' 
+              : 'bg-theme-secondary border-theme text-theme-secondary/50 hover:border-theme-accent hover:scale-105'
             }
           `}>
             {i + 1 < currentStep ? (
@@ -157,19 +157,19 @@ const OnboardingPage: React.FC = () => {
               <span className="text-sm font-semibold">{i + 1}</span>
             )}
             {i + 1 === currentStep && (
-              <div className="absolute inset-0 rounded-full bg-blue-500 opacity-20 animate-ping"></div>
+              <div className="absolute inset-0 rounded-full bg-theme-accent opacity-20 animate-ping"></div>
             )}
           </div>
           {i < totalSteps - 1 && (
             <div className={`
               w-16 h-1 mx-3 rounded-full transition-all duration-500 ease-out
               ${i + 1 < currentStep 
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm' 
-                : 'bg-gray-200'
+                ? 'bg-theme-accent shadow-sm' 
+                : 'bg-theme-hover'
               }
             `}>
               {i + 1 < currentStep && (
-                <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-in slide-in-from-left duration-500"></div>
+                <div className="h-full bg-theme-accent rounded-full animate-in slide-in-from-left duration-500"></div>
               )}
             </div>
           )}
@@ -541,40 +541,40 @@ const OnboardingPage: React.FC = () => {
 
   if (!options) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
           <LoadingSpinner />
-          <p className="mt-4 text-gray-600 animate-pulse">Loading your personalized onboarding...</p>
+          <p className="mt-4 text-theme-secondary animate-pulse transition-colors duration-300">Loading your personalized onboarding...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4 animate-slide-up-lg">
+    <div className="min-h-screen bg-theme-primary py-8 px-4 animate-slide-up-lg transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 md:p-12 animate-in zoom-in duration-700">
+        <div className="bg-theme-secondary/95 backdrop-blur-sm rounded-2xl shadow-xl border border-theme p-8 md:p-12 animate-in zoom-in duration-700 transition-colors duration-300">
           {/* Header */}
           <div className="text-center mb-12 animate-in slide-in-from-bottom duration-500">
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold mb-6 animate-in zoom-in duration-500 delay-100">
+            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-theme-accent to-theme-accent/80 text-white px-6 py-2 rounded-full text-sm font-semibold mb-6 animate-in zoom-in duration-500 delay-100">
               <Sparkles className="w-4 h-4" />
               <span>Step {currentStep} of {totalSteps}</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-theme-primary mb-4 transition-colors duration-300">
               Welcome to InternAI!
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Let's get you set up with a personalized internship roadmap</p>
+            <p className="text-xl text-theme-secondary max-w-2xl mx-auto transition-colors duration-300">Let's get you set up with a personalized internship roadmap</p>
           </div>
 
           {/* Progress Bar */}
           <div className="mb-8">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <div className="flex justify-between text-sm text-theme-secondary mb-2 transition-colors duration-300">
               <span>Progress</span>
               <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-theme-hover rounded-full h-2 overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-gradient-to-r from-theme-accent to-theme-accent/80 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
@@ -596,11 +596,11 @@ const OnboardingPage: React.FC = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-200">
+          <div className="flex justify-between items-center mt-12 pt-8 border-t border-theme">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:bg-gray-100 rounded-xl group"
+              className="flex items-center space-x-2 px-6 py-3 text-theme-secondary hover:text-theme-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:bg-theme-hover rounded-xl group"
             >
               <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
               <span className="font-medium">Previous</span>
@@ -610,7 +610,7 @@ const OnboardingPage: React.FC = () => {
               <button
                 onClick={nextStep}
                 disabled={!validateStep(currentStep)}
-                className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
+                className="flex items-center space-x-2 px-8 py-3 bg-theme-accent text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
               >
                 <span className="font-semibold">Next</span>
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
@@ -619,7 +619,7 @@ const OnboardingPage: React.FC = () => {
               <button
                 onClick={handleSubmit}
                 disabled={!validateStep(currentStep) || loading}
-                className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
+                className="flex items-center space-x-2 px-8 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
               >
                 {loading ? (
                   <>

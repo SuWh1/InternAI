@@ -10,7 +10,8 @@ import {
   BookOpen,
   List,
   Crown,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 
 
@@ -28,11 +29,12 @@ interface WeekNodeProps {
     is_expanded: boolean;
     is_last_step?: boolean;
     is_current_step?: boolean;
+    is_locked?: boolean;
     step_index?: number;
     completed_tasks?: string[];
-    onExpand?: (weekNumber: number) => void;
-    onTaskToggle?: (weekNumber: number, taskIndex: number, isCompleted: boolean) => void;
-    onGetDetails?: (topic: string, context: string) => void;
+    onExpand?: (weekNumber: number, isLocked?: boolean) => void;
+    onTaskToggle?: (weekNumber: number, taskIndex: number, isCompleted: boolean, isLocked?: boolean) => void;
+    onGetDetails?: (topic: string, context: string, isLocked?: boolean) => void;
   };
 }
 
@@ -50,6 +52,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
     is_expanded,
     is_last_step = false,
     is_current_step = false,
+    is_locked = false,
     step_index = 0,
     completed_tasks = [],
     onExpand,
@@ -60,28 +63,45 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
   // Initialize and sync local state with actual progress data
   useEffect(() => {
     const taskIndices = new Set<number>();
+    
+    // Check if we have subtopic progress (new system) or task progress (old system)
+    const hasSubtopics = completed_tasks.some(taskId => taskId.startsWith('subtopic-'));
+    
     completed_tasks.forEach(taskId => {
-      // Parse task IDs like "task-0", "task-1", etc.
-      const match = taskId.match(/^task-(\d+)$/);
-      if (match) {
-        taskIndices.add(parseInt(match[1], 10));
+      if (hasSubtopics) {
+        // Parse subtopic IDs like "subtopic-0", "subtopic-1", etc.
+        const match = taskId.match(/^subtopic-(\d+)$/);
+        if (match) {
+          taskIndices.add(parseInt(match[1], 10));
+        }
+      } else {
+        // Parse task IDs like "task-0", "task-1", etc.
+        const match = taskId.match(/^task-(\d+)$/);
+        if (match) {
+          taskIndices.add(parseInt(match[1], 10));
+        }
       }
     });
     setCompletedTasks(taskIndices);
   }, [completed_tasks]);
 
-  // Keep local state in sync with backend data
-  const actualCompletionPercentage = tasks.length > 0 ? Math.round((completed_tasks.length / tasks.length) * 100) : 0;
+  // Always use 6 as total for subtopic system, original task count for task system
+  const hasSubtopics = completed_tasks.some(taskId => taskId.startsWith('subtopic-'));
+  const totalItems = 6; // Always show 6 total items for all weeks
+  const completedItems = hasSubtopics 
+    ? completed_tasks.filter(taskId => taskId.startsWith('subtopic-')).length
+    : completed_tasks.filter(taskId => taskId.startsWith('task-')).length;
 
-  // Use backend data as source of truth for completion status
-  const completionPercentage = actualCompletionPercentage;
-  const isCompleted = actualCompletionPercentage === 100;
+  const completionPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const isCompleted = completionPercentage === 100;
 
   const handleExpand = () => {
-    onExpand?.(week_number);
+    onExpand?.(week_number, is_locked);
   };
 
   const handleTaskToggle = (taskIndex: number) => {
+    if (is_locked) return;
+    
     const newCompletedTasks = new Set(completedTasks);
     const isCompleting = !newCompletedTasks.has(taskIndex);
     
@@ -91,11 +111,11 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
       newCompletedTasks.add(taskIndex);
     }
     setCompletedTasks(newCompletedTasks);
-    onTaskToggle?.(week_number, taskIndex, isCompleting);
+    onTaskToggle?.(week_number, taskIndex, isCompleting, is_locked);
   };
 
   const handleGetDetails = () => {
-    onGetDetails?.(theme, `Week ${week_number} focus area: ${focus_area}`);
+    onGetDetails?.(theme, `Week ${week_number} focus area: ${focus_area}`, is_locked);
   };
 
   // Calculate elevation effect based on step index
@@ -108,21 +128,36 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
   return (
     <div 
       className={`
-        bg-white rounded-lg border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105
-        ${is_current_step 
-          ? 'border-indigo-500 bg-indigo-50 shadow-2xl ring-4 ring-indigo-300 ring-opacity-60 animate-pulse' 
-          : isCompleted 
-            ? 'border-green-400 bg-green-50' 
-            : 'border-blue-300'
+        bg-theme-secondary rounded-lg border-2 transition-all duration-300 
+        ${is_locked 
+          ? 'border-theme opacity-50 cursor-not-allowed' 
+          : 'hover:shadow-2xl hover:scale-105'
+        }
+        ${!is_locked && is_current_step 
+          ? 'border-purple-500 bg-purple-500/10 shadow-2xl animate-bounce-gentle' 
+          : !is_locked && isCompleted 
+            ? 'border-green-400 bg-green-50/20' 
+            : !is_locked
+              ? 'border-theme'
+              : ''
         }
         ${is_expanded ? 'min-w-80' : 'w-64'}
-        ${is_last_step ? 'shadow-2xl ring-4 ring-yellow-300 ring-opacity-50' : elevationClass}
+        ${!is_locked && is_last_step ? 'shadow-2xl ring-4 ring-yellow-300 ring-opacity-50' : !is_locked ? elevationClass : ''}
         relative overflow-hidden
       `}
-      style={transformStyle}
+      style={is_locked ? { ...transformStyle, filter: 'grayscale(40%)' } : transformStyle}
     >
+      {/* Lock overlay for locked nodes */}
+      {is_locked && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] rounded-lg flex items-center justify-center z-20">
+          <div className="bg-theme-secondary/90 rounded-full p-3 shadow-lg border border-theme">
+            <Lock className="w-6 h-6 text-theme-primary" />
+          </div>
+        </div>
+      )}
+
       {/* Crown and celebration effects for final step */}
-      {is_last_step && (
+      {is_last_step && !is_locked && (
         <>
           <div className="absolute -top-3 -right-3 z-10">
             <Crown className="w-8 h-8 text-yellow-500 animate-bounce" />
@@ -135,8 +170,13 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
       )}
 
       {/* Current step glow effect */}
-      {is_current_step && !is_last_step && (
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/40 to-purple-100/40 rounded-lg pointer-events-none animate-pulse" />
+      {is_current_step && !is_last_step && !is_locked && (
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-purple-500/10 rounded-lg pointer-events-none animate-bounce-gentle" />
+      )}
+
+      {/* Completed step background effect */}
+      {isCompleted && !is_current_step && !is_last_step && !is_locked && (
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500/15 to-green-500/8 rounded-lg pointer-events-none" />
       )}
 
       {/* Connection handles */}
@@ -144,8 +184,9 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         type="target"
         position={Position.Top}
         className={`w-3 h-3 ${
+          is_locked ? 'bg-gray-400' :
           is_last_step ? 'bg-yellow-500' : 
-          is_current_step ? 'bg-indigo-500 animate-pulse' : 
+          is_current_step ? 'bg-purple-500 animate-bounce-gentle' : 
           'bg-green-500'
         }`}
       />
@@ -153,56 +194,68 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         type="source"
         position={Position.Bottom}
         className={`w-3 h-3 ${
+          is_locked ? 'bg-gray-400' :
           is_last_step ? 'bg-yellow-500' : 
-          is_current_step ? 'bg-indigo-500 animate-pulse' : 
+          is_current_step ? 'bg-purple-500 animate-bounce-gentle' : 
           'bg-green-500'
         }`}
       />
 
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-theme transition-colors duration-300">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
             <div className={`
               w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
-              ${is_last_step 
-                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
-                : is_current_step
-                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg animate-pulse'
-                  : isCompleted 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-blue-500 text-white'
+              ${is_locked 
+                ? 'bg-theme-secondary text-theme-secondary border border-theme' 
+                : is_last_step 
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
+                  : is_current_step
+                    ? 'bg-purple-500 text-white shadow-lg animate-bounce-gentle'
+                    : isCompleted 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-theme-accent/80 text-white'
               }
             `}>
-              {is_last_step ? <Crown className="w-4 h-4" /> : week_number}
+              {is_locked ? <Lock className="w-4 h-4" /> : is_last_step ? <Crown className="w-4 h-4" /> : week_number}
             </div>
             <div className="flex-1">
-              <h3 className={`font-semibold text-sm ${
+              <h3 className={`font-semibold text-sm transition-colors duration-300 ${
+                is_locked ? 'text-theme-primary' :
                 is_last_step ? 'text-yellow-800 font-bold' : 
-                is_current_step ? 'text-indigo-800 font-bold' : 
-                'text-gray-800'
+                is_current_step ? 'text-purple-500 font-bold' : 
+                'text-theme-primary'
               }`}>
-                {is_last_step 
-                  ? `🎉 ${theme} - Final Step!` 
-                  : is_current_step 
-                    ? `➡️ ${theme} - Current Step` 
-                    : theme
+                {is_locked 
+                  ? `🔒 ${theme} - Locked` 
+                  : is_last_step 
+                    ? `🎉 ${theme} - Final Step!` 
+                    : is_current_step 
+                      ? `➡️ ${theme} - Current Step` 
+                      : theme
                 }
               </h3>
-              <p className={`text-xs ${
+              <p className={`text-xs transition-colors duration-300 ${
+                is_locked ? 'text-theme-secondary' :
                 is_last_step ? 'text-yellow-600' : 
-                is_current_step ? 'text-indigo-600' : 
-                'text-gray-500'
+                is_current_step ? 'text-purple-500/80' : 
+                'text-theme-secondary'
               }`}>
-                {focus_area}
+                {is_locked ? 'Complete the previous week to unlock' : focus_area}
               </p>
             </div>
           </div>
           <button
             onClick={handleExpand}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            disabled={is_locked}
+            className={`p-1 rounded transition-colors ${
+              is_locked ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'
+            }`}
           >
-            {is_expanded ? (
+            {is_locked ? (
+              <Lock className="w-4 h-4 text-gray-400" />
+            ) : is_expanded ? (
               <ChevronDown className="w-4 h-4 text-gray-600" />
             ) : (
               <ChevronRight className="w-4 h-4 text-gray-600" />
@@ -214,32 +267,38 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
-              is_last_step 
-                ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
-                : is_current_step
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 animate-pulse'
-                  : isCompleted 
-                    ? 'bg-green-500' 
-                    : 'bg-blue-500'
+              is_locked 
+                ? 'bg-gray-400' 
+                : is_last_step 
+                  ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
+                  : is_current_step
+                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 animate-bounce-gentle'
+                    : isCompleted 
+                      ? 'bg-green-500' 
+                      : 'bg-blue-500'
             }`}
-            style={{ width: `${completionPercentage}%` }}
+            style={{ width: is_locked ? '0%' : `${completionPercentage}%` }}
           />
         </div>
 
         {/* Quick stats */}
-        <div className="flex items-center justify-between text-xs text-gray-600">
+        <div className={`flex items-center justify-between text-xs ${is_locked ? 'text-theme-primary' : 'text-gray-600'}`}>
           <div className="flex items-center space-x-1">
             <Clock className="w-3 h-3" />
-            <span>{estimated_hours}h/week</span>
+            <span>{is_locked ? '--' : estimated_hours}h/week</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span>{completed_tasks.length}/{tasks.length} tasks</span>
+            {is_locked ? (
+              <span>Locked</span>
+            ) : (
+              <span>{completedItems}/{totalItems} topics</span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Expanded content */}
-      {is_expanded && (
+      {is_expanded && !is_locked && (
         <div className="p-4 space-y-4">
           {/* Tasks */}
           <div>

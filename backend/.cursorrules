@@ -55,6 +55,8 @@ backend/
            └── textract.py
 ```
 
+
+Always use gpt-3.5 turbo model.
 ### 2. Agent Development Rules
 
 #### Base Agent Class

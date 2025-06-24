@@ -16,7 +16,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   };
 
   return (
-    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-500 ${sizeClasses[size]} ${className}`} />
+    <div className={`animate-spin rounded-full border-2 border-theme-hover border-t-theme-accent transition-colors duration-300 ${sizeClasses[size]} ${className}`} />
   );
 };
 

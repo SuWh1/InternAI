@@ -110,16 +110,27 @@ class AgentService {
         request
       );
       
-      // Cache the response
-      this.gptCache.set(cacheKey, { ...response, cached: false });
+      // Ensure response has the correct structure
+      const formattedResponse: GPTTopicResponse = {
+        success: response.success || false,
+        explanation: typeof response.explanation === 'string' ? response.explanation : 'No explanation available',
+        resources: Array.isArray(response.resources) ? response.resources : [],
+        subtasks: Array.isArray(response.subtasks) ? response.subtasks : [],
+        cached: false
+      };
       
-      return { ...response, cached: false };
+      // Cache the response
+      this.gptCache.set(cacheKey, formattedResponse);
+      
+      return formattedResponse;
     } catch (error) {
       console.error('Error getting topic details:', error);
       // Return a fallback response
       return {
         success: false,
         explanation: 'Unable to load detailed explanation at this time. Please try again later.',
+        resources: [],
+        subtasks: [],
         cached: false
       };
     }
@@ -140,6 +151,100 @@ class AgentService {
       size: this.gptCache.size,
       keys: Array.from(this.gptCache.keys())
     };
+  }
+
+  /**
+   * Generate subtopics for a learning topic (with database storage)
+   */
+  async generateSubtopics(request: {
+    topic: string;
+    context?: string;
+    user_level?: string;
+    force_regenerate?: boolean;
+  }): Promise<{
+    success: boolean;
+    subtopics: string[];
+    cached: boolean;
+    generated_at: string;
+    access_count: string;
+  }> {
+    try {
+      const response = await apiService.post<{
+        success: boolean;
+        subtopics: string[];
+        cached: boolean;
+        generated_at: string;
+        access_count: string;
+      }>('/agents/generate-subtopics', request);
+      
+      return response;
+    } catch (error) {
+      console.error('Error generating subtopics:', error);
+      // Return fallback subtopics
+      return {
+        success: false,
+        subtopics: [
+          `Introduction to ${request.topic}`,
+          `Core Concepts of ${request.topic}`,
+          `Practical Applications of ${request.topic}`,
+          `Best Practices for ${request.topic}`,
+          `Common Challenges in ${request.topic}`,
+          `Advanced ${request.topic} Techniques`
+        ],
+        cached: false,
+        generated_at: new Date().toISOString(),
+        access_count: "0"
+      };
+    }
+  }
+
+  /**
+   * Get user's learning content by type
+   */
+  async getLearningContent(contentType: string): Promise<{
+    success: boolean;
+    content_type: string;
+    content: Array<{
+      id: string;
+      topic: string;
+      context: string;
+      content_data: any;
+      user_level: string;
+      access_count: string;
+      last_accessed: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    total_count: number;
+  }> {
+    try {
+      const response = await apiService.get<{
+        success: boolean;
+        content_type: string;
+        content: Array<{
+          id: string;
+          topic: string;
+          context: string;
+          content_data: any;
+          user_level: string;
+          access_count: string;
+          last_accessed: string;
+          created_at: string;
+          updated_at: string;
+        }>;
+        total_count: number;
+      }>(`/agents/learning-content/${contentType}`);
+      
+      return response;
+    } catch (error) {
+      console.error('Error getting learning content:', error);
+      return {
+        success: false,
+        content_type: contentType,
+        content: [],
+        total_count: 0
+      };
+    }
   }
 
   /**

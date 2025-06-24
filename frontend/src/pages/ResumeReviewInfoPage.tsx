@@ -2,27 +2,27 @@ import { FileText, Zap, Star } from 'lucide-react';
 
 const ResumeReviewInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-slate-50 animate-slide-up-lg">
+    <div className="min-h-screen pt-16 bg-theme-primary animate-slide-up-lg transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <FileText className="h-16 w-16 text-green-500 mx-auto mb-6" />
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             AI Resume Review & Optimization
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-theme-secondary max-w-2xl mx-auto transition-colors duration-300">
             Get instant, professional feedback on your resume with AI-powered analysis and optimization suggestions.
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Why Our Resume Review Stands Out</h2>
+        <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
+          <h2 className="text-2xl font-semibold text-theme-primary mb-6 transition-colors duration-300">Why Our Resume Review Stands Out</h2>
           
           <div className="space-y-6">
             <div className="flex items-start space-x-4">
               <Zap className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Instant Analysis</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-medium text-theme-primary mb-2 transition-colors duration-300">Instant Analysis</h3>
+                <p className="text-theme-secondary transition-colors duration-300">
                   Upload your resume and get comprehensive feedback in seconds, not days. Our AI reviews content, formatting, and ATS compatibility.
                 </p>
               </div>
@@ -31,18 +31,18 @@ const ResumeReviewInfoPage = () => {
             <div className="flex items-start space-x-4">
               <Star className="h-6 w-6 text-purple-500 mt-1 flex-shrink-0" />
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Industry-Specific Insights</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-medium text-theme-primary mb-2 transition-colors duration-300">Industry-Specific Insights</h3>
+                <p className="text-theme-secondary transition-colors duration-300">
                   Get tailored recommendations based on your target industry and role, with insights from thousands of successful applications.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start space-x-4">
-              <FileText className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
+              <FileText className="h-6 w-6 text-theme-accent mt-1 flex-shrink-0" />
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Actionable Improvements</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-medium text-theme-primary mb-2 transition-colors duration-300">Actionable Improvements</h3>
+                <p className="text-theme-secondary transition-colors duration-300">
                   Receive specific, actionable suggestions for keywords, formatting, and content optimization to maximize your interview chances.
                 </p>
               </div>
@@ -51,9 +51,9 @@ const ResumeReviewInfoPage = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">What We Analyze</h3>
-            <ul className="space-y-2 text-gray-600">
+          <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <h3 className="text-lg font-semibold text-theme-primary mb-4 transition-colors duration-300">What We Analyze</h3>
+            <ul className="space-y-2 text-theme-secondary transition-colors duration-300">
               <li>• Content relevance and impact</li>
               <li>• ATS (Applicant Tracking System) compatibility</li>
               <li>• Formatting and visual hierarchy</li>
@@ -62,9 +62,9 @@ const ResumeReviewInfoPage = () => {
             </ul>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">You'll Receive</h3>
-            <ul className="space-y-2 text-gray-600">
+          <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <h3 className="text-lg font-semibold text-theme-primary mb-4 transition-colors duration-300">You'll Receive</h3>
+            <ul className="space-y-2 text-theme-secondary transition-colors duration-300">
               <li>• Detailed score breakdown</li>
               <li>• Specific improvement suggestions</li>
               <li>• Industry benchmark comparisons</li>
@@ -75,7 +75,7 @@ const ResumeReviewInfoPage = () => {
         </div>
 
         <div className="text-center">
-          <div className="bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg p-8">
+          <div className="bg-gradient-to-r from-green-500 to-theme-accent text-white rounded-lg p-8">
             <h3 className="text-2xl font-semibold mb-4">Perfect Your Resume Today</h3>
             <p className="text-green-100 mb-6">
               Join professionals who have improved their interview rate by 3x with our AI-powered resume optimization.

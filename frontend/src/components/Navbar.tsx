@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitBranch, Menu, X, LogOut, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import AuthModal from './auth/AuthModal';
+import ThemeToggle from './ThemeToggle';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,15 +38,15 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-white shadow-sm border-b border-gray-200 fixed top-0 z-50 w-full">
+      <nav className="bg-theme-secondary shadow-sm border-b border-theme fixed top-0 z-50 w-full transition-colors duration-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">  
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2 hover:scale-105 transition-all duration-200">
-                <div className="h-12 w-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: '#C700FF' }}>
                   <GitBranch className="h-8 w-8 text-white" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">InternAI</span>
+                <span className="text-2xl font-bold text-theme-primary transition-colors duration-300">InternAI</span>
               </Link>
             </div>
 
@@ -56,19 +57,19 @@ const Navbar = () => {
                   <>
                     <Link 
                       to="/my-roadmap" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       My Roadmap
                     </Link>
                     <Link 
                       to="/my-resume" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       My Resume
                     </Link>
                     <Link 
                       to="/my-internships" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       My Internships
                     </Link>
@@ -77,19 +78,19 @@ const Navbar = () => {
                   <>
                     <Link 
                       to="/roadmap" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       Roadmap
                     </Link>
                     <Link 
                       to="/resume-review" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       Resume Review
                     </Link>
                     <Link 
                       to="/internships" 
-                      className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 hover:scale-105"
+                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
                     >
                       Internships
                     </Link>
@@ -100,17 +101,20 @@ const Navbar = () => {
 
             {/* Desktop Authentication */}
             <div className="hidden md:flex items-center space-x-4">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+              
               {isAuthenticated ? (
                 <div className="flex items-center space-x-4">
                   {!isOnboardingMode && (
-                    <div className="flex items-center space-x-2 text-gray-700">
+                    <div className="flex items-center space-x-2 text-theme-secondary">
                       <User className="h-4 w-4" />
                       <span className="text-sm font-medium">{user?.name}</span>
                     </div>
                   )}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-all duration-200"
+                    className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
                   >
                     <LogOut className="h-4 w-4" />
                     <span className="text-sm">Logout</span>
@@ -121,13 +125,13 @@ const Navbar = () => {
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={() => openAuthModal('login')}
-                      className="border-2 border-blue-500 text-blue-500 bg-white px-4 py-2 rounded-lg font-medium hover:bg-blue-50 hover:scale-105 transition-all duration-200"
+                      className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover hover:scale-105 transition-all duration-200"
                     >
                       Login
                     </button>
                     <button
                       onClick={() => openAuthModal('register')}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 hover:scale-105 hover:shadow-lg transition-all duration-200"
+                      className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:scale-105 hover:shadow-lg transition-all duration-200"
                     >
                       Sign up
                     </button>
@@ -138,10 +142,11 @@ const Navbar = () => {
 
             {/* Mobile menu button - Hidden during onboarding */}
             {!isOnboardingMode && (
-              <div className="md:hidden">
+              <div className="md:hidden flex items-center space-x-3">
+                <ThemeToggle />
                 <button
                   onClick={() => setIsOpen(!isOpen)}
-                  className="text-gray-700 hover:text-blue-600 transition-all duration-200"
+                  className="text-theme-secondary hover:text-theme-accent transition-all duration-200"
                 >
                   {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </button>
@@ -150,10 +155,11 @@ const Navbar = () => {
 
             {/* Mobile logout button during onboarding */}
             {isOnboardingMode && isAuthenticated && (
-              <div className="md:hidden">
+              <div className="md:hidden flex items-center space-x-3">
+                <ThemeToggle />
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-all duration-200"
+                  className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="text-sm">Logout</span>
@@ -164,7 +170,7 @@ const Navbar = () => {
 
           {/* Mobile Navigation - Hidden during onboarding */}
           {!isOnboardingMode && isOpen && (
-            <div className="md:hidden py-4 border-t border-gray-200">
+            <div className="md:hidden py-4 border-t border-theme bg-theme-secondary transition-colors duration-300">
               <div className="flex flex-col space-y-4">
                 {/* Navigation Links */}
                 <div className="flex flex-col space-y-3">
@@ -173,21 +179,21 @@ const Navbar = () => {
                       <Link 
                         to="/my-roadmap" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         My Roadmap
                       </Link>
                       <Link 
                         to="/my-resume" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         My Resume
                       </Link>
                       <Link 
                         to="/my-internships" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         My Internships
                       </Link>
@@ -197,21 +203,21 @@ const Navbar = () => {
                       <Link 
                         to="/roadmap" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         Roadmap
                       </Link>
                       <Link 
                         to="/resume-review" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         Resume Review
                       </Link>
                       <Link 
                         to="/internships" 
                         onClick={() => setIsOpen(false)}
-                        className="text-gray-700 hover:text-blue-600 font-medium transition-all duration-200 py-2"
+                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
                       >
                         Internships
                       </Link>
@@ -221,8 +227,8 @@ const Navbar = () => {
                 
                 {/* Authentication Section */}
                 {isAuthenticated ? (
-                  <div className="pt-2 border-t border-gray-200">
-                    <div className="flex items-center space-x-2 text-gray-700 mb-3">
+                  <div className="pt-2 border-t border-theme">
+                    <div className="flex items-center space-x-2 text-theme-secondary mb-3">
                       <User className="h-4 w-4" />
                       <span className="text-sm font-medium">{user?.name}</span>
                     </div>
@@ -231,21 +237,21 @@ const Navbar = () => {
                         handleLogout();
                         setIsOpen(false);
                       }}
-                      className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-all duration-200"
+                      className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
                     >
                       <LogOut className="h-4 w-4" />
                       <span className="text-sm">Logout</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="pt-2 border-t border-gray-200">
+                  <div className="pt-2 border-t border-theme">
                     <div className="flex flex-col space-y-3">
                       <button
                         onClick={() => {
                           openAuthModal('login');
                           setIsOpen(false);
                         }}
-                        className="border-2 border-blue-500 text-blue-500 bg-white px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-all duration-200 w-full"
+                        className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover transition-all duration-200 w-full"
                       >
                         Login
                       </button>
@@ -254,7 +260,7 @@ const Navbar = () => {
                           openAuthModal('register');
                           setIsOpen(false);
                         }}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 hover:shadow-lg transition-all duration-200 w-full"
+                        className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:shadow-lg transition-all duration-200 w-full"
                       >
                         Sign up
                       </button>

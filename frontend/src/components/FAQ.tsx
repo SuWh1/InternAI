@@ -36,35 +36,35 @@ const FAQ = () => {
   };
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-20 bg-theme-secondary transition-colors duration-300">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             Frequently Asked Questions
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-theme-secondary transition-colors duration-300">
             Everything you need to know about InternAI
           </p>
         </div>
 
         <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <div key={index} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div key={index} className="bg-theme-primary rounded-xl border border-theme overflow-hidden transition-colors duration-300">
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-4 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-all duration-200"
+                className="w-full px-4 py-4 text-left flex items-center justify-between hover:bg-theme-hover transition-all duration-300"
               >
-                <span className="font-semibold text-gray-900">{faq.question}</span>
+                <span className="font-semibold text-theme-primary transition-colors duration-300">{faq.question}</span>
                 {openIndex === index ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                  <ChevronUp className="h-5 w-5 text-theme-secondary/50 flex-shrink-0 transition-colors duration-300" />
                 ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                  <ChevronDown className="h-5 w-5 text-theme-secondary/50 flex-shrink-0 transition-colors duration-300" />
                 )}
               </button>
               
               {openIndex === index && (
                 <div className="px-6 pb-4">
-                  <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
+                  <p className="text-theme-secondary leading-relaxed transition-colors duration-300">{faq.answer}</p>
                 </div>
               )}
             </div>

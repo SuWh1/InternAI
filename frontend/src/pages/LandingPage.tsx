@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen animate-slide-up-lg">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300 animate-slide-up-lg">
       <HeroSection />
       <HowItWorks />
       <TargetAudience />

@@ -10,14 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@react-oauth/google": "^0.12.2",
     "@tailwindcss/vite": "^4.1.10",
     "axios": "^1.10.0",
     "lucide-react": "^0.515.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.6.2",
     "reactflow": "^11.11.4",
+    "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.1.10",
     "vite": "npm:rolldown-vite@latest",
     "zustand": "^5.0.5"

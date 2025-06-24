@@ -19,4 +19,7 @@ class User(Base):
     onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False)
     
     # Relationship to roadmap
-    roadmap = relationship("Roadmap", back_populates="user", uselist=False) 
+    roadmap = relationship("Roadmap", back_populates="user", uselist=False)
+    
+    # Relationship to learning content
+    learning_content = relationship("LearningContent", back_populates="user") 

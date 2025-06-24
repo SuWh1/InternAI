@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+/* Theme CSS Variables */
+:root {
+  /* Light Theme (Default) */
+  --bg-primary: #FAFAFA;
+  --bg-secondary: #EFEFEF;
+  --text-primary: #121212;
+  --text-secondary: #2B2B2B;
+  --accent: #C700FF;
+  --border: #E0E0E0;
+  --hover: #F5F5F5;
+}
+
+.dark {
+  /* Dark Theme */
+  --bg-primary: #080808;
+  --bg-secondary: #151515;
+  --text-primary: #F0F0F0;
+  --text-secondary: #B0B0B0;
+  --accent: #C700FF;
+  --border: #2A2A2A;
+  --hover: #1F1F1F;
+}
+
+/* Theme-aware utility classes */
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-theme-hover {
+  background-color: var(--hover);
+}
+
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-accent {
+  color: var(--accent);
+}
+
+.border-theme {
+  border-color: var(--border);
+}
+
+.bg-theme-accent {
+  background-color: var(--accent);
+}
+
 /* Slide up animation */
 @keyframes slideUp {
   from {
@@ -45,4 +101,444 @@
 .animate-slide-up-delay-3 {
   animation: slideUp 0.6s ease-out 0.3s forwards;
   opacity: 0;
+}
+
+/* Gentle breathing animation for current step */
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+/* React Flow Controls Theme Support */
+.react-flow__controls-button {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--hover) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  transform: scale(1.05);
+}
+
+.react-flow__controls-button svg {
+  fill: var(--text-primary) !important;
+  stroke: var(--text-primary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.react-flow__controls-button:hover svg {
+  fill: var(--accent) !important;
+  stroke: var(--accent) !important;
+}
+
+/* React Flow Panel (Controls container) */
+.react-flow__panel {
+  background-color: var(--bg-secondary) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Dark theme specific shadows */
+.dark .react-flow__panel {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Lesson page specific styles */
+.lesson-content {
+  line-height: 1.8;
+  font-size: 1.05rem;
+  max-width: none;
+}
+
+.lesson-content h1, .lesson-content h2, .lesson-content h3, .lesson-content h4 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lesson-content h1 {
+  font-size: 1.75rem;
+}
+
+.lesson-content h2 {
+  font-size: 1.5rem;
+}
+
+.lesson-content h3 {
+  font-size: 1.25rem;
+}
+
+.lesson-content h4 {
+  font-size: 1.1rem;
+}
+
+.lesson-content p {
+  margin-bottom: 1.2rem;
+  text-align: justify;
+}
+
+.lesson-content ul, .lesson-content ol {
+  margin-bottom: 1.2rem;
+  padding-left: 1.5rem;
+}
+
+.lesson-content li {
+  margin-bottom: 0.5rem;
+}
+
+.lesson-content code {
+  background: var(--hover);
+  color: var(--text-primary);
+  padding: 0.15rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+  border: 1px solid var(--border);
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+}
+
+.lesson-content pre {
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.lesson-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.lesson-content blockquote {
+  border-left: 4px solid var(--accent);
+  background: var(--hover);
+  padding: 1rem 1rem 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.lesson-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lesson-content em {
+  font-style: italic;
+}
+
+/* Code block syntax highlighting */
+.lesson-content .code-block {
+  position: relative;
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.lesson-content .code-block-header {
+  background: var(--border);
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-content .code-block-content {
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Better readability for long content */
+.lesson-content {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Table styling for structured content */
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.lesson-content th,
+.lesson-content td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-content th {
+  background: var(--hover);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lesson-content tr:last-child td {
+  border-bottom: none;
+}
+
+/* Callout boxes for important information */
+.lesson-content .callout {
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.lesson-content .callout-info {
+  border-left-color: #3b82f6;
+}
+
+.lesson-content .callout-warning {
+  border-left-color: #f59e0b;
+}
+
+.lesson-content .callout-error {
+  border-left-color: #ef4444;
+}
+
+.lesson-content .callout-success {
+  border-left-color: #10b981;
+}
+
+/* Improved animation for lesson elements */
+.animate-slide-up {
+  opacity: 0;
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+/* Progress bar animation */
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width);
+  }
+}
+
+/* Lesson Content Styles */
+.lesson-content-container {
+  animation: slideUp 0.6s ease-out;
+  padding: 0 4px;
+}
+
+.lesson-section {
+  animation: slideUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.lesson-section:nth-child(2) { animation-delay: 0.1s; }
+.lesson-section:nth-child(3) { animation-delay: 0.2s; }
+.lesson-section:nth-child(4) { animation-delay: 0.3s; }
+
+.section-header h2 {
+  position: relative;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+.section-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--theme-accent), transparent);
+  border-radius: 1px;
+}
+
+.text-content p {
+  text-align: justify;
+  hyphens: auto;
+}
+
+.text-content strong {
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent-secondary, var(--theme-accent)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+.text-content code {
+  background: var(--theme-hover);
+  border: 1px solid var(--theme-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.text-content code:hover {
+  background: var(--theme-accent-alpha-10);
+  border-color: var(--theme-accent);
+}
+
+.code-block-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.code-block-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.15), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-header {
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.try-it-yourself {
+  position: relative;
+  overflow: hidden;
+}
+
+.try-it-yourself::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+}
+
+/* Monaco Editor Custom Styles */
+.monaco-editor {
+  font-family: 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
+}
+
+/* List Styling */
+.text-content [class*="flex items-start gap-3"] {
+  position: relative;
+  padding-left: 8px;
+  transition: all 0.2s ease;
+}
+
+.text-content [class*="flex items-start gap-3"]:hover {
+  background: var(--theme-hover);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 0 -8px;
+}
+
+/* Animation for numbered lists */
+.text-content [class*="w-6 h-6 bg-theme-accent"] {
+  transition: all 0.3s ease;
+}
+
+.text-content [class*="flex items-start gap-3"]:hover [class*="w-6 h-6 bg-theme-accent"] {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px var(--theme-accent-alpha-20);
+}
+
+/* Smooth transitions for theme changes */
+.lesson-content-container * {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Enhanced typography */
+.text-content {
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+}
+
+.text-content h1,
+.text-content h2,
+.text-content h3,
+.text-content h4,
+.text-content h5,
+.text-content h6 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+/* Focus indicators for accessibility */
+.code-block-header button:focus,
+.text-content a:focus {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .lesson-content-container {
+    padding: 0 8px;
+  }
+  
+  .code-block-container {
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 0;
+  }
+  
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .text-content {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+}
+
+/* Print styles */
+@media print {
+  .code-block-header,
+  .lesson-content-container button {
+    display: none;
+  }
+  
+  .code-block-container {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .lesson-section {
+    break-inside: avoid;
+    margin-bottom: 24px;
+  }
 }

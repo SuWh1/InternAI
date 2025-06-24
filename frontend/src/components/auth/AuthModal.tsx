@@ -171,22 +171,22 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop with white-blue blur effect */}
+      {/* Backdrop with theme-aware blur effect */}
       <div 
-        className="fixed inset-0 bg-gradient-to-br from-blue-100/90 via-white/80 to-indigo-200/90 backdrop-blur-sm transition-opacity duration-200" 
+        className="fixed inset-0 bg-theme-primary/90 backdrop-blur-sm transition-opacity duration-300" 
         onClick={onClose}
       />
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-6">
         <div 
-          className="relative w-[420px] transform overflow-hidden rounded-xl bg-white shadow-xl border border-gray-200 transition-all duration-200 animate-in zoom-in-95 slide-in-from-bottom-2"
+          className="relative w-[420px] transform overflow-hidden rounded-xl bg-theme-secondary shadow-xl border border-theme transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-2"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all duration-200"
+            className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-theme-secondary hover:bg-theme-hover hover:text-theme-primary transition-all duration-300"
           >
             <X className="h-5 w-5" />
           </button>
@@ -194,8 +194,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
           {/* Header */}
           <div className="px-6 pt-8 pb-4 text-center">
             <div className="flex items-center justify-center mb-4">
-              <GitBranch className="h-10 w-10 text-blue-600 mr-2" />
-              <h1 className="text-2xl font-bold text-gray-900">InternAI</h1>
+              <GitBranch className="h-10 w-10 text-theme-accent mr-2" />
+              <h1 className="text-2xl font-bold text-theme-primary transition-colors duration-300">InternAI</h1>
             </div>
           </div>
 
@@ -239,7 +239,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 bg-theme-primary text-theme-primary"
                       placeholder="Enter your full name"
                       disabled={loading}
                     />
@@ -257,7 +257,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 bg-theme-primary text-theme-primary"
                     placeholder="Enter your email"
                     disabled={loading}
                   />
@@ -287,7 +287,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 transition-all duration-200"
+                        className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent pr-10 transition-all duration-300 bg-theme-primary text-theme-primary"
                         placeholder="Enter your password"
                         disabled={loading}
                       />
@@ -315,7 +315,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 transition-all duration-200"
+                        className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent pr-10 transition-all duration-300 bg-theme-primary text-theme-primary"
                         placeholder="Confirm your password"
                         disabled={loading}
                       />
@@ -334,7 +334,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-500 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mb-4"
+                  className="w-full bg-theme-accent text-white py-2.5 px-4 rounded-lg font-medium hover:opacity-90 focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 mb-4"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center">

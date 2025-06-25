@@ -21,6 +21,7 @@ import type {
   RoadmapNode, 
   GPTTopicResponse 
 } from '../../types/roadmap';
+import { isWeekUnlocked } from '../../utils/weekProgress';
 
 const nodeTypes = {
   week: WeekNode,
@@ -261,10 +262,8 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
       // Find progress for this week
       const weekProgress = progress.find(p => p.week_number === week.week_number);
       
-      // Determine if this week is locked (can't access until previous week is 100% complete)
-      const isLocked = index > 0 && progress.length > 0 ? 
-        progress.find(p => p.week_number === week.week_number - 1)?.completion_percentage !== 100 :
-        false;
+      // Determine if this week is locked using the utility function
+      const isLocked = !isWeekUnlocked(week.week_number, progress);
       
       const weekNode: Node = {
         id: `week-${week.week_number}`,
@@ -357,6 +356,8 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     // Prevent interaction with locked nodes
     if (node.data?.is_locked) {
+      // Show helpful message for locked nodes
+      console.log(`Week ${node.data.week_number} is locked. Complete the previous week to unlock it.`);
       return;
     }
     

@@ -1,10 +1,11 @@
 import { CheckCircle, MapPin, TrendingUp } from 'lucide-react';
+import AnimatedSection from '../components/common/AnimatedSection';
 
 const RoadmapInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary animate-slide-up-lg transition-colors duration-300">
+    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
+        <AnimatedSection className="text-center mb-12">
           <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
           <h1 className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             AI-Powered Career Roadmap
@@ -12,9 +13,9 @@ const RoadmapInfoPage = () => {
           <p className="text-xl text-theme-secondary max-w-2xl mx-auto transition-colors duration-300">
             Get a personalized, step-by-step plan to land your dream internship with AI-guided recommendations.
           </p>
-        </div>
+        </AnimatedSection>
 
-        <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
+        <AnimatedSection delay={2} className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
           <h2 className="text-2xl font-semibold text-theme-primary mb-6 transition-colors duration-300">How Our Roadmap Works</h2>
           
           <div className="space-y-6">
@@ -48,9 +49,9 @@ const RoadmapInfoPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
-        <div className="text-center">
+        <AnimatedSection delay={4} className="text-center">
           <div className="bg-gradient-to-r from-theme-accent to-purple-600 text-white rounded-lg p-8">
             <h3 className="text-2xl font-semibold mb-4">Ready to Start Your Journey?</h3>
             <p className="text-blue-100 mb-6">
@@ -60,7 +61,7 @@ const RoadmapInfoPage = () => {
               Get Started Today
             </button>
           </div>
-        </div>
+        </AnimatedSection>
       </div>
     </div>
   );

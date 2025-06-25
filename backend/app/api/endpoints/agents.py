@@ -712,78 +712,33 @@ Learning {topic} will enhance your development skills and make you more competit
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo-16k",
             messages=[
-                {"role": "system", "content": f"You are an expert technical educator and senior software engineer. Your task is to create a comprehensive lesson about '{topic}' - NOT a template or example structure. Generate actual educational content with real code examples, practical explanations, and specific information about {topic}. Never return placeholder text like '[Description of what to do]' or generic templates."},
+                {"role": "system", "content": f"You are an expert technical educator and senior software engineer. Your task is to create a comprehensive lesson about '{topic}' - NOT a template or example structure. Generate actual educational content with real code examples, practical explanations, and specific information about {topic}. Never return placeholder text like '[Description of what to do]' or generic templates. You must respond with valid JSON only."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=4000,
-            temperature=0.7
+            temperature=0.7,
+            response_format={"type": "json_object"}
         )
         
         content = response.choices[0].message.content
         
-        # Clean and extract JSON from content
-        def extract_json_from_content(text: str) -> str:
-            """Extract JSON from markdown code blocks or raw text."""
-            # Remove markdown code block markers
-            import re
-            
-            # Pattern to match ```json ... ``` blocks
-            json_pattern = r'```(?:json)?\s*\n?(.*?)\n?```'
-            match = re.search(json_pattern, text, re.DOTALL | re.IGNORECASE)
-            
-            if match:
-                return match.group(1).strip()
-            
-            # If no code block, try to find JSON-like content
-            # Look for content between first { and last }
-            start = text.find('{')
-            if start != -1:
-                # Find the matching closing brace
-                brace_count = 0
-                end = start
-                for i, char in enumerate(text[start:], start):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end = i + 1
-                            break
-                
-                if end > start:
-                    return text[start:end]
-            
-            return text
-        
-        # Try to parse JSON response
+        # Parse JSON response (guaranteed to be valid JSON due to response_format)
         try:
             import json
-            
-            # First try to parse as-is
-            try:
-                result = json.loads(content)
-                return result
-            except json.JSONDecodeError:
-                # Extract JSON from markdown or find JSON in text
-                extracted_json = extract_json_from_content(content)
-                
-                try:
-                    result = json.loads(extracted_json)
-                    return result
-                except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse extracted JSON: {extracted_json[:200]}...")
-                    # If still failing, return the content as explanation
-                    return {
-                        "explanation": extracted_json if extracted_json != content else content,
-                        "resources": [],
-                        "subtasks": []
-                    }
-                    
+            result = json.loads(content)
+            return result
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {str(e)}")
+            # This should rarely happen with response_format, but provide fallback
+            return {
+                "explanation": f"Error parsing lesson content for {topic}. Please try again.",
+                "resources": [],
+                "subtasks": []
+            }
         except Exception as e:
             logger.error(f"Error processing AI response: {str(e)}")
-            # Fallback if all parsing fails
             return {
-                "explanation": content,
+                "explanation": f"Error generating lesson for {topic}. Please try again.",
                 "resources": [],
                 "subtasks": []
             }
@@ -998,12 +953,13 @@ async def generate_subtopics_ai(topic: str, context: str, user_level: str) -> Di
                 {"role": "user", "content": prompt}
             ],
             max_tokens=300,
-            temperature=0.7
+            temperature=0.7,
+            response_format={"type": "json_object"}
         )
         
         content = response.choices[0].message.content
         
-        # Try to parse JSON response
+        # Parse JSON response (guaranteed to be valid JSON due to response_format)
         try:
             import json
             result = json.loads(content)
@@ -1012,25 +968,31 @@ async def generate_subtopics_ai(topic: str, context: str, user_level: str) -> Di
             if "subtopics" in result and isinstance(result["subtopics"], list):
                 return result
             else:
-                raise ValueError("Invalid response format")
+                logger.warning("AI response missing subtopics array, using fallback")
+                return {
+                    "subtopics": [
+                        f"Introduction to {topic}",
+                        f"Core Concepts of {topic}",
+                        f"Practical Applications of {topic}",
+                        f"Best Practices for {topic}",
+                        f"Common Challenges in {topic}",
+                        f"Advanced {topic} Techniques"
+                    ]
+                }
                 
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse AI response as JSON: {str(e)}")
-            # Fallback: try to extract subtopics from text
-            lines = content.split('\n')
-            subtopics = []
-            for line in lines:
-                line = line.strip()
-                if line and not line.startswith('{') and not line.startswith('}'):
-                    # Clean up the line (remove quotes, numbers, bullets)
-                    cleaned = line.strip('"\'').strip('123456789.- ')
-                    if cleaned and len(cleaned) > 5:
-                        subtopics.append(cleaned)
-            
-            if subtopics:
-                return {"subtopics": subtopics[:6]}  # Limit to 6
-            else:
-                raise ValueError("Could not extract subtopics from AI response")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {str(e)}")
+            # This should rarely happen with response_format, but provide fallback
+            return {
+                "subtopics": [
+                    f"Introduction to {topic}",
+                    f"Core Concepts of {topic}",
+                    f"Practical Applications of {topic}",
+                    f"Best Practices for {topic}",
+                    f"Common Challenges in {topic}",
+                    f"Advanced {topic} Techniques"
+                ]
+            }
             
     except Exception as e:
         logger.error(f"Error calling OpenAI API for subtopics: {str(e)}")

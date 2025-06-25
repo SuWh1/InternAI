@@ -238,12 +238,12 @@ interface TextContentProps {
 
 const TextContent: React.FC<TextContentProps> = ({ content }) => {
   const renderFormattedText = (text: string) => {
-    // Handle different text patterns
-    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|^- .+$|^\d+\. .+$)/gm);
+    // Handle different text patterns - improved regex without conflicting anchors
+    const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*|`[^`]+?`)/g);
     
     return parts.map((part, index) => {
       // Bold text
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
         return (
           <strong key={index} className="font-semibold text-theme-primary">
             {part.slice(2, -2)}
@@ -252,7 +252,7 @@ const TextContent: React.FC<TextContentProps> = ({ content }) => {
       }
       
       // Italic text
-      if (part.startsWith('*') && part.endsWith('*') && !part.includes('**')) {
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2 && !part.includes('**')) {
         return (
           <em key={index} className="italic text-theme-secondary">
             {part.slice(1, -1)}
@@ -261,7 +261,7 @@ const TextContent: React.FC<TextContentProps> = ({ content }) => {
       }
       
       // Inline code
-      if (part.startsWith('`') && part.endsWith('`')) {
+      if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
         return (
           <code key={index} className="px-2 py-1 bg-theme-hover text-theme-accent rounded font-mono text-sm border border-theme">
             {part.slice(1, -1)}
@@ -269,13 +269,58 @@ const TextContent: React.FC<TextContentProps> = ({ content }) => {
         );
       }
       
-      // List items
+      // Check for list items in regular text parts
+      const lines = part.split('\n');
+      if (lines.length > 1) {
+        return (
+          <span key={index}>
+            {lines.map((line, lineIndex) => {
+              // List items
+              if (line.match(/^- .+$/)) {
+                return (
+                  <div key={lineIndex} className="flex items-start gap-3 my-2">
+                    <div className="w-2 h-2 bg-theme-accent rounded-full mt-2 flex-shrink-0"></div>
+                    <span className="text-theme-secondary leading-relaxed">
+                      {renderFormattedText(line.slice(2))}
+                    </span>
+                  </div>
+                );
+              }
+              
+              // Numbered lists
+              if (line.match(/^\d+\. .+$/)) {
+                const number = line.match(/^(\d+)\. (.+)$/);
+                return (
+                  <div key={lineIndex} className="flex items-start gap-3 my-2">
+                    <div className="w-6 h-6 bg-theme-accent text-white rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0">
+                      {number?.[1]}
+                    </div>
+                    <span className="text-theme-secondary leading-relaxed">
+                      {renderFormattedText(number?.[2] || '')}
+                    </span>
+                  </div>
+                );
+              }
+              
+              // Regular text line
+              return (
+                <span key={lineIndex} className="text-theme-secondary leading-relaxed">
+                  {line}
+                  {lineIndex < lines.length - 1 && <br />}
+                </span>
+              );
+            })}
+          </span>
+        );
+      }
+      
+      // Single line - check for list items
       if (part.match(/^- .+$/)) {
         return (
           <div key={index} className="flex items-start gap-3 my-2">
             <div className="w-2 h-2 bg-theme-accent rounded-full mt-2 flex-shrink-0"></div>
             <span className="text-theme-secondary leading-relaxed">
-              {part.slice(2)}
+              {renderFormattedText(part.slice(2))}
             </span>
           </div>
         );
@@ -290,7 +335,7 @@ const TextContent: React.FC<TextContentProps> = ({ content }) => {
               {number?.[1]}
             </div>
             <span className="text-theme-secondary leading-relaxed">
-              {number?.[2]}
+              {renderFormattedText(number?.[2] || '')}
             </span>
           </div>
         );

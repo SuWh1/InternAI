@@ -243,7 +243,8 @@ class RoadmapAgent(BaseAgent):
                     }
                 ],
                 max_tokens=3000,  # Increased for full roadmap
-                temperature=0.7
+                temperature=0.7,
+                response_format={"type": "json_object"}
             )
             
             self.log_info("Received OpenAI response")
@@ -251,13 +252,14 @@ class RoadmapAgent(BaseAgent):
             self.log_info(f"Response content length: {len(content)} chars")
             self.log_info(f"Response preview: {content[:200]}...")
             
-            # Parse JSON response
+            # Parse JSON response (guaranteed to be valid JSON due to response_format)
             try:
                 roadmap_data = json.loads(content)
                 self.log_info("Successfully parsed JSON roadmap")
                 
                 # Validate structure
                 if "weeks" not in roadmap_data:
+                    self.log_error("Invalid roadmap structure: missing 'weeks' key")
                     raise Exception("Invalid roadmap structure: missing 'weeks' key")
                 
                 weeks_count = len(roadmap_data["weeks"])
@@ -268,8 +270,8 @@ class RoadmapAgent(BaseAgent):
             except json.JSONDecodeError as e:
                 self.log_error(f"JSON parsing error: {str(e)}")
                 self.log_error(f"Raw content: {content}")
-                # Try to extract JSON from response
-                return self._extract_json_from_response(content)
+                # This should rarely happen with response_format, but provide fallback
+                raise Exception(f"Failed to parse AI response as JSON: {str(e)}")
                 
         except Exception as e:
             self.log_error(f"OpenAI API error: {str(e)}")

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ArrowRight, Target } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from './auth/AuthModal';
+import AnimatedSection from './common/AnimatedSection';
 
 const HeroSection = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -19,50 +21,194 @@ const HeroSection = () => {
     }
   };
 
+  // Floating animation for the preview card
+  const floatAnimation = {
+    y: [0, -10, 0],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut" as const
+    }
+  };
+
   return (
     <>
-      <section className="relative min-h-screen flex items-center bg-theme-primary pt-16 transition-colors duration-300">
+      <section className="relative min-h-screen flex items-center bg-theme-primary pt-16 transition-colors duration-300 overflow-hidden">
+        {/* Animated background gradient */}
+        <motion.div
+          className="absolute inset-0 opacity-30"
+          animate={{
+            background: [
+              "radial-gradient(circle at 20% 80%, #C700FF 0%, transparent 50%)",
+              "radial-gradient(circle at 80% 20%, #C700FF 0%, transparent 50%)",
+              "radial-gradient(circle at 20% 80%, #C700FF 0%, transparent 50%)",
+            ],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        />
+
         <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            {/* Main heading */}
-            <h1 className="text-4xl md:text-6xl font-bold text-theme-primary mb-6 transition-colors duration-300">
-              Want to Land Your Dream{' '}
-              <span className="text-theme-accent">
-                Internship
-              </span>
-              ?
-            </h1>
+            {/* Main heading with stagger animation */}
+            <AnimatedSection animation="fade-in-up" delay={0}>
+              <h1 className="text-4xl md:text-6xl font-bold text-theme-primary mb-6 transition-colors duration-300">
+                <motion.span
+                  className="text-shine"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  Want to Land Your Dream{' '}
+                </motion.span>
+                <motion.span 
+                  className="inline-block"
+                  initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  transition={{ 
+                    duration: 0.6, 
+                    delay: 0.4,
+                    type: "spring",
+                    stiffness: 200
+                  }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    rotate: 2,
+                    transition: { type: "spring", stiffness: 300 }
+                  }}
+                >
+                  <span className="text-gradient-animate">Internship</span>
+                </motion.span>
+                <motion.span
+                  className="text-shine"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                >
+                  ?
+                </motion.span>
+              </h1>
+            </AnimatedSection>
             
-            <p className="text-lg md:text-xl text-theme-secondary mb-8 max-w-3xl mx-auto transition-colors duration-300">
-              Stop wondering what to learn next. Get a personalized, AI-generated roadmap 
-              that turns your internship dreams into achievable weekly goals.
-            </p>
-
-            {/* CTA Button */}
-            <div className="flex flex-col sm:flex-row justify-center items-center mb-16 mt-10">
-              <button
-                onClick={handleGetRoadmap}
-                className="bg-theme-accent text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 hover:scale-105 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
-              >
-                Get Your Free Roadmap
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-all duration-200" />
-              </button>
-
-              <p className="text-sm text-theme-primary mt-3 sm:mt-0 sm:ml-4 transition-colors duration-300">
-                📊 Join 2,000+ students already using InternAI
+            <AnimatedSection animation="fade-in-up" delay={2}>
+              <p className="text-lg md:text-xl text-theme-secondary mb-8 max-w-3xl mx-auto transition-colors duration-300">
+                Stop wondering what to learn next. Get a personalized, AI-generated roadmap 
+                that turns your internship dreams into achievable weekly goals.
               </p>
-            </div>
+            </AnimatedSection>
 
-            {/* Roadmap Preview */}
-            <div className="bg-theme-secondary rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto hover:shadow-3xl hover:scale-[1.02] transition-all duration-200 cursor-pointer border border-theme">
-              <div className="bg-gradient-to-br from-theme-accent/20 to-theme-accent/10 rounded-xl h-64 sm:h-80 flex items-center justify-center">
-                <div className="text-center">
-                  <Target className="h-16 w-16 text-theme-accent mx-auto mb-4" />
-                  <p className="text-theme-accent font-medium">Interactive Roadmap Preview</p>
-                  <p className="text-sm text-theme-secondary mt-2 transition-colors duration-300">Personalized learning path visualization</p>
-                </div>
+            {/* CTA Button with bounce animation */}
+            <AnimatedSection animation="bounce" delay={3}>
+              <div className="flex flex-col sm:flex-row justify-center items-center mb-16 mt-10">
+                <motion.button
+                  onClick={handleGetRoadmap}
+                  className="bg-theme-accent text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center group button glow-hover relative overflow-hidden"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  animate={{
+                    boxShadow: [
+                      "0 0 0 0 rgba(199, 0, 255, 0.7)",
+                      "0 0 0 10px rgba(199, 0, 255, 0)",
+                      "0 0 0 0 rgba(199, 0, 255, 0)",
+                    ],
+                  }}
+                  transition={{
+                    boxShadow: {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    },
+                  }}
+                >
+                  <span className="relative z-10">Get Your Free Roadmap</span>
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-all duration-200 relative z-10" />
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </motion.button>
+
+                <motion.p 
+                  className="text-sm text-theme-primary mt-3 sm:mt-0 sm:ml-4 transition-colors duration-300"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                >
+                  📊 Join 2,000+ students already using InternAI
+                </motion.p>
               </div>
-            </div>
+            </AnimatedSection>
+
+            {/* Roadmap Preview with floating animation */}
+            <AnimatedSection animation="scale" delay={4}>
+              <motion.div 
+                className="rounded-2xl shadow-2xl max-w-4xl mx-auto transition-all duration-200 cursor-pointer border border-theme card-hover relative overflow-hidden group h-64 sm:h-80"
+                animate={floatAnimation}
+                whileHover={{ scale: 1.02 }}
+              >
+                {/* Shimmer effect on hover */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent z-20"
+                  initial={{ x: "-100%" }}
+                  whileHover={{ x: "100%" }}
+                  transition={{ duration: 0.8 }}
+                />
+                
+                <motion.img
+                  src="/homeRoadmap.png"
+                  alt="Interactive Roadmap Preview"
+                  className="w-full h-full object-cover rounded-2xl"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.6, duration: 0.8, ease: "easeOut" }}
+                  whileHover={{ scale: 1.05 }}
+                />
+                
+                {/* Overlay gradient for better text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-2xl z-10" />
+                
+                {/* Bottom overlay text */}
+                <motion.div 
+                  className="absolute bottom-6 left-6 right-6 text-center z-10"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 1, duration: 0.5 }}
+                >
+                  <p className="text-white font-semibold text-lg drop-shadow-lg">Interactive Roadmap Preview</p>
+                  <p className="text-white/90 text-sm mt-1 drop-shadow-md">Personalized learning path visualization</p>
+                </motion.div>
+                
+                {/* Animated particles */}
+                {[...Array(5)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 bg-white/70 rounded-full z-10"
+                    initial={{ opacity: 0 }}
+                    animate={{
+                      opacity: [0, 1, 0],
+                      scale: [0, 1.5, 0],
+                      x: [0, (i - 2) * 50],
+                      y: [0, -100],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      delay: i * 0.4,
+                      ease: "easeOut",
+                    }}
+                    style={{
+                      left: "50%",
+                      bottom: "20%",
+                    }}
+                  />
+                ))}
+              </motion.div>
+            </AnimatedSection>
           </div>
         </div>
       </section>

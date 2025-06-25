@@ -1,10 +1,11 @@
 import { FileText, Zap, Star } from 'lucide-react';
+import AnimatedSection from '../components/common/AnimatedSection';
 
 const ResumeReviewInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary animate-slide-up-lg transition-colors duration-300">
+    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
+        <AnimatedSection className="text-center mb-12">
           <FileText className="h-16 w-16 text-green-500 mx-auto mb-6" />
           <h1 className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             AI Resume Review & Optimization
@@ -12,9 +13,9 @@ const ResumeReviewInfoPage = () => {
           <p className="text-xl text-theme-secondary max-w-2xl mx-auto transition-colors duration-300">
             Get instant, professional feedback on your resume with AI-powered analysis and optimization suggestions.
           </p>
-        </div>
+        </AnimatedSection>
 
-        <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
+        <AnimatedSection delay={2} className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
           <h2 className="text-2xl font-semibold text-theme-primary mb-6 transition-colors duration-300">Why Our Resume Review Stands Out</h2>
           
           <div className="space-y-6">
@@ -48,9 +49,9 @@ const ResumeReviewInfoPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <AnimatedSection delay={4} className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
             <h3 className="text-lg font-semibold text-theme-primary mb-4 transition-colors duration-300">What We Analyze</h3>
             <ul className="space-y-2 text-theme-secondary transition-colors duration-300">
@@ -72,9 +73,9 @@ const ResumeReviewInfoPage = () => {
               <li>• Follow-up optimization tips</li>
             </ul>
           </div>
-        </div>
+        </AnimatedSection>
 
-        <div className="text-center">
+        <AnimatedSection delay={6} className="text-center">
           <div className="bg-gradient-to-r from-green-500 to-theme-accent text-white rounded-lg p-8">
             <h3 className="text-2xl font-semibold mb-4">Perfect Your Resume Today</h3>
             <p className="text-green-100 mb-6">
@@ -84,7 +85,7 @@ const ResumeReviewInfoPage = () => {
               Upload Resume Now
             </button>
           </div>
-        </div>
+        </AnimatedSection>
       </div>
     </div>
   );

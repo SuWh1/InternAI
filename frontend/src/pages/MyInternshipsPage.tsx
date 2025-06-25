@@ -1,10 +1,11 @@
 import { Briefcase, Heart, TrendingUp } from 'lucide-react';
+import AnimatedSection from '../components/common/AnimatedSection';
 
 const MyInternshipsPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary animate-slide-up-lg transition-colors duration-300">
+    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12">
+        <AnimatedSection className="text-center mb-12">
           <Briefcase className="h-16 w-16 text-purple-500 mx-auto mb-6" />
           <h1 className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             My Internships
@@ -12,7 +13,7 @@ const MyInternshipsPage = () => {
           <p className="text-xl text-theme-secondary transition-colors duration-300">
             Track applications, manage opportunities, and discover new matches
           </p>
-        </div>
+        </AnimatedSection>
 
         <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-12 transition-colors duration-300">
           <div className="text-center">

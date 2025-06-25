@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GitBranch, Menu, X, LogOut, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import AuthModal from './auth/AuthModal';
 import ThemeToggle from './ThemeToggle';
@@ -36,242 +37,411 @@ const Navbar = () => {
   // Check if user is currently in onboarding
   const isOnboardingMode = location.pathname === '/onboarding';
 
+  // Animation variants
+  const navVariants = {
+    hidden: { y: -100, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: {
+        type: 'spring' as const,
+        damping: 20,
+        stiffness: 300,
+        staggerChildren: 0.1,
+      }
+    }
+  };
+
+  const linkVariants = {
+    hidden: { y: -20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: {
+        type: 'spring' as const,
+        damping: 15,
+        stiffness: 300,
+      }
+    }
+  };
+
+  const mobileMenuVariants = {
+    hidden: { 
+      height: 0,
+      opacity: 0,
+      transition: {
+        height: { duration: 0.3 },
+        opacity: { duration: 0.2 }
+      }
+    },
+    visible: { 
+      height: 'auto',
+      opacity: 1,
+      transition: {
+        height: { duration: 0.3 },
+        opacity: { duration: 0.2, delay: 0.1 },
+        staggerChildren: 0.05,
+        delayChildren: 0.15
+      }
+    }
+  };
+
+  const mobileItemVariants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { 
+      x: 0, 
+      opacity: 1,
+      transition: {
+        type: 'spring' as const,
+        damping: 20,
+        stiffness: 300,
+      }
+    }
+  };
+
   return (
     <>
-      <nav className="bg-theme-secondary shadow-sm border-b border-theme fixed top-0 z-50 w-full transition-colors duration-300">
+      <motion.nav 
+        className="bg-theme-secondary shadow-sm border-b border-theme fixed top-0 z-50 w-full transition-colors duration-300"
+        initial="hidden"
+        animate="visible"
+        variants={navVariants}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">  
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link to="/" className="flex items-center space-x-2 hover:scale-105 transition-all duration-200">
-                <div className="h-12 w-12 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: '#C700FF' }}>
-                  <GitBranch className="h-8 w-8 text-white" />
-                </div>
-                <span className="text-2xl font-bold text-theme-primary transition-colors duration-300">InternAI</span>
-              </Link>
-            </div>
-
-            {/* Desktop Navigation - Hidden during onboarding */}
-            {!isOnboardingMode && (
-              <div className="hidden md:flex items-center space-x-6">
-                {isAuthenticated ? (
-                  <>
-                    <Link 
-                      to="/my-roadmap" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      My Roadmap
-                    </Link>
-                    <Link 
-                      to="/my-resume" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      My Resume
-                    </Link>
-                    <Link 
-                      to="/my-internships" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      My Internships
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link 
-                      to="/roadmap" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      Roadmap
-                    </Link>
-                    <Link 
-                      to="/resume-review" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      Resume Review
-                    </Link>
-                    <Link 
-                      to="/internships" 
-                      className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 hover:scale-105"
-                    >
-                      Internships
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Desktop Authentication */}
-            <div className="hidden md:flex items-center space-x-4">
-              {/* Theme Toggle */}
-              <ThemeToggle />
-              
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  {!isOnboardingMode && (
-                    <div className="flex items-center space-x-2 text-theme-secondary">
-                      <User className="h-4 w-4" />
-                      <span className="text-sm font-medium">{user?.name}</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
+            <motion.div 
+              className="flex items-center justify-between w-full relative"
+              variants={navVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div 
+                className="flex items-center"
+                variants={linkVariants}
+              >
+                <Link to="/" className="flex items-center space-x-2 group">
+                  <motion.div 
+                    className="h-12 w-12 rounded-lg flex items-center justify-center shadow-lg relative overflow-hidden" 
+                    style={{ backgroundColor: '#C700FF' }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={{ 
+                      scale: [1, 1.08, 1],
+                    }}
+                    transition={{ 
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
                   >
-                    <LogOut className="h-4 w-4" />
-                    <span className="text-sm">Logout</span>
-                  </button>
-                </div>
-              ) : (
-                !isOnboardingMode && (
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => openAuthModal('login')}
-                      className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover hover:scale-105 transition-all duration-200"
-                    >
-                      Login
-                    </button>
-                    <button
-                      onClick={() => openAuthModal('register')}
-                      className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:scale-105 hover:shadow-lg transition-all duration-200"
-                    >
-                      Sign up
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
+                    <GitBranch className="h-8 w-8 text-white relative z-10" />
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"
+                      animate={{
+                        x: ["-200%", "200%"],
+                      }}
+                      transition={{
+                        duration: 6,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        repeatDelay: 2,
+                      }}
+                      style={{ opacity: 0.15 }}
+                    />
+                  </motion.div>
+                  <motion.span 
+                    className="text-2xl font-bold text-theme-primary transition-colors duration-300"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                  >
+                    InternAI
+                  </motion.span>
+                </Link>
+              </motion.div>
 
-            {/* Mobile menu button - Hidden during onboarding */}
-            {!isOnboardingMode && (
-              <div className="md:hidden flex items-center space-x-3">
-                <ThemeToggle />
-                <button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="text-theme-secondary hover:text-theme-accent transition-all duration-200"
+              {/* Desktop Navigation - Hidden during onboarding - Centered */}
+              {!isOnboardingMode && (
+                <motion.div 
+                  className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2"
+                  variants={linkVariants}
                 >
-                  {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
-              </div>
-            )}
-
-            {/* Mobile logout button during onboarding */}
-            {isOnboardingMode && isAuthenticated && (
-              <div className="md:hidden flex items-center space-x-3">
-                <ThemeToggle />
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-sm">Logout</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Navigation - Hidden during onboarding */}
-          {!isOnboardingMode && isOpen && (
-            <div className="md:hidden py-4 border-t border-theme bg-theme-secondary transition-colors duration-300">
-              <div className="flex flex-col space-y-4">
-                {/* Navigation Links */}
-                <div className="flex flex-col space-y-3">
                   {isAuthenticated ? (
                     <>
-                      <Link 
-                        to="/my-roadmap" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        My Roadmap
-                      </Link>
-                      <Link 
-                        to="/my-resume" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        My Resume
-                      </Link>
-                      <Link 
-                        to="/my-internships" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        My Internships
-                      </Link>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/my-roadmap" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          My Roadmap
+                        </Link>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/my-resume" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          My Resume
+                        </Link>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/my-internships" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          My Internships
+                        </Link>
+                      </motion.div>
                     </>
                   ) : (
                     <>
-                      <Link 
-                        to="/roadmap" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        Roadmap
-                      </Link>
-                      <Link 
-                        to="/resume-review" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        Resume Review
-                      </Link>
-                      <Link 
-                        to="/internships" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2"
-                      >
-                        Internships
-                      </Link>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/roadmap" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          Roadmap
+                        </Link>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/resume-review" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          Resume Review
+                        </Link>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Link 
+                          to="/internships" 
+                          className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                        >
+                          Internships
+                        </Link>
+                      </motion.div>
                     </>
                   )}
-                </div>
-                
-                {/* Authentication Section */}
+                </motion.div>
+              )}
+
+              {/* Desktop Authentication */}
+              <motion.div 
+                className="hidden md:flex items-center space-x-4"
+                variants={linkVariants}
+              >
                 {isAuthenticated ? (
-                  <div className="pt-2 border-t border-theme">
-                    <div className="flex items-center space-x-2 text-theme-secondary mb-3">
-                      <User className="h-4 w-4" />
-                      <span className="text-sm font-medium">{user?.name}</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsOpen(false);
-                      }}
+                  <div className="flex items-center space-x-4">
+                    <ThemeToggle />
+                    {!isOnboardingMode && (
+                      <motion.div 
+                        className="flex items-center space-x-2 text-theme-secondary"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        <User className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm font-medium">{user?.name}</span>
+                      </motion.div>
+                    )}
+                    <motion.button
+                      onClick={handleLogout}
                       className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       <LogOut className="h-4 w-4" />
                       <span className="text-sm">Logout</span>
-                    </button>
+                    </motion.button>
                   </div>
                 ) : (
-                  <div className="pt-2 border-t border-theme">
-                    <div className="flex flex-col space-y-3">
-                      <button
-                        onClick={() => {
-                          openAuthModal('login');
-                          setIsOpen(false);
-                        }}
-                        className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover transition-all duration-200 w-full"
+                  !isOnboardingMode && (
+                    <div className="flex items-center space-x-3">
+                      <ThemeToggle />
+                      <motion.button
+                        onClick={() => openAuthModal('login')}
+                        className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover transition-all duration-200 button"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                       >
                         Login
-                      </button>
-                      <button
-                        onClick={() => {
-                          openAuthModal('register');
-                          setIsOpen(false);
-                        }}
-                        className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:shadow-lg transition-all duration-200 w-full"
+                      </motion.button>
+                      <motion.button
+                        onClick={() => openAuthModal('register')}
+                        className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:shadow-lg transition-all duration-200 button glow-hover"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
                       >
                         Sign up
-                      </button>
+                      </motion.button>
                     </div>
-                  </div>
+                  )
                 )}
-              </div>
-            </div>
-          )}
+              </motion.div>
+
+              {/* Mobile menu button - Hidden during onboarding */}
+              {!isOnboardingMode && (
+                <div className="md:hidden flex items-center space-x-3">
+                  <motion.button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="text-theme-secondary hover:text-theme-accent transition-all duration-200"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    animate={{ rotate: isOpen ? 90 : 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  >
+                    {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                  </motion.button>
+                  {/* Theme Toggle for mobile */}
+                  <ThemeToggle />
+                </div>
+              )}
+
+              {/* Mobile logout button during onboarding */}
+              {isOnboardingMode && isAuthenticated && (
+                <div className="md:hidden flex items-center space-x-3">
+                  <motion.button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="text-sm">Logout</span>
+                  </motion.button>
+                  {/* Theme Toggle for mobile */}
+                  <ThemeToggle />
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Mobile Navigation - Hidden during onboarding */}
+          <AnimatePresence>
+            {!isOnboardingMode && isOpen && (
+              <motion.div 
+                className="md:hidden py-4 border-t border-theme bg-theme-secondary transition-colors duration-300 overflow-hidden"
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                variants={mobileMenuVariants}
+              >
+                <div className="flex flex-col space-y-4">
+                  {/* Navigation Links */}
+                  <div className="flex flex-col space-y-3">
+                    {isAuthenticated ? (
+                      <>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/my-roadmap" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            My Roadmap
+                          </Link>
+                        </motion.div>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/my-resume" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            My Resume
+                          </Link>
+                        </motion.div>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/my-internships" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            My Internships
+                          </Link>
+                        </motion.div>
+                      </>
+                    ) : (
+                      <>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/roadmap" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            Roadmap
+                          </Link>
+                        </motion.div>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/resume-review" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            Resume Review
+                          </Link>
+                        </motion.div>
+                        <motion.div variants={mobileItemVariants}>
+                          <Link 
+                            to="/internships" 
+                            onClick={() => setIsOpen(false)}
+                            className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                          >
+                            Internships
+                          </Link>
+                        </motion.div>
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Authentication Section */}
+                  {isAuthenticated ? (
+                    <motion.div 
+                      className="pt-2 border-t border-theme"
+                      variants={mobileItemVariants}
+                    >
+                      <div className="flex items-center space-x-2 text-theme-secondary mb-3">
+                        <User className="h-4 w-4" />
+                        <span className="text-sm font-medium">{user?.name}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsOpen(false);
+                        }}
+                        className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span className="text-sm">Logout</span>
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      className="pt-2 border-t border-theme"
+                      variants={mobileItemVariants}
+                    >
+                      <div className="flex flex-col space-y-3">
+                        <button
+                          onClick={() => {
+                            openAuthModal('login');
+                            setIsOpen(false);
+                          }}
+                          className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover transition-all duration-200 w-full"
+                        >
+                          Login
+                        </button>
+                        <button
+                          onClick={() => {
+                            openAuthModal('register');
+                            setIsOpen(false);
+                          }}
+                          className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:shadow-lg transition-all duration-200 w-full"
+                        >
+                          Sign up
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Auth Modal - Hidden during onboarding */}
       {!isOnboardingMode && (

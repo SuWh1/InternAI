@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
   ChevronDown, 
@@ -118,65 +119,181 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
     onGetDetails?.(theme, `Week ${week_number} focus area: ${focus_area}`, is_locked);
   };
 
-  // Calculate elevation effect based on step index
-  const elevationClass = `shadow-${Math.min(step_index + 1, 3) * 2}xl`;
-  const transformStyle = {
-    transform: `translateY(-${step_index * 2}px) rotate(${step_index * 0.5}deg)`,
-    transition: 'all 0.3s ease-in-out'
+  // Animation variants
+  const nodeVariants = {
+    initial: {
+      scale: 0.8,
+      opacity: 0,
+      y: 20
+    },
+    animate: {
+      scale: 1,
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        delay: step_index * 0.1,
+        type: "spring" as const,
+        stiffness: 300,
+        damping: 25
+      }
+    },
+    hover: {
+      scale: is_locked ? 1 : 1.05,
+      transition: {
+        duration: 0.2,
+        type: "spring" as const,
+        stiffness: 400,
+        damping: 25
+      }
+    }
+  };
+
+  const expandedContentVariants = {
+    hidden: {
+      opacity: 0,
+      height: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut" as const
+      }
+    },
+    visible: {
+      opacity: 1,
+      height: "auto",
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut" as const,
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: {
+        type: "spring" as const,
+        stiffness: 300,
+        damping: 25
+      }
+    }
   };
 
   return (
-    <div 
-      className={`
-        bg-theme-secondary rounded-lg border-2 transition-all duration-300 
-        ${is_locked 
-          ? 'border-theme opacity-50 cursor-not-allowed' 
-          : 'hover:shadow-2xl hover:scale-105'
-        }
-        ${!is_locked && is_current_step 
-          ? 'border-purple-500 bg-purple-500/10 shadow-2xl animate-bounce-gentle' 
-          : !is_locked && isCompleted 
-            ? 'border-green-400 bg-green-50/20' 
-            : !is_locked
-              ? 'border-theme'
-              : ''
-        }
-        ${is_expanded ? 'min-w-80' : 'w-64'}
-        ${!is_locked && is_last_step ? 'shadow-2xl ring-4 ring-yellow-300 ring-opacity-50' : !is_locked ? elevationClass : ''}
-        relative overflow-hidden
-      `}
-      style={is_locked ? { ...transformStyle, filter: 'grayscale(40%)' } : transformStyle}
-    >
+    <div className={`relative ${is_last_step && !is_locked ? 'pt-6' : ''}`}>
+      {/* Crown container positioned above the node */}
+      {is_last_step && !is_locked && (
+        <motion.div 
+          className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-20"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ 
+            y: 0, 
+            opacity: 1,
+            rotate: [0, -5, 5, -5, 0]
+          }}
+          transition={{
+            y: { duration: 0.5 },
+            opacity: { duration: 0.5 },
+            rotate: {
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }
+          }}
+        >
+          <Crown className="w-8 h-8 text-yellow-500" />
+        </motion.div>
+      )}
+      
+      <motion.div 
+        className={`
+          bg-theme-secondary rounded-lg border-2 transition-all duration-300 
+          ${is_locked 
+            ? 'border-theme opacity-50 cursor-not-allowed' 
+            : 'shadow-lg'
+          }
+          ${!is_locked && is_current_step 
+            ? 'border-purple-500 bg-purple-500/10 shadow-2xl' 
+            : !is_locked && isCompleted 
+              ? 'border-green-400 bg-green-50/20' 
+              : !is_locked
+                ? 'border-theme'
+                : ''
+          }
+          ${is_expanded ? 'min-w-80' : 'w-64'}
+          ${!is_locked && is_last_step ? 'shadow-2xl ring-4 ring-yellow-300 ring-opacity-50' : ''}
+          relative overflow-hidden
+        `}
+        variants={nodeVariants}
+        initial="initial"
+        animate="animate"
+        whileHover="hover"
+      >
       {/* Lock overlay for locked nodes */}
       {is_locked && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] rounded-lg flex items-center justify-center z-20">
-          <div className="bg-theme-secondary/90 rounded-full p-3 shadow-lg border border-theme">
+        <motion.div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-[1px] rounded-lg flex items-center justify-center z-20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div 
+            className="bg-theme-secondary/90 rounded-full p-3 shadow-lg border border-theme"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
             <Lock className="w-6 h-6 text-theme-primary" />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
-      {/* Crown and celebration effects for final step */}
+      {/* Sparkles and background effects for final step */}
       {is_last_step && !is_locked && (
         <>
-          <div className="absolute -top-3 -right-3 z-10">
-            <Crown className="w-8 h-8 text-yellow-500 animate-bounce" />
-          </div>
-          <div className="absolute -top-2 -left-2 z-10">
-            <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/30 to-orange-100/30 rounded-lg pointer-events-none" />
+          <motion.div 
+            className="absolute -top-2 -left-2 z-10"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 180, 360]
+            }}
+            transition={{ 
+              duration: 3,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
+            <Sparkles className="w-6 h-6 text-yellow-400" />
+          </motion.div>
+          <motion.div 
+            className="absolute inset-0 bg-gradient-to-br from-yellow-100/30 to-orange-100/30 rounded-lg pointer-events-none"
+            animate={{
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
         </>
       )}
 
       {/* Current step glow effect */}
       {is_current_step && !is_last_step && !is_locked && (
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-purple-500/10 rounded-lg pointer-events-none animate-bounce-gentle" />
-      )}
-
-      {/* Completed step background effect */}
-      {isCompleted && !is_current_step && !is_last_step && !is_locked && (
-        <div className="absolute inset-0 bg-gradient-to-br from-green-500/15 to-green-500/8 rounded-lg pointer-events-none" />
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-purple-500/10 rounded-lg pointer-events-none"
+          animate={{
+            opacity: [0.2, 0.4, 0.2]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
       )}
 
       {/* Connection handles */}
@@ -186,7 +303,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         className={`w-3 h-3 ${
           is_locked ? 'bg-gray-400' :
           is_last_step ? 'bg-yellow-500' : 
-          is_current_step ? 'bg-purple-500 animate-bounce-gentle' : 
+          is_current_step ? 'bg-purple-500' : 
           'bg-green-500'
         }`}
       />
@@ -196,7 +313,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         className={`w-3 h-3 ${
           is_locked ? 'bg-gray-400' :
           is_last_step ? 'bg-yellow-500' : 
-          is_current_step ? 'bg-purple-500 animate-bounce-gentle' : 
+          is_current_step ? 'bg-purple-500' : 
           'bg-green-500'
         }`}
       />
@@ -205,21 +322,31 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
       <div className="p-4 border-b border-theme transition-colors duration-300">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
-            <div className={`
-              w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
-              ${is_locked 
-                ? 'bg-theme-secondary text-theme-secondary border border-theme' 
-                : is_last_step 
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
-                  : is_current_step
-                    ? 'bg-purple-500 text-white shadow-lg animate-bounce-gentle'
-                    : isCompleted 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-theme-accent/80 text-white'
-              }
-            `}>
+            <motion.div 
+              className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
+                ${is_locked 
+                  ? 'bg-theme-secondary text-theme-secondary border border-theme' 
+                  : is_last_step 
+                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
+                    : is_current_step
+                      ? 'bg-purple-500 text-white shadow-lg'
+                      : isCompleted 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-theme-accent/80 text-white'
+                }
+              `}
+              animate={is_current_step && !is_locked ? { 
+                scale: [1, 1.1, 1] 
+              } : {}}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
               {is_locked ? <Lock className="w-4 h-4" /> : is_last_step ? <Crown className="w-4 h-4" /> : week_number}
-            </div>
+            </motion.div>
             <div className="flex-1">
               <h3 className={`font-semibold text-sm transition-colors duration-300 ${
                 is_locked ? 'text-theme-primary' :
@@ -246,12 +373,14 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
               </p>
             </div>
           </div>
-          <button
+          <motion.button
             onClick={handleExpand}
             disabled={is_locked}
             className={`p-1 rounded transition-colors ${
               is_locked ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'
             }`}
+            animate={{ rotate: is_expanded ? 180 : 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             {is_locked ? (
               <Lock className="w-4 h-4 text-gray-400" />
@@ -260,117 +389,160 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
             ) : (
               <ChevronRight className="w-4 h-4 text-gray-600" />
             )}
-          </button>
+          </motion.button>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-          <div
-            className={`h-2 rounded-full transition-all duration-300 ${
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
+          <motion.div
+            className={`h-2 rounded-full ${
               is_locked 
                 ? 'bg-gray-400' 
                 : is_last_step 
                   ? 'bg-gradient-to-r from-yellow-400 to-orange-500' 
                   : is_current_step
-                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 animate-bounce-gentle'
+                    ? 'bg-gradient-to-r from-purple-500 to-purple-600'
                     : isCompleted 
                       ? 'bg-green-500' 
                       : 'bg-blue-500'
             }`}
-            style={{ width: is_locked ? '0%' : `${completionPercentage}%` }}
+            initial={{ width: 0 }}
+            animate={{ width: is_locked ? '0%' : `${completionPercentage}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           />
         </div>
 
         {/* Quick stats */}
         <div className={`flex items-center justify-between text-xs ${is_locked ? 'text-theme-primary' : 'text-gray-600'}`}>
-          <div className="flex items-center space-x-1">
+          <motion.div 
+            className="flex items-center space-x-1"
+            whileHover={{ scale: 1.05 }}
+          >
             <Clock className="w-3 h-3" />
             <span>{is_locked ? '--' : estimated_hours}h/week</span>
-          </div>
-          <div className="flex items-center space-x-1">
+          </motion.div>
+          <motion.div 
+            className="flex items-center space-x-1"
+            whileHover={{ scale: 1.05 }}
+          >
             {is_locked ? (
               <span>Locked</span>
             ) : (
               <span>{completedItems}/{totalItems} topics</span>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Expanded content */}
-      {is_expanded && !is_locked && (
-        <div className="p-4 space-y-4">
-          {/* Tasks */}
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <List className="w-4 h-4 text-blue-500" />
-              <span className="font-medium text-sm text-gray-700">Tasks</span>
-            </div>
-            <div className="space-y-2">
-              {tasks.map((task, index) => (
-                <div key={index} className="flex items-start space-x-2">
-                  <button
-                    onClick={() => handleTaskToggle(index)}
-                    className="mt-0.5 flex-shrink-0"
-                  >
-                    {completedTasks.has(index) ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-gray-400 hover:text-blue-500" />
-                    )}
-                  </button>
-                  <span className={`text-xs ${
-                    completedTasks.has(index) 
-                      ? 'text-gray-500 line-through' 
-                      : 'text-gray-700'
-                  }`}>
-                    {task}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Deliverables */}
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <Target className="w-4 h-4 text-green-500" />
-              <span className="font-medium text-sm text-gray-700">Deliverables</span>
-            </div>
-            <div className="space-y-1">
-              {deliverables.map((deliverable, index) => (
-                <div key={index} className="text-xs text-gray-600">
-                  • {deliverable}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <BookOpen className="w-4 h-4 text-purple-500" />
-              <span className="font-medium text-sm text-gray-700">Resources</span>
-            </div>
-            <div className="space-y-1">
-              {resources.map((resource, index) => (
-                <div key={index} className="text-xs text-gray-600">
-                  • {resource}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Get Details Button */}
-          <button
-            onClick={handleGetDetails}
-            className="w-full bg-blue-500 text-white text-xs py-2 px-3 rounded hover:bg-blue-600 transition-colors flex items-center justify-center space-x-1"
+      <AnimatePresence>
+        {is_expanded && !is_locked && (
+          <motion.div 
+            className="p-4 space-y-4"
+            variants={expandedContentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
           >
-            <BookOpen className="w-3 h-3" />
-            <span>Get Detailed Explanation</span>
-          </button>
-        </div>
-      )}
+            {/* Tasks */}
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center space-x-2 mb-2">
+                <List className="w-4 h-4 text-blue-500" />
+                <span className="font-medium text-sm text-gray-700">Tasks</span>
+              </div>
+              <div className="space-y-2">
+                {tasks.map((task, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="flex items-start space-x-2"
+                    variants={itemVariants}
+                    whileHover={{ x: 4 }}
+                  >
+                    <motion.button
+                      onClick={() => handleTaskToggle(index)}
+                      className="mt-0.5 flex-shrink-0"
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      {completedTasks.has(index) ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                      )}
+                    </motion.button>
+                    <span className={`text-xs ${
+                      completedTasks.has(index) 
+                        ? 'text-gray-500 line-through' 
+                        : 'text-gray-700'
+                    }`}>
+                      {task}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Deliverables */}
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center space-x-2 mb-2">
+                <Target className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-sm text-gray-700">Deliverables</span>
+              </div>
+              <div className="space-y-1">
+                {deliverables.map((deliverable, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="text-xs text-gray-600"
+                    variants={itemVariants}
+                    whileHover={{ x: 4 }}
+                  >
+                    • {deliverable}
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Resources */}
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center space-x-2 mb-2">
+                <BookOpen className="w-4 h-4 text-purple-500" />
+                <span className="font-medium text-sm text-gray-700">Resources</span>
+              </div>
+              <div className="space-y-1">
+                {resources.map((resource, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="text-xs text-gray-600"
+                    variants={itemVariants}
+                    whileHover={{ x: 4 }}
+                  >
+                    • {resource}
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Get Details Button */}
+            <motion.button
+              onClick={handleGetDetails}
+              className="w-full bg-blue-500 text-white text-xs py-2 px-3 rounded hover:bg-blue-600 transition-colors flex items-center justify-center space-x-1 relative overflow-hidden"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <BookOpen className="w-3 h-3 relative z-10" />
+              <span className="relative z-10">Get Detailed Explanation</span>
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600"
+                initial={{ x: "-100%" }}
+                whileHover={{ x: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </motion.div>
     </div>
   );
 };

@@ -10,7 +10,6 @@ import {
   Clock,
   Brain,
   Lightbulb,
-  Play,
   Target,
   Youtube,
   FileText,
@@ -18,6 +17,7 @@ import {
   Share2
 } from 'lucide-react';
 import agentService from '../services/agentService';
+import lessonSlugService from '../services/lessonSlugService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LessonRenderer from '../components/common/LessonRenderer';
@@ -25,9 +25,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import type { GPTTopicResponse } from '../types/roadmap';
 
 const LessonPage: React.FC = () => {
-  const { topic, context, weekNumber } = useParams<{ 
-    topic: string; 
-    context: string; 
+  const params = useParams<{ 
+    slug?: string;
+    topic?: string; 
+    context?: string; 
     weekNumber?: string;
   }>();
   const navigate = useNavigate();
@@ -41,15 +42,45 @@ const LessonPage: React.FC = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
 
-  const decodedTopic = topic ? decodeURIComponent(topic) : '';
-  const decodedContext = context ? decodeURIComponent(context) : '';
+  // Handle both new slug format and legacy URL format
+  let topic = '';
+  let context = '';
+  let weekNumber = '';
+
+  if (params.slug) {
+    // New slug-based URL
+    const lessonData = lessonSlugService.getLessonData(params.slug);
+    if (lessonData) {
+      topic = lessonData.topic;
+      context = lessonData.context;
+      weekNumber = lessonData.weekNumber.toString();
+    }
+  } else if (params.topic && params.context) {
+    // Legacy URL format - decode and use directly
+    topic = decodeURIComponent(params.topic);
+    context = decodeURIComponent(params.context);
+    weekNumber = params.weekNumber || '';
+    
+    // Create a slug for this lesson and redirect to clean URL
+    const weekNum = parseInt(weekNumber || '1');
+    const newUrl = lessonSlugService.createLessonUrl(topic, context, weekNum);
+    
+    // Replace the current URL with the clean one
+    setTimeout(() => {
+      navigate(newUrl, { replace: true });
+    }, 100);
+  }
 
   useEffect(() => {
-    if (decodedTopic) {
+    if (topic) {
       loadLessonContent();
+    } else if (params.slug) {
+      setError('Lesson not found. The lesson may have been moved or deleted.');
+      setLoading(false);
     }
-  }, [decodedTopic, decodedContext]);
+  }, [topic, context]);
 
   // Show timeout warning after 20 seconds of loading
   useEffect(() => {
@@ -75,7 +106,14 @@ const LessonPage: React.FC = () => {
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = Math.min((scrollTop / docHeight) * 100, 100);
+      
+      // Ensure docHeight is valid to prevent incorrect initial calculations
+      if (docHeight <= 0) {
+        setReadingProgress(0);
+        return;
+      }
+      
+      const scrollPercent = Math.min(Math.max((scrollTop / docHeight) * 100, 0), 100);
       setReadingProgress(scrollPercent);
       
       // Mark as completed when user scrolls to 80%
@@ -84,6 +122,9 @@ const LessonPage: React.FC = () => {
       }
     };
 
+    // Set initial progress to 0
+    setReadingProgress(0);
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isCompleted]);
@@ -116,8 +157,8 @@ const LessonPage: React.FC = () => {
 
     try {
       const details = await agentService.getTopicDetails({
-        topic: decodedTopic,
-        context: decodedContext,
+        topic: topic,
+        context: context,
         user_level: 'intermediate'
       });
       
@@ -159,8 +200,8 @@ const LessonPage: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Learn about ${decodedTopic}`,
-          text: `Check out this detailed lesson on ${decodedTopic}`,
+          title: `Learn about ${topic}`,
+          text: `Check out this detailed lesson on ${topic}`,
           url: window.location.href,
         });
       } catch (error) {
@@ -352,6 +393,10 @@ const LessonPage: React.FC = () => {
 
     if (tasksArray.length === 0) return null;
 
+    const handleRevealHint = (hintIndex: number) => {
+      setRevealedHints(prev => new Set(prev).add(hintIndex));
+    };
+
     return tasksArray.map((task: any, index: number) => {
       const levelColors = {
         'Beginner': 'bg-green-500/20 text-green-600 border-green-500/30',
@@ -361,6 +406,7 @@ const LessonPage: React.FC = () => {
       };
 
       const levelColor = levelColors[task.level as keyof typeof levelColors] || levelColors.General;
+      const isHintRevealed = revealedHints.has(index);
 
       return (
         <div
@@ -381,8 +427,24 @@ const LessonPage: React.FC = () => {
             </div>
             {task.hint && (
               <div className="text-xs text-theme-secondary/70 bg-blue-500/10 border border-blue-500/20 rounded-md p-2 mt-2">
-                <span className="text-blue-600 font-medium">💡 Hint: </span>
-                {task.hint}
+                <span className="text-purple-600 font-medium">💡 Hint: </span>
+                {isHintRevealed ? (
+                  <span className="transition-all duration-300 text-theme-secondary">
+                    {task.hint}
+                  </span>
+                ) : (
+                  <span 
+                    onClick={() => handleRevealHint(index)}
+                    className="cursor-pointer select-none transition-all duration-300 hover:opacity-80 text-theme-primary"
+                    style={{ 
+                      filter: 'blur(4px)',
+                      WebkitFilter: 'blur(4px)'
+                    }}
+                    title="Click to reveal hint"
+                  >
+                    {task.hint}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -434,7 +496,7 @@ const LessonPage: React.FC = () => {
                 Expert AI is crafting your lesson...
               </h2>
               <p className="text-theme-secondary max-w-2xl mx-auto mb-8 transition-colors duration-300">
-                Creating an in-depth learning guide on <strong>{decodedTopic}</strong> 
+                Creating an in-depth learning guide on <strong>{topic}</strong> 
                 with real code examples, practical demonstrations, and 3 progressive practice tasks.
               </p>
               
@@ -559,11 +621,11 @@ const LessonPage: React.FC = () => {
             <BookOpen className="w-8 h-8 text-theme-accent" />
             <div>
               <h1 className="text-3xl font-bold text-theme-primary transition-colors duration-300">
-                {decodedTopic}
+                {topic}
               </h1>
-              {decodedContext && (
+              {context && (
                 <p className="text-theme-secondary mt-2 transition-colors duration-300">
-                  {decodedContext}
+                  {context}
                 </p>
               )}
             </div>
@@ -649,40 +711,10 @@ const LessonPage: React.FC = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             
-            {/* Progress Card */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.3s'}}>
-              <div className="flex items-center gap-2 mb-4">
-                <Play className="w-5 h-5 text-theme-accent" />
-                <h3 className="font-semibold text-theme-primary transition-colors duration-300">Progress</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-theme-secondary">Reading Progress</span>
-                    <span className="text-theme-accent font-medium">{Math.round(readingProgress)}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-theme-hover rounded-full">
-                    <div 
-                      className="h-full bg-theme-accent rounded-full transition-all duration-300"
-                      style={{ width: `${readingProgress}%` }}
-                    />
-                  </div>
-                </div>
-                
-                {estimatedReadTime > 0 && (
-                  <div className="text-center pt-2">
-                    <div className="text-2xl font-bold text-theme-accent">
-                      {estimatedReadTime}
-                    </div>
-                    <div className="text-xs text-theme-secondary">minutes to read</div>
-                  </div>
-                )}
-              </div>
-            </div>
+
 
             {/* Quick Tips */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.4s'}}>
+            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.3s'}}>
               <div className="flex items-center gap-2 mb-4">
                 <Lightbulb className="w-5 h-5 text-yellow-500" />
                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Study Tips</h3>
@@ -710,7 +742,7 @@ const LessonPage: React.FC = () => {
 
             {/* Navigation */}
             {weekNumber && (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.5s'}}>
+              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.4s'}}>
                 <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300">Navigation</h3>
                 <div className="space-y-2">
                   <button

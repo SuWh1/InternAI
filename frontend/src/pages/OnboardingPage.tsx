@@ -551,7 +551,7 @@ const OnboardingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-primary py-8 px-4 animate-slide-up-lg transition-colors duration-300">
+    <div className="min-h-screen bg-theme-primary py-8 px-4 transition-colors duration-300">
       <div className="max-w-4xl mx-auto">
         <div className="bg-theme-secondary/95 backdrop-blur-sm rounded-2xl shadow-xl border border-theme p-8 md:p-12 animate-in zoom-in duration-700 transition-colors duration-300">
           {/* Header */}

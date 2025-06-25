@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer, staggerItem } from "../utils/animations";
 
 const faqs = [
   {
@@ -36,40 +38,135 @@ const FAQ = () => {
   };
 
   return (
-    <section className="py-20 bg-theme-secondary transition-colors duration-300">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+    <section className="py-20 bg-theme-secondary transition-colors duration-300 relative overflow-hidden">
+      {/* Animated background pattern */}
+      <motion.div
+        className="absolute inset-0 opacity-5"
+        animate={{
+          backgroundPosition: ["0% 0%", "100% 100%"],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          repeatType: "reverse",
+        }}
+        style={{
+          backgroundImage: `repeating-linear-gradient(
+            45deg,
+            #C700FF,
+            #C700FF 10px,
+            transparent 10px,
+            transparent 20px
+          )`,
+          backgroundSize: "28px 28px",
+        }}
+      />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
           <h2 className="text-3xl sm:text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
             Frequently Asked Questions
           </h2>
           <p className="text-xl text-theme-secondary transition-colors duration-300">
             Everything you need to know about InternAI
           </p>
-        </div>
+        </motion.div>
 
-        <div className="space-y-4">
+        <motion.div 
+          className="space-y-4"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
           {faqs.map((faq, index) => (
-            <div key={index} className="bg-theme-primary rounded-xl border border-theme overflow-hidden transition-colors duration-300">
-              <button
-                onClick={() => toggleFAQ(index)}
-                className="w-full px-4 py-4 text-left flex items-center justify-between hover:bg-theme-hover transition-all duration-300"
+            <motion.div
+              key={index}
+              variants={staggerItem}
+              // whileHover={{ 
+              //   y: -8,
+              //   transition: { 
+              //     type: "spring", 
+              //     stiffness: 400,
+              //     damping: 17 
+              //   }
+              // }}
+              className="relative overflow-hidden group"
+            >
+              <motion.div 
+                className="bg-theme-secondary rounded-xl border border-theme overflow-hidden transition-colors duration-300 relative cursor-pointer"
+                // whileHover={{
+                //   borderColor: 'rgba(147, 51, 234, 0.3)',
+                // }}
+                transition={{ duration: 0.3 }}
               >
-                <span className="font-semibold text-theme-primary transition-colors duration-300">{faq.question}</span>
-                {openIndex === index ? (
-                  <ChevronUp className="h-5 w-5 text-theme-secondary/50 flex-shrink-0 transition-colors duration-300" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-theme-secondary/50 flex-shrink-0 transition-colors duration-300" />
-                )}
-              </button>
-              
-              {openIndex === index && (
-                <div className="px-6 pb-4">
-                  <p className="text-theme-secondary leading-relaxed transition-colors duration-300">{faq.answer}</p>
-                </div>
-              )}
-            </div>
+                {/* Gradient purple background on hover with animation */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-purple-500/30 to-pink-500/20 opacity-0 rounded-xl pointer-events-none"
+                  initial={{ opacity: 0 }}
+                  // whileHover={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+
+                <motion.button
+                  onClick={() => toggleFAQ(index)}
+                  className="w-full px-6 py-6 text-left flex items-center justify-between transition-all duration-300 relative z-10 outline-none focus:outline-none"
+                >
+                  <span className="font-semibold text-theme-primary transition-colors duration-300 pr-4">{faq.question}</span>
+                  <motion.div
+                    animate={{ rotate: openIndex === index ? 180 : 0 }}
+                    transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+                    className="flex-shrink-0"
+                  >
+                    {openIndex === index ? (
+                      <ChevronUp className="h-5 w-5 text-purple-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-purple-500" />
+                    )}
+                  </motion.div>
+                </motion.button>
+                
+                <AnimatePresence>
+                  {openIndex === index && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ 
+                        height: { duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] },
+                        opacity: { duration: 0.4, delay: 0.1 }
+                      }}
+                      className="overflow-hidden"
+                    >
+                      <motion.div 
+                        className="px-6 pb-6"
+                        initial={{ y: -10 }}
+                        animate={{ y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                      >
+                        <p className="text-theme-secondary leading-relaxed transition-colors duration-300">{faq.answer}</p>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Animated underline */}
+                {/* <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent pointer-events-none"
+                  initial={{ scaleX: 0 }}
+                  whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.3 }}
+                /> */}
+              </motion.div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

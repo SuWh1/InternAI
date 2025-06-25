@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Loader, Lightbulb, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight, Loader } from 'lucide-react';
 import agentService from '../services/agentService';
 
-import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import { useRoadmap } from '../hooks/useRoadmap';
 import { useTheme } from '../contexts/ThemeContext';
+import { isWeekUnlocked, isWeekCompleted, validateWeekNavigation } from '../utils/weekProgress';
 import type { WeekData } from '../types/roadmap';
 
 const WeekDetailPage: React.FC = () => {
@@ -20,7 +20,9 @@ const WeekDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [completedSubtopics, setCompletedSubtopics] = useState<Set<number>>(new Set());
   const [subtopics, setSubtopics] = useState<string[]>([]);
-  const [loadingSubtopics, setLoadingSubtopics] = useState(false);
+  const [isGeneratingSubtopics, setIsGeneratingSubtopics] = useState(false);
+  const [userInteracting, setUserInteracting] = useState(false);
+  const [forceGeneration, setForceGeneration] = useState(false);
 
   // Study tips rotation state
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
@@ -40,15 +42,67 @@ const WeekDetailPage: React.FC = () => {
     "Sleep well - your brain consolidates learning during rest."
   ];
   
-
+  // Get week progress by week number
+  const getWeekProgress = (weekNum: number) => {
+    return progress.find(p => p.week_number === weekNum);
+  };
 
   useEffect(() => {
+    // Only reset state when week number actually changes (not when roadmap data refreshes)
+    console.log(`Week navigation: changing to week ${weekNumber}`);
+    setError(null);
+    setWeek(null); // Reset week data so second useEffect can trigger
+    setCompletedSubtopics(new Set());
+    setSubtopics([]);
+    setIsGeneratingSubtopics(false);
+    setUserInteracting(false);
+    setForceGeneration(true); // Force generation when navigating to new week
+    
     if (roadmap && progress.length > 0) {
+      // Check if current week is unlocked before loading
+      const weekNum = parseInt(weekNumber || '1');
+      if (!isWeekUnlocked(weekNum, progress)) {
+        setError(`Week ${weekNum} is locked. Complete the previous week to unlock it.`);
+        return;
+      }
+      console.log(`Week ${weekNumber}: roadmap and progress ready, calling loadWeekData()`);
       loadWeekData();
-    } else if (!roadmapLoading) {
-      setLoading(false);
+    } else {
+      console.log(`Week ${weekNumber}: waiting for roadmap and progress data`);
     }
-  }, [weekNumber, roadmap, progress, roadmapLoading]);
+  }, [weekNumber]); // Only depend on weekNumber to prevent unnecessary resets
+
+  // Separate effect to handle roadmap/progress loading without resetting component state
+  useEffect(() => {
+    if (roadmap && progress.length > 0 && !week) {
+      // Only load week data if we don't have it yet
+      const weekNum = parseInt(weekNumber || '1');
+      console.log(`Second useEffect triggered for week ${weekNumber}: roadmap and progress available, week is null`);
+      if (isWeekUnlocked(weekNum, progress)) {
+        console.log(`Week ${weekNumber} is unlocked, calling loadWeekData()`);
+        loadWeekData();
+      } else {
+        console.log(`Week ${weekNumber} is locked`);
+      }
+    }
+  }, [roadmap, progress, roadmapLoading, week]);
+
+  // Separate effect to sync progress data without resetting local state
+  useEffect(() => {
+    if (week && progress.length > 0 && !userInteracting) {
+      const weekNum = parseInt(weekNumber || '1');
+      const weekProgress = progress.find(p => p.week_number === weekNum);
+      if (weekProgress) {
+        // Only update if we don't have local state yet (prevents overriding user's immediate changes)
+        if (completedSubtopics.size === 0) {
+          const subtopicIndices = weekProgress.completed_tasks
+            .map((taskId: string) => parseInt(taskId.replace('subtopic-', '')))
+            .filter((index: number) => !isNaN(index));
+          setCompletedSubtopics(new Set(subtopicIndices));
+        }
+      }
+    }
+  }, [progress, week, weekNumber, userInteracting]); // Sync progress without full reset
 
   // Rotate study tips every 7 seconds
   useEffect(() => {
@@ -62,16 +116,20 @@ const WeekDetailPage: React.FC = () => {
   const loadWeekData = () => {
     if (!roadmap) {
       setError('No roadmap data found. Please generate a roadmap first.');
-      setLoading(false);
       return;
     }
 
     const weekNum = parseInt(weekNumber || '1');
+    
+    // Don't reload if we already have the correct week data
+    if (week && week.week_number === weekNum) {
+      return;
+    }
+    
     const weekData = roadmap.weeks?.find((w: WeekData) => w.week_number === weekNum);
     
     if (!weekData) {
       setError(`Week ${weekNumber} not found in roadmap.`);
-      setLoading(false);
       return;
     }
 
@@ -87,20 +145,30 @@ const WeekDetailPage: React.FC = () => {
       setCompletedSubtopics(new Set(subtopicIndices));
     }
     
-    // Only generate subtopics if they don't already exist
-    if (subtopics.length === 0) {
+    // Generate subtopics if they don't exist OR if force generation is requested (for new week navigation)
+    // OR if we're loading a different week than what we currently have data for
+    const needsGeneration = subtopics.length === 0 || forceGeneration || (week && week.week_number !== weekNum);
+    
+    if (needsGeneration) {
+      console.log(`Starting subtopics generation for week ${weekNum}: subtopics.length=${subtopics.length}, forceGeneration=${forceGeneration}, currentWeek=${week?.week_number}`);
+      setIsGeneratingSubtopics(true);
+      setForceGeneration(false); // Reset the flag
       generateSubtopics(weekData.theme, weekData.focus_area);
+    } else {
+      console.log(`Skipping subtopics generation for week ${weekNum}: subtopics.length=${subtopics.length}, forceGeneration=${forceGeneration}, currentWeek=${week?.week_number}`);
     }
     
-    setLoading(false);
     setError(null);
   };
 
   const generateSubtopics = async (theme: string, focusArea: string) => {
-    setLoadingSubtopics(true);
+    const startTime = Date.now();
+    const weekNum = parseInt(weekNumber || '1');
+    
+    console.log(`generateSubtopics called for week ${weekNum}, theme: ${theme}, focusArea: ${focusArea}`);
     
     try {
-      const weekNum = parseInt(weekNumber || '1');
+      console.log(`Making API call to agentService.generateSubtopics...`);
       const response = await agentService.generateSubtopics({
         topic: theme,
         context: `Week ${weekNum} - Focus area: ${focusArea}`,
@@ -108,15 +176,13 @@ const WeekDetailPage: React.FC = () => {
         force_regenerate: false
       });
       
+      console.log(`API response received:`, response);
+      
       if (response.success && response.subtopics && response.subtopics.length > 0) {
+        console.log(`Setting ${response.subtopics.length} subtopics from API response`);
         setSubtopics(response.subtopics);
-        
-        // If it's cached, hide loading immediately since the data is already available
-        if (response.cached) {
-          setLoadingSubtopics(false);
-          return;
-        }
       } else {
+        console.log(`API response invalid, using fallback subtopics`);
         // Fallback to default subtopics if AI generation fails
         setSubtopics([
           `Introduction to ${theme}`,
@@ -129,6 +195,7 @@ const WeekDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error generating subtopics:', error);
+      console.log(`Using fallback subtopics due to error`);
       // Fallback subtopics
       setSubtopics([
         `Introduction to ${theme}`,
@@ -139,42 +206,70 @@ const WeekDetailPage: React.FC = () => {
         `Advanced Techniques`
       ]);
     } finally {
-      setLoadingSubtopics(false);
+      console.log(`generateSubtopics finishing, clearing loading state`);
+      // Ensure loading is shown for at least 500ms for better UX
+      const elapsedTime = Date.now() - startTime;
+      const minDisplayTime = 500;
+      
+      if (elapsedTime < minDisplayTime) {
+        setTimeout(() => {
+          console.log(`Setting isGeneratingSubtopics to false after delay`);
+          setIsGeneratingSubtopics(false);
+        }, minDisplayTime - elapsedTime);
+      } else {
+        console.log(`Setting isGeneratingSubtopics to false immediately`);
+        setIsGeneratingSubtopics(false);
+      }
     }
   };
 
   const handleSubtopicToggle = (subtopicIndex: number) => {
-    const newCompletedSubtopics = new Set(completedSubtopics);
-    const isCompleting = !newCompletedSubtopics.has(subtopicIndex);
-    
-    if (newCompletedSubtopics.has(subtopicIndex)) {
-      newCompletedSubtopics.delete(subtopicIndex);
-    } else {
-      newCompletedSubtopics.add(subtopicIndex);
+    try {
+      // Set user interaction flag to prevent progress sync interference
+      setUserInteracting(true);
+      
+      const newCompletedSubtopics = new Set(completedSubtopics);
+      const isCompleting = !newCompletedSubtopics.has(subtopicIndex);
+      
+      if (newCompletedSubtopics.has(subtopicIndex)) {
+        newCompletedSubtopics.delete(subtopicIndex);
+      } else {
+        newCompletedSubtopics.add(subtopicIndex);
+      }
+      
+      // Update local state immediately for instant responsiveness
+      setCompletedSubtopics(newCompletedSubtopics);
+      
+      // Update backend in background without blocking UI
+      const weekNum = parseInt(weekNumber || '1');
+      const subtopicId = `subtopic-${subtopicIndex}`;
+      
+      updateProgress(weekNum, subtopicId, isCompleting).catch((error) => {
+        // Revert local state on error and notify user
+        setCompletedSubtopics(completedSubtopics);
+        console.error('Error updating progress:', error);
+      });
+      
+      // Clear user interaction flag after a delay to allow progress sync
+      setTimeout(() => {
+        setUserInteracting(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Error in handleSubtopicToggle:', error);
+      setUserInteracting(false);
     }
-    
-    // Update local state immediately for instant responsiveness
-    setCompletedSubtopics(newCompletedSubtopics);
-    
-    // Update backend in background without blocking UI
-    const weekNum = parseInt(weekNumber || '1');
-    const subtopicId = `subtopic-${subtopicIndex}`;
-    
-    updateProgress(weekNum, subtopicId, isCompleting).catch((error) => {
-      // Revert local state on error and notify user
-      setCompletedSubtopics(completedSubtopics);
-      console.error('Error updating progress:', error);
-    });
   };
 
   const handleGetAIExplanation = (subtopic: string) => {
     const weekNum = parseInt(weekNumber || '1');
-    const encodedTopic = encodeURIComponent(subtopic);
-    const encodedContext = encodeURIComponent(`Week ${weekNum}: ${week?.theme} - ${subtopic}`);
-    navigate(`/lesson/${encodedTopic}/${encodedContext}/${weekNum}`);
+    const context = `Week ${weekNum}: ${week?.theme} - ${subtopic}`;
+    
+    // Import the lesson slug service dynamically to avoid circular dependencies
+    import('../services/lessonSlugService').then(({ lessonSlugService }) => {
+      const lessonUrl = lessonSlugService.createLessonUrl(subtopic, context, weekNum);
+      navigate(lessonUrl);
+    });
   };
-
-
 
   const getCompletionPercentage = () => {
     if (!subtopics.length) return 0;
@@ -183,13 +278,18 @@ const WeekDetailPage: React.FC = () => {
     return Math.round((completedSubtopics.size / subtopics.length) * 100);
   };
 
-  if (loading || roadmapLoading) {
-    return (
-      <div className="min-h-screen pt-16 bg-theme-primary flex items-center justify-center transition-colors duration-300">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  const handleNavigation = (targetWeek: number) => {
+    const validation = validateWeekNavigation(targetWeek, progress);
+    if (!validation.allowed) {
+      // Do nothing for locked weeks - no error messages
+      return;
+    }
+    
+    // Navigate to the target week
+    navigate(`/roadmap/week/${targetWeek}`);
+  };
+
+
 
   if (error || roadmapError) {
     return (
@@ -274,16 +374,17 @@ const WeekDetailPage: React.FC = () => {
                 </h2>
               </div>
               
-              {loadingSubtopics ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center space-x-3">
-                    <Loader className="w-6 h-6 text-purple-600 animate-spin" />
-                    <span className="text-theme-secondary">AI is generating learning subtopics...</span>
+
+                {isGeneratingSubtopics && subtopics.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center space-x-3">
+                      <Loader className="w-5 h-5 text-purple-600 animate-spin" />
+                      <span className="text-theme-secondary text-sm">Generating learning content...</span>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {subtopics.map((subtopic, index) => (
+                ) : (
+                  <div className="space-y-4">
+                    {subtopics.map((subtopic, index) => (
                                       <div
                     key={index}
                     onClick={() => handleSubtopicToggle(index)}
@@ -324,7 +425,7 @@ const WeekDetailPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              )}
+                )}
             </div>
 
 
@@ -394,12 +495,13 @@ const WeekDetailPage: React.FC = () => {
             <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
               <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300">Navigate</h3>
               <div className="space-y-2">
-                {week.week_number > 1 && (
+                {week && week.week_number > 1 && (
                   <button
-                    onClick={() => navigate(`/roadmap/week/${week.week_number - 1}`)}
-                    className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
+                    onClick={() => handleNavigation(week.week_number - 1)}
+                    className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300 flex items-center gap-2"
                   >
-                    ← Week {week.week_number - 1}
+                    <ChevronRight className="w-4 h-4 rotate-180" />
+                    Week {week.week_number - 1}
                   </button>
                 )}
                 <button
@@ -408,12 +510,31 @@ const WeekDetailPage: React.FC = () => {
                 >
                   📊 Full Roadmap
                 </button>
-                <button
-                  onClick={() => navigate(`/roadmap/week/${week.week_number + 1}`)}
-                  className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
-                >
-                  Week {week.week_number + 1} →
-                </button>
+                
+                {/* Next Week Navigation */}
+                {week && roadmap && week.week_number < roadmap.weeks.length && (
+                  <div className="relative">
+                    <button
+                      onClick={() => handleNavigation(week.week_number + 1)}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-all duration-300 flex items-center justify-between group ${
+                        isWeekUnlocked(week.week_number + 1, progress)
+                          ? 'text-theme-secondary hover:bg-theme-hover cursor-pointer'
+                          : 'text-gray-600 dark:text-white cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isWeekUnlocked(week.week_number + 1, progress) ? (
+                          <ChevronRight className="w-4 h-4" />
+                        ) : (
+                          <Lock className="w-4 h-4" />
+                        )}
+                        <span>Week {week.week_number + 1}</span>
+                      </div>
+                    </button>
+                    
+
+                  </div>
+                )}
               </div>
             </div>
           </div>

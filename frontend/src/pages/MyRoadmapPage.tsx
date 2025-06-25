@@ -79,7 +79,7 @@ const MyRoadmapPage = () => {
     : 0;
 
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary animate-slide-up-lg transition-colors duration-300">
+    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-8">

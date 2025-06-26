@@ -1,11 +1,12 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional
 import uuid
 
 from app.models.onboarding import OnboardingData
 from app.schemas.onboarding import OnboardingCreate, OnboardingUpdate
 
-def create_onboarding_data(db: Session, user_id: uuid.UUID, onboarding_data: OnboardingCreate) -> OnboardingData:
+async def create_onboarding_data(db: AsyncSession, user_id: uuid.UUID, onboarding_data: OnboardingCreate) -> OnboardingData:
     """Create onboarding data for a user."""
     # Apply default values for empty fields to help AI
     data_dict = onboarding_data.dict()
@@ -30,17 +31,18 @@ def create_onboarding_data(db: Session, user_id: uuid.UUID, onboarding_data: Onb
         **data_dict
     )
     db.add(db_onboarding)
-    db.commit()
-    db.refresh(db_onboarding)
+    await db.commit()
+    await db.refresh(db_onboarding)
     return db_onboarding
 
-def get_onboarding_data_by_user_id(db: Session, user_id: uuid.UUID) -> Optional[OnboardingData]:
+async def get_onboarding_data_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[OnboardingData]:
     """Get onboarding data for a specific user."""
-    return db.query(OnboardingData).filter(OnboardingData.user_id == user_id).first()
+    result = await db.execute(select(OnboardingData).where(OnboardingData.user_id == user_id))
+    return result.scalar_one_or_none()
 
-def update_onboarding_data(db: Session, user_id: uuid.UUID, onboarding_update: OnboardingUpdate) -> Optional[OnboardingData]:
+async def update_onboarding_data(db: AsyncSession, user_id: uuid.UUID, onboarding_update: OnboardingUpdate) -> Optional[OnboardingData]:
     """Update onboarding data for a user."""
-    db_onboarding = get_onboarding_data_by_user_id(db, user_id)
+    db_onboarding = await get_onboarding_data_by_user_id(db, user_id)
     if not db_onboarding:
         return None
     
@@ -48,21 +50,21 @@ def update_onboarding_data(db: Session, user_id: uuid.UUID, onboarding_update: O
     for field, value in update_data.items():
         setattr(db_onboarding, field, value)
     
-    db.commit()
-    db.refresh(db_onboarding)
+    await db.commit()
+    await db.refresh(db_onboarding)
     return db_onboarding
 
-def delete_onboarding_data(db: Session, user_id: uuid.UUID) -> bool:
+async def delete_onboarding_data(db: AsyncSession, user_id: uuid.UUID) -> bool:
     """Delete onboarding data for a user."""
-    db_onboarding = get_onboarding_data_by_user_id(db, user_id)
+    db_onboarding = await get_onboarding_data_by_user_id(db, user_id)
     if not db_onboarding:
         return False
     
-    db.delete(db_onboarding)
-    db.commit()
+    await db.delete(db_onboarding)
+    await db.commit()
     return True
 
-def has_completed_onboarding(db: Session, user_id: uuid.UUID) -> bool:
+async def has_completed_onboarding(db: AsyncSession, user_id: uuid.UUID) -> bool:
     """Check if user has completed onboarding."""
-    onboarding_data = get_onboarding_data_by_user_id(db, user_id)
+    onboarding_data = await get_onboarding_data_by_user_id(db, user_id)
     return onboarding_data is not None 

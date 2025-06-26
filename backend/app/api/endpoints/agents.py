@@ -3,7 +3,7 @@ Agent pipeline API endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 import asyncio
 import os
@@ -39,7 +39,7 @@ router = APIRouter()
 async def run_agent_pipeline(
     request: AgentPipelineRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Run the complete multi-agent pipeline for internship preparation.
@@ -57,7 +57,7 @@ async def run_agent_pipeline(
         logger.info(f"Starting agent pipeline for user {current_user.id}")
         
         # Get user's onboarding data
-        onboarding_data = get_onboarding_data_by_user_id(db, user_id=current_user.id)
+        onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
         
         if not onboarding_data:
             raise HTTPException(
@@ -118,7 +118,7 @@ async def run_agent_pipeline(
                     ]
                 
                 # Save roadmap to database
-                upsert_roadmap(
+                await upsert_roadmap(
                     db=db,
                     user_id=current_user.id,
                     roadmap_data=roadmap_data,
@@ -159,7 +159,7 @@ async def run_agent_pipeline(
 )
 async def get_pipeline_status(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Check if the user can run the agent pipeline.
@@ -169,7 +169,7 @@ async def get_pipeline_status(
     """
     try:
         # Get user's onboarding data
-        onboarding_data = get_onboarding_data_by_user_id(db, user_id=current_user.id)
+        onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
         
         if not onboarding_data:
             return {
@@ -344,7 +344,7 @@ async def get_sample_pipeline_output():
 )
 async def get_user_roadmap(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get the user's roadmap and progress from the database.
@@ -352,7 +352,7 @@ async def get_user_roadmap(
     Returns the complete roadmap data and progress tracking for the authenticated user.
     """
     try:
-        roadmap_record = get_roadmap_by_user_id(db, user_id=current_user.id)
+        roadmap_record = await get_roadmap_by_user_id(db, user_id=current_user.id)
         
         if not roadmap_record:
             return {
@@ -393,7 +393,7 @@ async def get_user_roadmap(
 async def update_roadmap_progress_endpoint(
     progress_data: List[Dict[str, Any]],
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Update the progress tracking for the user's roadmap.
@@ -401,7 +401,7 @@ async def update_roadmap_progress_endpoint(
     This endpoint allows updating which tasks are completed, progress percentages, etc.
     """
     try:
-        updated_roadmap = update_roadmap_progress(
+        updated_roadmap = await update_roadmap_progress(
             db=db,
             user_id=current_user.id,
             progress_data=progress_data
@@ -439,7 +439,7 @@ async def update_roadmap_progress_endpoint(
 async def get_topic_details(
     request: Dict[str, Any],
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed explanation for a topic using GPT.
@@ -465,7 +465,7 @@ async def get_topic_details(
         
         # Check if explanation already exists for this topic (unless force regenerate)
         if not force_regenerate:
-            existing_content = get_learning_content(
+            existing_content = await get_learning_content(
                 db=db, 
                 user_id=current_user.id, 
                 topic=topic, 
@@ -475,7 +475,7 @@ async def get_topic_details(
             
             if existing_content:
                 # Update access tracking
-                update_access_tracking(db, existing_content.id)
+                await update_access_tracking(db, existing_content.id)
                 
                 return {
                     "success": True,
@@ -489,7 +489,7 @@ async def get_topic_details(
         explanation = await generate_topic_explanation(topic, context, user_level)
         
         # Store in database
-        learning_content = upsert_learning_content(
+        learning_content = await upsert_learning_content(
             db=db,
             user_id=current_user.id,
             content_type="explanation",
@@ -506,7 +506,7 @@ async def get_topic_details(
         )
         
         # Update access tracking
-        update_access_tracking(db, learning_content.id)
+        await update_access_tracking(db, learning_content.id)
         
         return {
             "success": True,
@@ -768,7 +768,7 @@ Learning {topic} will enhance your development skills and make you more competit
 async def generate_subtopics(
     request: Dict[str, Any],
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Generate subtopics for a learning topic using AI.
@@ -794,7 +794,7 @@ async def generate_subtopics(
         
         # Check if subtopics already exist for this topic (unless force regenerate)
         if not force_regenerate:
-            existing_content = get_learning_content(
+            existing_content = await get_learning_content(
                 db=db, 
                 user_id=current_user.id, 
                 topic=topic, 
@@ -804,7 +804,7 @@ async def generate_subtopics(
             
             if existing_content:
                 # Update access tracking
-                update_access_tracking(db, existing_content.id)
+                await update_access_tracking(db, existing_content.id)
                 
                 return {
                     "success": True,
@@ -818,7 +818,7 @@ async def generate_subtopics(
         subtopics_data = await generate_subtopics_ai(topic, context, user_level)
         
         # Store in database
-        learning_content = upsert_learning_content(
+        learning_content = await upsert_learning_content(
             db=db,
             user_id=current_user.id,
             content_type="subtopics",
@@ -834,7 +834,7 @@ async def generate_subtopics(
         )
         
         # Update access tracking
-        update_access_tracking(db, learning_content.id)
+        await update_access_tracking(db, learning_content.id)
         
         return {
             "success": True,
@@ -861,7 +861,7 @@ async def generate_subtopics(
 async def get_user_learning_content(
     content_type: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get all learning content of a specific type for the authenticated user.
@@ -870,7 +870,7 @@ async def get_user_learning_content(
     """
     
     try:
-        content_list = get_learning_content_by_user(
+        content_list = await get_learning_content_by_user(
             db=db,
             user_id=current_user.id,
             content_type=content_type

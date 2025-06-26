@@ -1,44 +1,48 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
 from app.models.learning_content import LearningContent
 
-def get_learning_content(
-    db: Session, 
+async def get_learning_content(
+    db: AsyncSession, 
     user_id: UUID, 
     topic: str, 
     content_type: str,
     context: Optional[str] = None
 ) -> Optional[LearningContent]:
     """Get learning content for a specific user, topic, and type."""
-    query = db.query(LearningContent).filter(
+    query = select(LearningContent).where(
         LearningContent.user_id == user_id,
         LearningContent.topic == topic,
         LearningContent.content_type == content_type
     )
     
     if context:
-        query = query.filter(LearningContent.context == context)
+        query = query.where(LearningContent.context == context)
     
-    return query.first()
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
 
-def get_learning_content_by_user(
-    db: Session, 
+async def get_learning_content_by_user(
+    db: AsyncSession, 
     user_id: UUID,
     content_type: Optional[str] = None
 ) -> List[LearningContent]:
     """Get all learning content for a user, optionally filtered by type."""
-    query = db.query(LearningContent).filter(LearningContent.user_id == user_id)
+    query = select(LearningContent).where(LearningContent.user_id == user_id)
     
     if content_type:
-        query = query.filter(LearningContent.content_type == content_type)
+        query = query.where(LearningContent.content_type == content_type)
     
-    return query.order_by(LearningContent.created_at.desc()).all()
+    query = query.order_by(LearningContent.created_at.desc())
+    result = await db.execute(query)
+    return result.scalars().all()
 
-def create_learning_content(
-    db: Session,
+async def create_learning_content(
+    db: AsyncSession,
     user_id: UUID,
     content_type: str,
     topic: str,
@@ -62,12 +66,12 @@ def create_learning_content(
     )
     
     db.add(learning_content)
-    db.commit()
-    db.refresh(learning_content)
+    await db.commit()
+    await db.refresh(learning_content)
     return learning_content
 
-def upsert_learning_content(
-    db: Session,
+async def upsert_learning_content(
+    db: AsyncSession,
     user_id: UUID,
     content_type: str,
     topic: str,
@@ -77,7 +81,7 @@ def upsert_learning_content(
     generation_metadata: Optional[Dict[str, Any]] = None
 ) -> LearningContent:
     """Create or update learning content."""
-    existing = get_learning_content(db, user_id, topic, content_type, context)
+    existing = await get_learning_content(db, user_id, topic, content_type, context)
     
     if existing:
         # Update existing content
@@ -86,12 +90,12 @@ def upsert_learning_content(
         existing.generation_metadata = generation_metadata or {}
         existing.updated_at = datetime.utcnow()
         
-        db.commit()
-        db.refresh(existing)
+        await db.commit()
+        await db.refresh(existing)
         return existing
     else:
         # Create new content
-        return create_learning_content(
+        return await create_learning_content(
             db=db,
             user_id=user_id,
             content_type=content_type,
@@ -102,12 +106,13 @@ def upsert_learning_content(
             generation_metadata=generation_metadata
         )
 
-def update_access_tracking(
-    db: Session,
+async def update_access_tracking(
+    db: AsyncSession,
     learning_content_id: UUID,
 ) -> Optional[LearningContent]:
     """Update access count and last accessed time for learning content."""
-    content = db.query(LearningContent).filter(LearningContent.id == learning_content_id).first()
+    result = await db.execute(select(LearningContent).where(LearningContent.id == learning_content_id))
+    content = result.scalar_one_or_none()
     
     if content:
         # Increment access count
@@ -115,24 +120,24 @@ def update_access_tracking(
         content.access_count = str(current_count + 1)
         content.last_accessed = datetime.utcnow().isoformat()
         
-        db.commit()
-        db.refresh(content)
+        await db.commit()
+        await db.refresh(content)
     
     return content
 
-def delete_learning_content(
-    db: Session,
+async def delete_learning_content(
+    db: AsyncSession,
     user_id: UUID,
     topic: str,
     content_type: str,
     context: Optional[str] = None
 ) -> bool:
     """Delete learning content."""
-    content = get_learning_content(db, user_id, topic, content_type, context)
+    content = await get_learning_content(db, user_id, topic, content_type, context)
     
     if content:
-        db.delete(content)
-        db.commit()
+        await db.delete(content)
+        await db.commit()
         return True
     
     return False 

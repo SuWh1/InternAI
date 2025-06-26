@@ -1,15 +1,17 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional, Dict, Any
 import uuid
 
 from app.models.roadmap import Roadmap
 
-def get_roadmap_by_user_id(db: Session, user_id: uuid.UUID) -> Optional[Roadmap]:
+async def get_roadmap_by_user_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[Roadmap]:
     """Get roadmap by user ID."""
-    return db.query(Roadmap).filter(Roadmap.user_id == user_id).first()
+    result = await db.execute(select(Roadmap).where(Roadmap.user_id == user_id))
+    return result.scalar_one_or_none()
 
-def create_roadmap(
-    db: Session, 
+async def create_roadmap(
+    db: AsyncSession, 
     user_id: uuid.UUID, 
     roadmap_data: Dict[str, Any],
     progress_data: Optional[Dict[str, Any]] = None,
@@ -25,19 +27,19 @@ def create_roadmap(
         ai_generated=ai_generated
     )
     db.add(db_roadmap)
-    db.commit()
-    db.refresh(db_roadmap)
+    await db.commit()
+    await db.refresh(db_roadmap)
     return db_roadmap
 
-def update_roadmap(
-    db: Session,
+async def update_roadmap(
+    db: AsyncSession,
     user_id: uuid.UUID,
     roadmap_data: Optional[Dict[str, Any]] = None,
     progress_data: Optional[Dict[str, Any]] = None,
     generation_metadata: Optional[Dict[str, Any]] = None
 ) -> Optional[Roadmap]:
     """Update existing roadmap for a user."""
-    db_roadmap = get_roadmap_by_user_id(db, user_id)
+    db_roadmap = await get_roadmap_by_user_id(db, user_id)
     if not db_roadmap:
         return None
     
@@ -48,12 +50,12 @@ def update_roadmap(
     if generation_metadata is not None:
         db_roadmap.generation_metadata = generation_metadata
     
-    db.commit()
-    db.refresh(db_roadmap)
+    await db.commit()
+    await db.refresh(db_roadmap)
     return db_roadmap
 
-def upsert_roadmap(
-    db: Session,
+async def upsert_roadmap(
+    db: AsyncSession,
     user_id: uuid.UUID,
     roadmap_data: Dict[str, Any],
     progress_data: Optional[Dict[str, Any]] = None,
@@ -61,7 +63,7 @@ def upsert_roadmap(
     ai_generated: bool = True
 ) -> Roadmap:
     """Create or update roadmap for a user."""
-    existing_roadmap = get_roadmap_by_user_id(db, user_id)
+    existing_roadmap = await get_roadmap_by_user_id(db, user_id)
     
     if existing_roadmap:
         # Update existing roadmap
@@ -72,12 +74,12 @@ def upsert_roadmap(
             existing_roadmap.generation_metadata = generation_metadata
         existing_roadmap.ai_generated = ai_generated
         
-        db.commit()
-        db.refresh(existing_roadmap)
+        await db.commit()
+        await db.refresh(existing_roadmap)
         return existing_roadmap
     else:
         # Create new roadmap
-        return create_roadmap(
+        return await create_roadmap(
             db=db,
             user_id=user_id,
             roadmap_data=roadmap_data,
@@ -86,19 +88,19 @@ def upsert_roadmap(
             ai_generated=ai_generated
         )
 
-def update_roadmap_progress(
-    db: Session,
+async def update_roadmap_progress(
+    db: AsyncSession,
     user_id: uuid.UUID,
     progress_data: Dict[str, Any]
 ) -> Optional[Roadmap]:
     """Update only the progress data for a user's roadmap."""
-    return update_roadmap(db, user_id, progress_data=progress_data)
+    return await update_roadmap(db, user_id, progress_data=progress_data)
 
-def delete_roadmap(db: Session, user_id: uuid.UUID) -> bool:
+async def delete_roadmap(db: AsyncSession, user_id: uuid.UUID) -> bool:
     """Delete roadmap for a user."""
-    db_roadmap = get_roadmap_by_user_id(db, user_id)
+    db_roadmap = await get_roadmap_by_user_id(db, user_id)
     if db_roadmap:
-        db.delete(db_roadmap)
-        db.commit()
+        await db.delete(db_roadmap)
+        await db.commit()
         return True
     return False 

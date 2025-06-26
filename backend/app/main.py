@@ -2,11 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.api_router import api_router
 from app.core.config import settings
-from app.db.base import Base
-from app.db.session import engine
 
-# Create all tables in the database
-Base.metadata.create_all(bind=engine)
+# Note: Database tables are created via Alembic migrations
+# Run: alembic upgrade head
 
 app = FastAPI(title=settings.PROJECT_NAME)
 

@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Optional
 from fastapi import HTTPException, status
 
@@ -6,17 +7,20 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    result = await db.execute(select(User).where(User.email == email))
+    return result.scalar_one_or_none()
 
-def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
-    return db.query(User).filter(User.id == user_id).first()
+async def get_user_by_id(db: AsyncSession, user_id: str) -> Optional[User]:
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
 
-def get_user_by_google_id(db: Session, google_id: str) -> Optional[User]:
-    return db.query(User).filter(User.google_id == google_id).first()
+async def get_user_by_google_id(db: AsyncSession, google_id: str) -> Optional[User]:
+    result = await db.execute(select(User).where(User.google_id == google_id))
+    return result.scalar_one_or_none()
 
-def create_user(db: Session, user_data: UserCreate) -> User:
-    db_user = get_user_by_email(db, email=user_data.email)
+async def create_user(db: AsyncSession, user_data: UserCreate) -> User:
+    db_user = await get_user_by_email(db, email=user_data.email)
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -33,13 +37,13 @@ def create_user(db: Session, user_data: UserCreate) -> User:
     
     # Add to DB
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     
     return db_user
 
-def update_user(db: Session, user_id: str, user_data: UserUpdate) -> User:
-    db_user = get_user_by_id(db, user_id=user_id)
+async def update_user(db: AsyncSession, user_id: str, user_data: UserUpdate) -> User:
+    db_user = await get_user_by_id(db, user_id=user_id)
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -54,13 +58,13 @@ def update_user(db: Session, user_id: str, user_data: UserUpdate) -> User:
     for field, value in user_data_dict.items():
         setattr(db_user, field, value)
     
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     
     return db_user
 
-def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
-    user = get_user_by_email(db, email=email)
+async def authenticate_user(db: AsyncSession, email: str, password: str) -> Optional[User]:
+    user = await get_user_by_email(db, email=email)
     
     if not user or not user.hashed_password:
         return None
@@ -70,11 +74,11 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     
     return user
 
-def authenticate_google_user(db: Session, google_id: str, email: str, name: str, profile_picture: Optional[str] = None) -> User:
+async def authenticate_google_user(db: AsyncSession, google_id: str, email: str, name: str, profile_picture: Optional[str] = None) -> User:
     print(f"DEBUG: Authenticating Google user - google_id: {google_id}, email: {email}, name: {name}")
     
     # First check if user exists by Google ID
-    user = get_user_by_google_id(db, google_id=google_id)
+    user = await get_user_by_google_id(db, google_id=google_id)
     
     if user:
         print(f"DEBUG: Found existing user by Google ID: {user.id}")
@@ -92,14 +96,14 @@ def authenticate_google_user(db: Session, google_id: str, email: str, name: str,
             print(f"WARNING: Fixed NULL is_active for user {user.id}")
         
         if updated:
-            db.commit()
-            db.refresh(user)
+            await db.commit()
+            await db.refresh(user)
             print("DEBUG: Updated existing user info")
         
         return user
 
     # Check if user exists by email
-    user = get_user_by_email(db, email=email)
+    user = await get_user_by_email(db, email=email)
     
     if user:
         print(f"DEBUG: Found existing user by email: {user.id}, linking Google ID")
@@ -112,8 +116,8 @@ def authenticate_google_user(db: Session, google_id: str, email: str, name: str,
         if user.is_active is None:
             user.is_active = True
             print(f"WARNING: Fixed NULL is_active for user {user.id}")
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         return user
     
     # Create new user - bypass create_user to avoid email duplicate check
@@ -129,32 +133,32 @@ def authenticate_google_user(db: Session, google_id: str, email: str, name: str,
         )
         
         db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        await db.commit()
+        await db.refresh(db_user)
         
         print(f"DEBUG: Successfully created new user: {db_user.id}")
         return db_user
         
     except Exception as e:
         print(f"ERROR: Failed to create Google user: {e}")
-        db.rollback()
+        await db.rollback()
         # Try to find if user was created in the meantime (race condition)
-        existing_user = get_user_by_email(db, email=email)
+        existing_user = await get_user_by_email(db, email=email)
         if existing_user:
             print("DEBUG: User was created by another process, linking Google ID")
             existing_user.google_id = google_id
             if profile_picture:
                 existing_user.profile_picture = profile_picture
-            db.commit()
-            db.refresh(existing_user)
+            await db.commit()
+            await db.refresh(existing_user)
             return existing_user
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create or find Google user: {str(e)}",
         )
 
-def deactivate_user(db: Session, user_id: str) -> User:
-    db_user = get_user_by_id(db, user_id=user_id)
+async def deactivate_user(db: AsyncSession, user_id: str) -> User:
+    db_user = await get_user_by_id(db, user_id=user_id)
     if not db_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -162,7 +166,7 @@ def deactivate_user(db: Session, user_id: str) -> User:
         )
     
     db_user.is_active = False
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     
     return db_user 

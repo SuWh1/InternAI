@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
 from typing import Any
 
@@ -15,23 +15,23 @@ from app.utils.google_auth import verify_google_token
 
 router = APIRouter()
 
-def add_onboarding_status(user: User, db: Session) -> User:
+async def add_onboarding_status(user: User, db: AsyncSession) -> User:
     """Add onboarding status to user object."""
-    user.has_completed_onboarding = has_completed_onboarding(db, user.id)
+    user.has_completed_onboarding = await has_completed_onboarding(db, user.id)
     
     # Safety check: ensure is_active is never None
     if user.is_active is None:
         user.is_active = True
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
         print(f"WARNING: Fixed NULL is_active for user {user.id}")
     
     return user
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-def register(user_data: UserCreate, db: Session = Depends(get_db)) -> Any:
-    user = create_user(db, user_data)
-    user = add_onboarding_status(user, db)
+async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
+    user = await create_user(db, user_data)
+    user = await add_onboarding_status(user, db)
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -44,8 +44,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)) -> Any:
     }
 
 @router.post("/login", response_model=AuthResponse)
-def login(user_data: UserLogin, db: Session = Depends(get_db)) -> Any:
-    user = authenticate_user(db, user_data.email, user_data.password)
+async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
+    user = await authenticate_user(db, user_data.email, user_data.password)
     
     if not user:
         raise HTTPException(
@@ -54,7 +54,7 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)) -> Any:
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    user = add_onboarding_status(user, db)
+    user = await add_onboarding_status(user, db)
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -67,7 +67,7 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)) -> Any:
     }
 
 @router.post("/google", response_model=AuthResponse)
-async def google_login(auth_data: GoogleAuthRequest, db: Session = Depends(get_db)) -> Any:
+async def google_login(auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
     print(f"DEBUG: Google login attempt with token length: {len(auth_data.token) if auth_data.token else 0}")
     
     # Check if Google OAuth is configured
@@ -91,7 +91,7 @@ async def google_login(auth_data: GoogleAuthRequest, db: Session = Depends(get_d
         print(f"DEBUG: Token verified successfully for email: {user_info['email']}")
         
         # Step 2: Authenticate or create user with Google credentials
-        user = authenticate_google_user(
+        user = await authenticate_google_user(
             db,
             google_id=user_info["google_id"],
             email=user_info["email"],
@@ -102,7 +102,7 @@ async def google_login(auth_data: GoogleAuthRequest, db: Session = Depends(get_d
         print(f"DEBUG: User authentication successful for user ID: {user.id}")
         
         # Step 3: Add onboarding status
-        user = add_onboarding_status(user, db)
+        user = await add_onboarding_status(user, db)
         
         # Step 4: Create access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -128,21 +128,21 @@ async def google_login(auth_data: GoogleAuthRequest, db: Session = Depends(get_d
         )
 
 @router.post("/logout", response_model=GenericResponse)
-def logout(response: Response) -> Any:
+async def logout(response: Response) -> Any:
     """
     Logout user (client-side only).
     """
     return {"success": True, "message": "Successfully logged out"}
 
 @router.get("/me", response_model=User)
-def get_current_user_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Any:
+async def get_current_user_info(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> Any:
     """
     Get current user info.
     """
-    return add_onboarding_status(current_user, db)
+    return await add_onboarding_status(current_user, db)
 
 @router.get("/google/debug")
-def debug_google_config() -> Any:
+async def debug_google_config() -> Any:
     """
     Debug endpoint to check Google OAuth configuration.
     """

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 
 from app.db.session import get_db
@@ -31,15 +31,15 @@ from app.core.security import get_current_user
 router = APIRouter()
 
 @router.post("/", response_model=OnboardingData, status_code=status.HTTP_201_CREATED)
-def create_user_onboarding(
+async def create_user_onboarding(
     onboarding_data: OnboardingCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """Create onboarding data for the current user."""
     
     # Check if user already has onboarding data
-    existing_data = get_onboarding_data_by_user_id(db, current_user.id)
+    existing_data = await get_onboarding_data_by_user_id(db, current_user.id)
     if existing_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -47,17 +47,17 @@ def create_user_onboarding(
         )
     
     # Create onboarding data
-    created_data = create_onboarding_data(db, current_user.id, onboarding_data)
+    created_data = await create_onboarding_data(db, current_user.id, onboarding_data)
     return created_data
 
 @router.get("/status", response_model=OnboardingStatus)
-def get_onboarding_status(
-    db: Session = Depends(get_db),
+async def get_onboarding_status(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """Get onboarding status for the current user."""
     
-    onboarding_data = get_onboarding_data_by_user_id(db, current_user.id)
+    onboarding_data = await get_onboarding_data_by_user_id(db, current_user.id)
     has_completed = onboarding_data is not None
     
     return {
@@ -66,13 +66,13 @@ def get_onboarding_status(
     }
 
 @router.get("/", response_model=OnboardingData)
-def get_user_onboarding(
-    db: Session = Depends(get_db),
+async def get_user_onboarding(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """Get onboarding data for the current user."""
     
-    onboarding_data = get_onboarding_data_by_user_id(db, current_user.id)
+    onboarding_data = await get_onboarding_data_by_user_id(db, current_user.id)
     if not onboarding_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -82,14 +82,14 @@ def get_user_onboarding(
     return onboarding_data
 
 @router.put("/", response_model=OnboardingData)
-def update_user_onboarding(
+async def update_user_onboarding(
     onboarding_update: OnboardingUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """Update onboarding data for the current user."""
     
-    updated_data = update_onboarding_data(db, current_user.id, onboarding_update)
+    updated_data = await update_onboarding_data(db, current_user.id, onboarding_update)
     if not updated_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -99,13 +99,13 @@ def update_user_onboarding(
     return updated_data
 
 @router.delete("/", response_model=GenericResponse)
-def delete_user_onboarding(
-    db: Session = Depends(get_db),
+async def delete_user_onboarding(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """Delete onboarding data for the current user."""
     
-    success = delete_onboarding_data(db, current_user.id)
+    success = await delete_onboarding_data(db, current_user.id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,7 +115,7 @@ def delete_user_onboarding(
     return {"success": True, "message": "Onboarding data deleted successfully"}
 
 @router.get("/options")
-def get_onboarding_options() -> Any:
+async def get_onboarding_options() -> Any:
     """Get all available options for onboarding form."""
     
     return {

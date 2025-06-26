@@ -181,8 +181,17 @@ const MyRoadmapPage = () => {
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
             <div className="text-center">
               <div className="relative">
-                <Play className="h-16 w-16 text-theme-accent mx-auto mb-6 animate-bounce" />
-                {/* <div className="absolute inset-0 bg-theme-accent/10 rounded-full animate-pulse opacity-20"></div> */}
+                <div className="relative mx-auto mb-6 w-16 h-16 flex items-center justify-center">
+                  <Play className="h-16 w-16 text-theme-accent animate-bounce" 
+                        style={{ 
+                          animationDuration: '1s',
+                          animationTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+                        }} />
+                  {/* Pulsing background ring */}
+                  <div className="absolute inset-0 bg-theme-accent/10 rounded-full animate-ping opacity-30"></div>
+                  {/* Secondary bounce ring */}
+                  <div className="absolute inset-2 bg-theme-accent/5 rounded-full animate-pulse"></div>
+                </div>
               </div>
               <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">
                 Creating Your Personalized Roadmap

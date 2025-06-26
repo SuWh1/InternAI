@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight, Loader } from 'lucide-react';
+import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight } from 'lucide-react';
 import agentService from '../services/agentService';
 
 import ErrorMessage from '../components/common/ErrorMessage';
+import { SubtopicLoadingIcon } from '../components/common/LoadingSpinner';
 import { useRoadmap } from '../hooks/useRoadmap';
 import { useTheme } from '../contexts/ThemeContext';
 import { isWeekUnlocked, isWeekCompleted, validateWeekNavigation } from '../utils/weekProgress';
@@ -378,7 +379,7 @@ const WeekDetailPage: React.FC = () => {
                 {isGeneratingSubtopics && subtopics.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="flex items-center space-x-3">
-                      <Loader className="w-5 h-5 text-purple-600 animate-spin" />
+                      <SubtopicLoadingIcon size="medium" />
                       <span className="text-theme-secondary text-sm">Generating learning content...</span>
                     </div>
                   </div>

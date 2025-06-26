@@ -15,16 +15,17 @@ interface AuthState {
   setError: (error: string | null) => void;
   clearError: () => void;
   logout: () => void;
+  initialize: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   devtools(
     persist(
-      (set) => ({
-        // Initial state
+      (set, get) => ({
+        // Initial state - start with loading true to prevent flash
         user: null,
         isAuthenticated: false,
-        loading: false,
+        loading: true,
         error: null,
 
         // Actions
@@ -73,6 +74,11 @@ export const useAuthStore = create<AuthState>()(
             'auth/logout'
           );
         },
+
+        initialize: async () => {
+          const { authService } = await import('../services/authService');
+          await authService.initializeAuth();
+        },
       }),
       {
         name: 'auth-storage',
@@ -80,6 +86,12 @@ export const useAuthStore = create<AuthState>()(
           user: state.user,
           isAuthenticated: state.isAuthenticated 
         }),
+        onRehydrateStorage: () => (state) => {
+          // Initialize auth after rehydration
+          if (state) {
+            state.initialize();
+          }
+        },
       }
     ),
     {

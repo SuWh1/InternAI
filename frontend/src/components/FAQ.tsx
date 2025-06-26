@@ -89,28 +89,31 @@ const FAQ = () => {
             <motion.div
               key={index}
               variants={staggerItem}
-              // whileHover={{ 
-              //   y: -8,
-              //   transition: { 
-              //     type: "spring", 
-              //     stiffness: 400,
-              //     damping: 17 
-              //   }
-              // }}
+              whileHover={{ 
+                y: -8,
+                transition: { 
+                  type: "spring", 
+                  stiffness: 400,
+                  damping: 17 
+                }
+              }}
               className="relative overflow-hidden group"
             >
               <motion.div 
                 className="bg-theme-secondary rounded-xl border border-theme overflow-hidden transition-colors duration-300 relative cursor-pointer"
-                // whileHover={{
-                //   borderColor: 'rgba(147, 51, 234, 0.3)',
-                // }}
+                animate={{
+                  borderColor: openIndex === index ? 'var(--border-hover)' : 'var(--border)',
+                }}
+                whileHover={{
+                  borderColor: 'var(--border-hover)',
+                }}
                 transition={{ duration: 0.3 }}
               >
                 {/* Gradient purple background on hover with animation */}
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-purple-500/30 to-pink-500/20 opacity-0 rounded-xl pointer-events-none"
                   initial={{ opacity: 0 }}
-                  // whileHover={{ opacity: 1 }}
+                  whileHover={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
                 />
 
@@ -157,12 +160,12 @@ const FAQ = () => {
                 </AnimatePresence>
 
                 {/* Animated underline */}
-                {/* <motion.div
+                <motion.div
                   className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent pointer-events-none"
                   initial={{ scaleX: 0 }}
                   whileHover={{ scaleX: 1 }}
                   transition={{ duration: 0.3 }}
-                /> */}
+                />
               </motion.div>
             </motion.div>
           ))}

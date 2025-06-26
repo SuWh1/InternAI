@@ -136,7 +136,13 @@ class AuthService {
       return this.initializationPromise;
     }
 
-    const { setLoading, setUser } = this.getStore();
+    const { setLoading, setUser, isAuthenticated, user } = this.getStore();
+    
+    // If already authenticated with user data, no need to re-initialize
+    if (isAuthenticated && user) {
+      setLoading(false);
+      return;
+    }
     
     const token = localStorage.getItem('auth_token');
     if (!token) {

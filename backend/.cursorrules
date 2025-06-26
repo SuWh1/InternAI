@@ -3,422 +3,541 @@
 ## Project Overview
 InternAI is a personalized AI assistant helping users land their first internship through:
 - **MVP**: Roadmap Generator (tailored learning paths)
-- **Future**: Internship Matcher, Resume Analyzer, Mock Interviews, Skill Gap Detection
+- **Current Features**: User onboarding, roadmap generation, resume analysis
+- **Future**: Internship matching, mock interviews, skill gap detection
 
-Built on **multi-agent AI architecture** with:
-- Main Agent (Coordinator): manages context, delegates tasks, integrates responses
-- Specialized Agents: RoadmapAgent, ResumeAgent, JobMatchAgent, InterviewAgent
+Built on **FastAPI** with **multi-agent AI architecture**:
+- Base Agent: Abstract class for all AI agents
+- Specialized Agents: RoadmapAgent, RecommendationAgent, ResumeAgent
 
-## Architecture Principles
+## Current Architecture
 
-### 1. Multi-Agent Structure
+### 1. Project Structure
 ```
 backend/
 ├── app/
-│   ├── agents/                 # Core AI agents
+│   ├── agents/                 # AI agents (current)
 │   │   ├── __init__.py
-│   │   ├── base/              # Base agent classes
-│   │   │   ├── __init__.py
-│   │   │   ├── agent.py       # BaseAgent abstract class
-│   │   │   └── coordinator.py # MainAgent coordinator
-│   │   ├── roadmap/           # RoadmapAgent
-│   │   │   ├── __init__.py
-│   │   │   ├── agent.py
-│   │   │   ├── prompts.py
-│   │   │   └── schemas.py
-│   │   ├── resume/            # ResumeAgent
-│   │   ├── job_match/         # JobMatchAgent
-│   │   └── interview/         # InterviewAgent (future)
-│   ├── services/              # Business logic layer
-│   │   ├── __init__.py
-│   │   ├── agent_service.py   # Agent orchestration
-│   │   ├── roadmap_service.py
-│   │   ├── resume_service.py
-│   │   └── job_service.py
-│   ├── workers/               # Background job processors
-│   │   ├── __init__.py
-│   │   ├── celery_app.py      # Celery configuration
-│   │   ├── tasks/
-│   │   │   ├── __init__.py
-│   │   │   ├── roadmap_tasks.py
-│   │   │   ├── resume_tasks.py
-│   │   │   └── job_tasks.py
-│   └── integrations/          # Third-party API integrations
-       ├── __init__.py
-       ├── openai_client.py
-       ├── job_boards/
-       │   ├── indeed.py
-       │   ├── linkedin.py
-       │   └── greenhouse.py
-       └── resume_parsers/
-           ├── pyresparser.py
-           └── textract.py
+│   │   ├── base_agent.py       # BaseAgent abstract class
+│   │   ├── roadmap_agent.py    # Roadmap generation
+│   │   ├── recommendation_agent.py # Recommendations
+│   │   ├── resume_agent.py     # Resume analysis
+│   │   └── pipeline.py         # Agent orchestration
+│   ├── api/                    # API layer
+│   │   ├── api_router.py       # Main router
+│   │   └── endpoints/          # API endpoints
+│   │       ├── auth.py         # Authentication
+│   │       ├── onboarding.py   # User onboarding
+│   │       └── agents.py       # Agent endpoints
+│   ├── core/                   # Core configuration
+│   │   ├── config.py           # Settings & config
+│   │   └── security.py         # Security utilities
+│   ├── crud/                   # Database operations
+│   │   ├── user.py
+│   │   ├── onboarding.py
+│   │   └── roadmap.py
+│   ├── db/                     # Database setup
+│   │   ├── base.py             # Base model
+│   │   ├── session.py          # DB session
+│   │   └── base_all.py         # Model registry
+│   ├── models/                 # SQLAlchemy models
+│   │   ├── user.py
+│   │   ├── onboarding.py
+│   │   ├── roadmap.py
+│   │   └── learning_content.py
+│   ├── schemas/                # Pydantic schemas
+│   │   ├── auth.py
+│   │   ├── onboarding.py
+│   │   ├── user.py
+│   │   └── agents.py
+│   ├── utils/                  # Utilities
+│   └── main.py                 # FastAPI app
+├── requirements.txt            # Dependencies
+├── alembic/                    # Database migrations
+├── alembic.ini                 # Alembic config
+└── .env                        # Environment variables
 ```
 
+### 2. Current Tech Stack
+- **Web Framework**: FastAPI 0.104.1
+- **Database**: PostgreSQL with SQLAlchemy 2.0.23
+- **Authentication**: Google OAuth + JWT tokens
+- **AI**: OpenAI API (GPT-3.5 Turbo)
+- **Migrations**: Alembic
+- **Validation**: Pydantic
 
-Always use gpt-3.5 turbo model.
-### 2. Agent Development Rules
+## Development Rules
 
-#### Base Agent Class
-- All agents MUST inherit from `BaseAgent`
-- Implement required methods: `process()`, `validate_input()`, `format_output()`
-- Use dependency injection for LLM clients, databases, external services
-- Include structured logging with agent context
+### 3. Agent Development Standards
+
+#### Base Agent Pattern (Current)
+```python
+from app.agents.base_agent import BaseAgent, AgentResponse
+
+class YourAgent(BaseAgent):
+    def __init__(self):
+        super().__init__("YourAgent")
+    
+    async def run(self, input_data: Dict[str, Any]) -> AgentResponse:
+        try:
+            # Agent logic here
+            result = await self.process_data(input_data)
+            return self._create_response(True, result)
+        except Exception as e:
+            self.log_error(f"Error processing: {str(e)}")
+            return self._create_response(False, error=str(e))
+```
 
 #### Agent Naming Convention
 - Agent classes: `{Domain}Agent` (e.g., `RoadmapAgent`)
 - Agent files: `{domain}_agent.py`
-- Service files: `{domain}_service.py`
-- Schema files: `{domain}_schemas.py`
+- Always inherit from `BaseAgent`
+- Use the logging methods: `self.log_info()`, `self.log_error()`
 
-#### Agent Communication
-- Use message passing through Redis/Celery for async operations
-- Implement agent-to-agent communication via coordinator
-- Store agent states in Redis for multi-step workflows
+#### AI Model Configuration
+- **Always use GPT-3.5 Turbo** for cost efficiency
+- Set reasonable token limits (max 4000 tokens)
+- Include proper error handling for API failures
+- Cache responses when possible
 
-### 3. API Design Standards
+### 4. API Design Standards
 
-#### Versioning Strategy
-```python
-# Current: /api/v1/{resource}
-# Future: /api/v2/{resource}
-API_V1_STR = "/api/v1"
-API_V2_STR = "/api/v2"  # For breaking changes
+#### Current Endpoint Structure
+```
+/api/
+├── auth/                       # Authentication endpoints
+│   ├── POST /login             # User login
+│   ├── POST /google-login      # Google OAuth
+│   └── GET /me                 # Get current user
+├── onboarding/                 # User onboarding
+│   ├── POST /                  # Create onboarding data
+│   ├── GET /{user_id}          # Get onboarding data
+│   └── PUT /{user_id}          # Update onboarding
+└── agents/                     # AI agent endpoints
+    ├── POST /roadmap           # Generate roadmap
+    ├── POST /recommendation    # Get recommendations
+    └── POST /resume-analysis   # Analyze resume
 ```
 
-#### Endpoint Organization
-```
-/api/v1/
-├── auth/                      # Authentication
-├── users/                     # User management
-├── roadmaps/                  # Roadmap generation & management
-│   ├── POST /generate         # Generate new roadmap
-│   ├── GET /{roadmap_id}      # Get roadmap
-│   ├── PUT /{roadmap_id}      # Update roadmap
-│   └── GET /user/{user_id}    # Get user's roadmaps
-├── resumes/                   # Resume analysis
-│   ├── POST /upload           # Upload resume
-│   ├── POST /analyze          # Analyze resume
-│   └── GET /{resume_id}       # Get analysis
-├── jobs/                      # Job matching
-│   ├── POST /search           # Search jobs
-│   ├── GET /recommendations   # Get recommendations
-│   └── POST /save             # Save job
-├── profiles/                  # User profiles
-└── admin/                     # Admin endpoints
-```
-
-#### Response Standards
+#### Response Format Standards
 ```python
 # Success Response
 {
     "success": true,
     "data": {...},
-    "message": "Optional success message",
-    "meta": {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "request_id": "uuid",
-        "agent_used": "RoadmapAgent"  # For AI responses
-    }
+    "message": "Optional message"
 }
 
 # Error Response
 {
     "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "Human readable message",
-        "details": {...}
-    },
-    "meta": {
-        "timestamp": "2024-01-01T00:00:00Z",
-        "request_id": "uuid"
-    }
+    "error": "Error message",
+    "details": {...}  # Optional error details
 }
 ```
 
-### 4. Database Schema Guidelines
-
-#### Model Organization
+#### API Endpoint Best Practices
 ```python
-# Models structure
-models/
-├── __init__.py
-├── user.py                    # User & authentication
-├── profile.py                 # User profile & preferences
-├── roadmap.py                 # Roadmaps & learning paths
-├── resume.py                  # Resume data & analysis
-├── job.py                     # Job postings & matches
-├── application.py             # Job applications tracking
-├── skill.py                   # Skills & competencies
-├── progress.py                # Learning progress tracking
-└── agent_log.py               # Agent execution logs
-```
+from fastapi import APIRouter, Depends, HTTPException
+from app.core.security import get_current_user
 
-#### Required Fields for All Models
-```python
-class BaseModel(Base):
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
-    metadata = Column(JSON, default={})  # For flexible data storage
-```
+router = APIRouter()
 
-#### Key Relationships
-- User -> UserProfile (1:1)
-- User -> Roadmaps (1:many)
-- User -> Resumes (1:many)
-- User -> JobApplications (1:many)
-- Roadmap -> RoadmapSteps (1:many)
-- Job -> JobApplications (1:many)
-
-### 5. Service Layer Patterns
-
-#### Service Class Structure
-```python
-class BaseService:
-    def __init__(self, db: Session, redis_client: Redis):
-        self.db = db
-        self.redis = redis_client
-    
-    async def execute_with_agent(self, agent_class, input_data):
-        # Standard agent execution pattern
-        pass
-```
-
-#### Dependency Injection
-```python
-# Use dependency injection for services
-@router.post("/roadmaps/generate")
-async def generate_roadmap(
-    request: RoadmapRequest,
-    service: RoadmapService = Depends(get_roadmap_service),
+@router.post("/your-endpoint")
+async def your_endpoint(
+    request: YourSchema,
     current_user: User = Depends(get_current_user)
 ):
-    return await service.generate_roadmap(request, current_user)
+    try:
+        # Process request
+        result = await your_service.process(request, current_user)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 ```
 
-### 6. Background Jobs & Queues
+### 5. Database Model Standards
 
-#### Celery Task Organization
+#### Base Model Pattern (Current)
 ```python
-# Use Celery for long-running AI tasks
-@celery_app.task(bind=True, name="generate_roadmap")
-def generate_roadmap_task(self, user_id: str, preferences: dict):
-    # Task implementation
-    pass
+from app.db.base import Base
+from sqlalchemy import Column, String, Boolean, DateTime, func
 
-# Task naming: {domain}_{action}_task
-# Queue routing: route tasks by domain/priority
-```
-
-#### Task Categories
-- **Immediate** (< 5s): Simple data retrieval, basic validation
-- **Background** (5s-2min): AI generation, analysis, external API calls
-- **Scheduled** (periodic): Data sync, cleanup, report generation
-
-### 7. External API Integration
-
-#### Client Organization
-```python
-# integrations/base_client.py
-class BaseAPIClient:
-    def __init__(self, api_key: str, base_url: str):
-        self.session = httpx.AsyncClient()
-        self.api_key = api_key
-        self.base_url = base_url
+class YourModel(Base):
+    __tablename__ = "your_table"
     
-    async def make_request(self, endpoint: str, **kwargs):
-        # Standard request handling with retries, logging
-        pass
+    # id, created_at, updated_at inherited from Base
+    your_field = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="your_model")
 ```
 
-#### Configuration Management
+#### Database Best Practices
+- Use meaningful table names (plural form)
+- Add indexes on frequently queried fields
+- Use nullable=False for required fields
+- Include proper relationships with back_populates
+- Use Alembic for all schema changes
+
+#### Migration Best Practices
+```bash
+# Create new migration
+alembic revision --autogenerate -m "descriptive message"
+
+# Apply migrations
+alembic upgrade head
+
+# Review generated migration before applying
+```
+
+### 6. Configuration Management
+
+#### Environment Variables (Required)
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost/internai
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=internai
+
+# Authentication
+SECRET_KEY=your-secret-key
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# AI Services
+OPENAI_API_KEY=your-openai-api-key
+```
+
+#### Configuration Pattern
 ```python
-# Add to core/config.py
+# In app/core/config.py
+from pydantic_settings import BaseSettings
+
 class Settings(BaseSettings):
+    # Database
+    DATABASE_URL: Optional[str] = None
+    
     # AI Services
     OPENAI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
     
-    # Job Board APIs
-    INDEED_API_KEY: str = ""
-    LINKEDIN_CLIENT_ID: str = ""
-    GREENHOUSE_API_KEY: str = ""
+    # CORS
+    @property
+    def cors_origins(self) -> List[str]:
+        return [
+            "http://localhost:5173",  # Vite dev server
+            "http://localhost:3000",  # Alternative port
+        ]
     
-    # Resume Parsing
-    TEXTRACT_ACCESS_KEY: str = ""
-    
-    # Background Jobs
-    REDIS_URL: str = "redis://localhost:6379"
-    CELERY_BROKER_URL: str = "redis://localhost:6379"
+    class Config:
+        case_sensitive = True
 ```
 
-### 8. Error Handling & Logging
+### 7. Error Handling & Logging
 
 #### Structured Logging
 ```python
-import structlog
+import logging
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
-# Log format
-logger.info(
-    "agent_execution_completed",
-    agent_name="RoadmapAgent",
-    user_id=user.id,
-    execution_time_ms=1250,
-    tokens_used=1500,
-    success=True
-)
+# In agents, use inherited logging
+self.log_info("Processing started")
+self.log_error("Processing failed")
+
+# In other modules
+logger.info("User created", extra={"user_id": user.id})
+logger.error("Database error", extra={"error": str(e)})
 ```
 
 #### Exception Handling
 ```python
 # Custom exceptions
 class InternAIException(Exception):
-    def __init__(self, message: str, code: str, details: dict = None):
+    def __init__(self, message: str, details: dict = None):
         self.message = message
-        self.code = code
         self.details = details or {}
 
-class AgentExecutionError(InternAIException):
-    pass
+# Use in endpoints
+@router.post("/endpoint")
+async def endpoint():
+    try:
+        # Business logic
+        pass
+    except InternAIException as e:
+        raise HTTPException(status_code=400, detail=e.message)
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+```
 
-class ExternalAPIError(InternAIException):
-    pass
+### 8. Security Best Practices
+
+#### Authentication Flow
+```python
+# JWT token validation
+from app.core.security import get_current_user
+
+@router.get("/protected")
+async def protected_endpoint(current_user: User = Depends(get_current_user)):
+    return {"user": current_user.email}
+```
+
+#### Data Validation
+```python
+# Use Pydantic schemas for validation
+from pydantic import BaseModel, validator
+
+class UserSchema(BaseModel):
+    email: str
+    name: str
+    
+    @validator('email')
+    def validate_email(cls, v):
+        # Custom email validation
+        return v.lower()
+```
+
+#### Security Headers
+```python
+# In main.py
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 ```
 
 ### 9. Testing Standards
 
-#### Test Organization
+#### Test Structure (Recommended)
 ```
 tests/
-├── unit/
-│   ├── agents/               # Agent unit tests
-│   ├── services/             # Service layer tests
-│   └── models/               # Model tests
-├── integration/
-│   ├── api/                  # API endpoint tests
-│   └── agents/               # Agent integration tests
-└── fixtures/
+├── __init__.py
+├── conftest.py                 # Pytest configuration
+├── test_agents/               # Agent tests
+│   ├── test_base_agent.py
+│   ├── test_roadmap_agent.py
+│   └── test_recommendation_agent.py
+├── test_api/                  # API endpoint tests
+│   ├── test_auth.py
+│   ├── test_onboarding.py
+│   └── test_agents.py
+├── test_models/               # Model tests
+│   ├── test_user.py
+│   └── test_roadmap.py
+└── fixtures/                  # Test data
     ├── users.py
-    ├── roadmaps.py
-    └── jobs.py
+    └── roadmaps.py
 ```
 
-#### Testing Patterns
+#### Test Patterns
 ```python
-# Use pytest with async support
-@pytest.mark.asyncio
-async def test_roadmap_generation():
-    # Arrange
-    user = create_test_user()
-    preferences = create_test_preferences()
-    
-    # Act
-    roadmap = await roadmap_service.generate(user, preferences)
-    
-    # Assert
-    assert roadmap.steps is not None
-    assert len(roadmap.steps) > 0
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+@pytest.fixture
+def test_user():
+    return {
+        "email": "test@example.com",
+        "name": "Test User"
+    }
+
+def test_create_user(test_user):
+    response = client.post("/api/auth/register", json=test_user)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
 ```
 
-### 10. Deployment & CI/CD
+### 10. Performance & Optimization
 
-#### Environment Configuration
+#### Database Query Optimization
 ```python
-# Use environment-specific configs
-class DevelopmentConfig(Settings):
-    DEBUG: bool = True
-    DATABASE_URL: str = "postgresql://localhost/internai_dev"
+# Use eager loading for relationships
+from sqlalchemy.orm import joinedload
 
-class ProductionConfig(Settings):
-    DEBUG: bool = False
-    # Production-specific settings
+def get_user_with_roadmap(db: Session, user_id: int):
+    return db.query(User).options(
+        joinedload(User.roadmap)
+    ).filter(User.id == user_id).first()
 ```
+
+#### Caching Strategy
+```python
+# Simple in-memory caching for AI responses
+from functools import lru_cache
+
+@lru_cache(maxsize=100)
+def get_cached_roadmap(user_preferences: str):
+    # Cache expensive AI operations
+    pass
+```
+
+#### Async Operations
+```python
+# Use async/await for I/O operations
+import httpx
+
+async def call_openai_api(prompt: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": prompt}]}
+        )
+        return response.json()
+```
+
+### 11. Code Quality Standards
+
+#### Type Hints
+```python
+from typing import Dict, List, Optional, Any
+
+async def process_data(
+    data: Dict[str, Any], 
+    user_id: int
+) -> Optional[Dict[str, Any]]:
+    # Implementation
+    pass
+```
+
+#### Code Style
+- Follow PEP 8 style guide
+- Use descriptive variable names
+- Keep functions under 50 lines
+- Add docstrings for complex functions
+- Use type hints throughout
+
+#### Documentation
+```python
+def complex_function(param1: str, param2: int) -> Dict[str, Any]:
+    """
+    Process complex data transformation.
+    
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+        
+    Returns:
+        Dict containing processed data
+        
+    Raises:
+        ValueError: If param1 is empty
+    """
+    pass
+```
+
+### 12. Deployment & Environment
 
 #### Docker Configuration
 ```dockerfile
-# Use multi-stage builds
-FROM python:3.11-slim as base
-# Base image setup
+FROM python:3.11-slim
 
-FROM base as worker
-# Celery worker configuration
+WORKDIR /app
 
-FROM base as api
-# FastAPI application
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 #### Health Checks
 ```python
 @router.get("/health")
 async def health_check():
-    # Check database, redis, external services
     return {
         "status": "healthy",
-        "services": {
-            "database": "up",
-            "redis": "up",
-            "openai": "up"
-        }
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
     }
 ```
 
-### 11. Security Guidelines
+#### Environment Setup
+```bash
+# Development
+export ENVIRONMENT=development
+export DEBUG=true
 
-#### Data Protection
-- Never log sensitive user data (passwords, tokens, PII)
-- Encrypt sensitive data at rest (resumes, personal info)
-- Use environment variables for all secrets
-- Implement rate limiting on AI endpoints
-
-#### AI Safety
-- Validate and sanitize all AI inputs
-- Implement content filtering for generated responses
-- Set reasonable token limits and timeouts
-- Monitor for prompt injection attempts
-
-### 12. Performance Optimization
-
-#### Caching Strategy
-```python
-# Use Redis for caching
-@cache(expire=3600, key="roadmap:{user_id}:{hash}")
-async def get_cached_roadmap(user_id: str, preferences: dict):
-    # Implementation
-    pass
+# Production
+export ENVIRONMENT=production
+export DEBUG=false
 ```
-
-#### Database Optimization
-- Use database indexes on frequently queried fields
-- Implement pagination for list endpoints
-- Use connection pooling
-- Consider read replicas for heavy queries
 
 ## Development Workflow
 
-1. **Feature Development**: Create feature branch, implement with agents/services/APIs
-2. **Testing**: Write unit and integration tests
-3. **Documentation**: Update API docs, add inline comments
-4. **Review**: Code review focusing on agent patterns, security, performance
-5. **Deployment**: Deploy to staging, run integration tests, deploy to production
+1. **Feature Development**: Create feature branch, implement following patterns above
+2. **Database Changes**: Use Alembic migrations for schema changes
+3. **Testing**: Write tests for new functionality
+4. **Code Review**: Focus on security, performance, and maintainability
+5. **Deployment**: Test in staging before production
 
-## Code Quality Standards
+## Common Patterns
 
-- Use type hints throughout
-- Follow PEP 8 style guide
-- Maximum function complexity: 10
-- Test coverage: minimum 80%
-- All AI operations must be async
-- Use dataclasses/Pydantic for structured data
+### CRUD Operations
+```python
+# In crud/base.py
+class CRUDBase:
+    def get(self, db: Session, id: int):
+        return db.query(self.model).filter(self.model.id == id).first()
+    
+    def create(self, db: Session, obj_in: BaseModel):
+        db_obj = self.model(**obj_in.dict())
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+```
 
-## Monitoring & Observability
+### Dependency Injection
+```python
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from app.db.session import get_db
 
-- Log all agent executions with metrics
+def get_user_service(db: Session = Depends(get_db)):
+    return UserService(db)
+```
+
+### Agent Pipeline
+```python
+async def process_with_agents(input_data: Dict[str, Any]):
+    # Initialize agents
+    roadmap_agent = RoadmapAgent()
+    recommendation_agent = RecommendationAgent()
+    
+    # Process through pipeline
+    roadmap_result = await roadmap_agent.run(input_data)
+    if roadmap_result.success:
+        recommendation_result = await recommendation_agent.run(roadmap_result.data)
+        return recommendation_result
+    
+    return roadmap_result
+```
+
+## Monitoring & Maintenance
+
 - Monitor API response times and error rates
-- Track AI token usage and costs
-- Set up alerts for system health
-- Implement distributed tracing for agent workflows
+- Track OpenAI API usage and costs
+- Set up logging for debugging
+- Regular database maintenance and backups
+- Keep dependencies updated
+
+## Future Enhancements
+
+- **Redis**: For caching and session management
+- **Celery**: For background job processing
+- **Structured Logging**: With correlation IDs
+- **API Rate Limiting**: To prevent abuse
+- **Comprehensive Testing**: Unit and integration tests
+- **API Documentation**: Enhanced OpenAPI docs

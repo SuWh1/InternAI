@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
 
@@ -11,10 +10,8 @@ export const useAuth = () => {
     clearError,
   } = useAuthStore();
 
-  // Initialize auth on first use
-  useEffect(() => {
-    authService.initializeAuth();
-  }, []);
+  // Auth initialization is now handled globally in App.tsx
+  // No need to initialize on every hook call
 
   const login = async (email: string, password: string) => {
     clearError();

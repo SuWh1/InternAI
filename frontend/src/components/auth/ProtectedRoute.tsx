@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import LoadingSpinner from '../common/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -31,22 +30,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [loading, isAuthenticated, navigate, location.pathname]);
 
-  // Show loading spinner while checking auth
+  // If still loading auth state, show skeleton instead of null to prevent flash
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <LoadingSpinner size="large" />
+      <div className="min-h-screen bg-theme-primary">
+        <div className="animate-pulse">
+          <div className="h-16 bg-theme-secondary"></div>
+          <div className="container mx-auto px-4 py-8">
+            <div className="h-8 bg-theme-secondary rounded mb-4"></div>
+            <div className="space-y-4">
+              <div className="h-4 bg-theme-secondary rounded w-3/4"></div>
+              <div className="h-4 bg-theme-secondary rounded w-1/2"></div>
+              <div className="h-4 bg-theme-secondary rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // If not authenticated, we've already redirected, so show loading
+  // If not authenticated after loading, redirect will happen via useEffect
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <LoadingSpinner size="large" />
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;

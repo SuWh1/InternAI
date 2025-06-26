@@ -1,5 +1,6 @@
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface GoogleLoginButtonProps {
   onSuccess?: () => void;
@@ -11,6 +12,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   onError 
 }) => {
   const { googleLoginWithToken } = useAuth();
+  const { theme } = useTheme();
   
   // Check if Google OAuth is configured
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -37,27 +39,33 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
 
   return (
     <div className="w-full flex justify-center">
-      <GoogleLogin
-        onSuccess={(credentialResponse) => {
-          const credential = credentialResponse.credential;
-          if (!credential) {
-            console.error('Missing Google credential');
-            onError?.('Missing Google credential');
-            return;
-          }
+      <div className="relative inline-block">
+        <GoogleLogin
+          onSuccess={(credentialResponse) => {
+            const credential = credentialResponse.credential;
+            if (!credential) {
+              console.error('Missing Google credential');
+              onError?.('Missing Google credential');
+              return;
+            }
 
-          handleGoogleLogin(credential);
-        }}
-        onError={() => {
-          console.log('Google Login Failed');
-          onError?.('Google Login Failed');
-        }}
-        theme="outline"
-        size="large"
-        text="continue_with"
-        shape="rectangular"
-        logo_alignment="left"
-      />
+            handleGoogleLogin(credential);
+          }}
+          onError={() => {
+            console.log('Google Login Failed');
+            onError?.('Google Login Failed');
+          }}
+          theme={theme === 'dark' ? 'filled_black' : 'outline'}
+          size="large"
+          text="continue_with"
+          shape="rectangular"
+          logo_alignment="left"
+        />
+        <div
+          className="absolute inset-0 pointer-events-none rounded-md"
+          style={{ backgroundColor: 'var(--google-button-overlay)' }}
+        ></div>
+      </div>
     </div>
   );
 }; 

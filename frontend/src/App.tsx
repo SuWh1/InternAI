@@ -15,6 +15,8 @@ import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { useAuth } from './hooks/useAuth';
+import { useAuthStore } from './stores/authStore';
 
 // Page transition variants
 const pageVariants = {
@@ -52,182 +54,53 @@ function AnimatedRoutes() {
 
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route 
-          path="/" 
-          element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <LandingPage />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/onboarding" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <OnboardingPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/roadmap" 
-          element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <RoadmapInfoPage />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/resume-review" 
-          element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <ResumeReviewInfoPage />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/internships" 
-          element={
-            <motion.div
-              initial="initial"
-              animate="in"
-              exit="out"
-              variants={pageVariants}
-              transition={pageTransition}
-            >
-              <InternshipsInfoPage />
-            </motion.div>
-          } 
-        />
-        <Route 
-          path="/my-roadmap" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <MyRoadmapPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/roadmap/week/:weekNumber" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <WeekDetailPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/lesson/:slug" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <LessonPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        {/* Legacy route support for backward compatibility */}
-        <Route 
-          path="/lesson/:topic/:context/:weekNumber" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <LessonPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/my-resume" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <MyResumePage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/my-internships" 
-          element={
-            <ProtectedRoute>
-              <motion.div
-                initial="initial"
-                animate="in"
-                exit="out"
-                variants={pageVariants}
-                transition={pageTransition}
-              >
-                <MyInternshipsPage />
-              </motion.div>
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+      <motion.div
+        key={location.pathname}
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={pageVariants}
+        transition={pageTransition}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+          <Route path="/roadmap" element={<RoadmapInfoPage />} />
+          <Route path="/resume-review" element={<ResumeReviewInfoPage />} />
+          <Route path="/internships" element={<InternshipsInfoPage />} />
+          <Route path="/my-roadmap" element={<ProtectedRoute><MyRoadmapPage /></ProtectedRoute>} />
+          <Route path="/roadmap/week/:weekNumber" element={<ProtectedRoute><WeekDetailPage /></ProtectedRoute>} />
+          <Route path="/lesson/:slug" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
+          <Route path="/lesson/:topic/:context/:weekNumber" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
+          <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
+          <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
+        </Routes>
+      </motion.div>
     </AnimatePresence>
   );
 }
 
 function App() {
+  // Initialize auth globally once when app starts
+  const { loading: authLoading } = useAuth();
+  const { initialize } = useAuthStore();
+
+  // Trigger auth initialization on app start
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Show loading screen only on initial app load
+  if (authLoading) {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen bg-theme-primary flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <Router>

@@ -32,6 +32,8 @@
   --accent: #C700FF;
   --border: #E0E0E0;
   --hover: #F5F5F5;
+  --border-hover: rgba(199, 0, 255, 0.6); /* Accent with opacity */
+  --google-button-overlay: rgba(199, 0, 255, 0.05);
   
   /* Animation Variables */
   --animation-fast: 200ms;
@@ -58,6 +60,8 @@
   --accent: #C700FF;
   --border: #2A2A2A;
   --hover: #1F1F1F;
+  --border-hover: rgba(199, 0, 255, 0.3); /* Accent with lower opacity for dark mode */
+  --google-button-overlay: rgba(199, 0, 255, 0.1);
   
   /* Dark theme shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -105,32 +109,6 @@
               border-color var(--animation-fast) var(--animation-smooth),
               box-shadow var(--animation-medium) var(--animation-smooth),
               transform var(--animation-fast) var(--animation-smooth-out);
-}
-
-/* Button hover effects */
-button, .button {
-  position: relative;
-  overflow: hidden;
-  transition: all var(--animation-fast) var(--animation-smooth);
-}
-
-button::before, .button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width var(--animation-medium) ease-out, 
-              height var(--animation-medium) ease-out;
-}
-
-button:hover::before, .button:hover::before {
-  width: 300px;
-  height: 300px;
 }
 
 /* Card hover effects */

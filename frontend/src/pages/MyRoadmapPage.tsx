@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MapPin, 
   Calendar, 
@@ -32,6 +33,15 @@ const MyRoadmapPage = () => {
   const [resumeText, setResumeText] = useState('');
   const [showResumeInput, setShowResumeInput] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+
+  const personalizedMessages = [
+    "Calibrating roadmap based on your unique skills...",
+    "Factoring in your learning style preferences...",
+    "Cross-referencing your experience with top internship requirements...",
+    "Identifying projects that align with your career goals...",
+    "Fine-tuning weekly goals for your schedule..."
+  ];
 
   const handleGenerateRoadmap = async () => {
     const request = resumeText.trim() ? { resume_text: resumeText } : {};
@@ -70,8 +80,18 @@ const MyRoadmapPage = () => {
     };
 
     document.addEventListener('keydown', handleEscKey);
-    return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showRegenerateConfirm]);
+
+    const intervalId = setInterval(() => {
+      if (loading && roadmap !== null) {
+        setCurrentMessageIndex(prevIndex => (prevIndex + 1) % personalizedMessages.length);
+      }
+    }, 3300);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      clearInterval(intervalId);
+    };
+  }, [showRegenerateConfirm, loading, roadmap]);
 
   // Calculate overall progress
   const overallProgress = progress.length > 0 
@@ -114,34 +134,43 @@ const MyRoadmapPage = () => {
         {loading && roadmap !== null && (
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
             <div className="text-center">
-              <div className="relative">
-                <RefreshCw className="h-16 w-16 text-theme-accent mx-auto mb-6 animate-spin" />
-                <div className="absolute inset-0 bg-theme-accent/10 rounded-full animate-pulse opacity-20"></div>
+              <div className="relative w-20 h-20 mx-auto mb-6">
+                <RefreshCw className="absolute inset-0 m-auto w-8 h-8 text-theme-accent" />
+                <motion.div
+                  className="w-full h-full rounded-full border-t-2 border-b-2 border-theme-accent"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                />
+                <motion.div
+                  className="absolute inset-0 w-full h-full rounded-full border-l-2 border-r-2 border-purple-400"
+                  animate={{ rotate: -360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                />
               </div>
               <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">
                 Regenerating Your Roadmap
               </h2>
               <p className="text-theme-secondary mb-6 max-w-2xl mx-auto transition-colors duration-300">
-                Our AI agents are creating a fresh, personalized roadmap just for you. 
                 This may take a few moments...
               </p>
               
               {/* Progress Steps */}
-              <div className="max-w-md mx-auto">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center space-x-2">
+              <div className="max-w-lg mx-auto h-6">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentMessageIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.4 }}
+                    className="flex items-center justify-center space-x-2"
+                  >
                     <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Analyzing your profile</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-150"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Generating AI roadmap</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-300"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Finding internship matches</span>
-                  </div>
-                </div>
+                    <span className="text-sm text-theme-secondary">
+                      {personalizedMessages[currentMessageIndex]}
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
           </div>

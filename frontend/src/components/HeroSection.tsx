@@ -3,6 +3,7 @@ import { ArrowRight, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import AuthModal from './auth/AuthModal';
 import AnimatedSection from './common/AnimatedSection';
 
@@ -10,6 +11,7 @@ const HeroSection = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const { isAuthenticated } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const handleGetRoadmap = () => {
@@ -55,9 +57,13 @@ const HeroSection = () => {
           <div className="text-center">
             {/* Main heading with stagger animation */}
             <AnimatedSection animation="fade-in-up" delay={0}>
-              <h1 className="text-4xl md:text-6xl font-bold text-theme-primary mb-6 transition-colors duration-300">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 transition-colors duration-300">
                 <motion.span
-                  className="text-shine"
+                  className={`${
+                    theme === 'dark' 
+                      ? 'bg-gradient-to-r from-white via-purple-400 to-pink-300 bg-clip-text text-transparent' 
+                      : 'bg-gradient-to-r from-gray-800 via-purple-700 to-gray-800 bg-clip-text text-transparent'
+                  }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
@@ -80,10 +86,20 @@ const HeroSection = () => {
                     transition: { type: "spring", stiffness: 300 }
                   }}
                 >
-                  <span className="text-gradient-animate">Internship</span>
+                  <span className={`${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-pulse'
+                      : 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent animate-pulse'
+                  }`}>
+                    Internship
+                  </span>
                 </motion.span>
                 <motion.span
-                  className="text-shine"
+                  className={`${
+                    theme === 'dark' 
+                      ? 'bg-gradient-to-r from-pink-300 via-purple-400 to-white bg-clip-text text-transparent' 
+                      : 'bg-gradient-to-r from-gray-800 via-purple-700 to-gray-800 bg-clip-text text-transparent'
+                  }`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
@@ -160,7 +176,7 @@ const HeroSection = () => {
                 />
                 
                 <motion.img
-                  src="/homeRoadmap.png"
+                  src={theme === 'dark' ? "/homeRoadmap.png" : "/homeRoadmapWhite.png"}
                   alt="Interactive Roadmap Preview"
                   className="w-full h-full object-cover rounded-2xl"
                   initial={{ scale: 0.9, opacity: 0 }}
@@ -170,7 +186,11 @@ const HeroSection = () => {
                 />
                 
                 {/* Overlay gradient for better text readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent rounded-2xl z-10" />
+                <div className={`absolute inset-0 rounded-2xl z-10 ${
+                  theme === 'dark' 
+                    ? 'bg-gradient-to-t from-black/50 via-transparent to-transparent' 
+                    : 'bg-gradient-to-t from-white/50 via-transparent to-transparent'
+                }`} />
                 
                 {/* Bottom overlay text */}
                 <motion.div 
@@ -179,21 +199,31 @@ const HeroSection = () => {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 1, duration: 0.5 }}
                 >
-                  <p className="text-white font-semibold text-lg drop-shadow-lg">Interactive Roadmap Preview</p>
-                  <p className="text-white/90 text-sm mt-1 drop-shadow-md">Personalized learning path visualization</p>
+                  <p className={`font-semibold text-lg drop-shadow-lg ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Interactive Roadmap Preview
+                  </p>
+                  <p className={`text-sm mt-1 drop-shadow-md ${
+                    theme === 'dark' ? 'text-white/90' : 'text-gray-700'
+                  }`}>
+                    Personalized learning path visualization
+                  </p>
                 </motion.div>
                 
                 {/* Animated particles */}
                 {[...Array(5)].map((_, i) => (
                   <motion.div
                     key={i}
-                    className="absolute w-2 h-2 bg-white/70 rounded-full z-10"
+                    className={`absolute w-2 h-2 rounded-full z-10 ${
+                      theme === 'dark' ? 'bg-white/70' : 'bg-gray-800/70'
+                    }`}
                     initial={{ opacity: 0 }}
                     animate={{
                       opacity: [0, 1, 0],
                       scale: [0, 1.5, 0],
                       x: [0, (i - 2) * 50],
-                      y: [0, -100],
+                      y: [0, -60],
                     }}
                     transition={{
                       duration: 3,

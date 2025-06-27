@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, BookOpen, ExternalLink, Loader, AlertCircle, CheckCircle } from 'lucide-react';
 import type { GPTTopicResponse } from '../../types/roadmap';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 
 interface TopicDetailsModalProps {
   isOpen: boolean;
@@ -77,11 +78,7 @@ const TopicDetailsModal: React.FC<TopicDetailsModalProps> = ({
                 {/* Explanation */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-3">Detailed Explanation</h3>
-                  <div className="prose prose-sm max-w-none">
-                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {details.explanation}
-                    </div>
-                  </div>
+                  <MarkdownRenderer content={details.explanation} />
                 </div>
 
                 {/* Resources */}

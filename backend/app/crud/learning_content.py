@@ -23,8 +23,11 @@ async def get_learning_content(
     if context:
         query = query.where(LearningContent.context == context)
     
+    # Order by most recent and get the first match to handle duplicates gracefully
+    query = query.order_by(LearningContent.created_at.desc())
+    
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 async def get_learning_content_by_user(
     db: AsyncSession, 

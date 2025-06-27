@@ -106,11 +106,25 @@ export interface GPTTopicRequest {
   user_level?: string;
 }
 
+export interface YouTubeVideo {
+  title: string;
+  url: string;
+  description: string;
+  channel: string;
+  duration: string;
+  view_count: number;
+  like_count: number;
+  thumbnail: string;
+  published_at: string;
+  relevance_score: number;
+}
+
 export interface GPTTopicResponse {
   success: boolean;
   explanation: string;
-  resources?: string[];
-  subtasks?: string[];
+  resources: string[];
+  subtasks: string[];
+  youtube_videos?: YouTubeVideo[];
   cached: boolean;
 }
 

@@ -20,7 +20,7 @@ const WeekDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completedSubtopics, setCompletedSubtopics] = useState<Set<number>>(new Set());
-  const [subtopics, setSubtopics] = useState<string[]>([]);
+  const [subtopics, setSubtopics] = useState<Array<{ title: string; description: string } | string>>([]);
   const [isGeneratingSubtopics, setIsGeneratingSubtopics] = useState(false);
   const [userInteracting, setUserInteracting] = useState(false);
   const [forceGeneration, setForceGeneration] = useState(false);
@@ -186,12 +186,12 @@ const WeekDetailPage: React.FC = () => {
         console.log(`API response invalid, using fallback subtopics`);
         // Fallback to default subtopics if AI generation fails
         setSubtopics([
-          `Introduction to ${theme}`,
-          `Core Concepts and Principles`,
-          `Practical Applications`,
-          `Best Practices and Guidelines`,
-          `Common Challenges and Solutions`,
-          `Advanced Techniques`
+          { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
+          { title: `Core Concepts`, description: `Master the essential concepts and building blocks of ${theme} development` },
+          { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
+          { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
+          { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
+          { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` }
         ]);
       }
     } catch (error) {
@@ -199,12 +199,12 @@ const WeekDetailPage: React.FC = () => {
       console.log(`Using fallback subtopics due to error`);
       // Fallback subtopics
       setSubtopics([
-        `Introduction to ${theme}`,
-        `Core Concepts and Principles`,
-        `Practical Applications`,
-        `Best Practices and Guidelines`,
-        `Common Challenges and Solutions`,
-        `Advanced Techniques`
+        { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
+        { title: `Core Concepts`, description: `Master the essential concepts and building blocks of ${theme} development` },
+        { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
+        { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
+        { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
+        { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` }
       ]);
     } finally {
       console.log(`generateSubtopics finishing, clearing loading state`);
@@ -261,13 +261,15 @@ const WeekDetailPage: React.FC = () => {
     }
   };
 
-  const handleGetAIExplanation = (subtopic: string) => {
+  const handleGetAIExplanation = (subtopicTitle: string, subtopicDescription?: string) => {
     const weekNum = parseInt(weekNumber || '1');
-    const context = `Week ${weekNum}: ${week?.theme} - ${subtopic}`;
+    // Use description for better context if available, otherwise fall back to title
+    const detailedContext = subtopicDescription || subtopicTitle;
+    const context = `Week ${weekNum}: ${week?.theme} - ${detailedContext}`;
     
     // Import the lesson slug service dynamically to avoid circular dependencies
     import('../services/lessonSlugService').then(({ lessonSlugService }) => {
-      const lessonUrl = lessonSlugService.createLessonUrl(subtopic, context, weekNum);
+      const lessonUrl = lessonSlugService.createLessonUrl(subtopicTitle, context, weekNum);
       navigate(lessonUrl);
     });
   };
@@ -385,46 +387,65 @@ const WeekDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {subtopics.map((subtopic, index) => (
-                                      <div
-                    key={index}
-                    onClick={() => handleSubtopicToggle(index)}
-                    className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors duration-200 cursor-pointer ${
-                      completedSubtopics.has(index)
-                        ? 'bg-green-500/10 border-green-500/30 dark:bg-green-400/10 dark:border-green-400/30'
-                        : 'bg-theme-hover border-theme hover:border-theme-accent'
-                    }`}
-                  >
-                    <div className="mt-0.5">
-                      {completedSubtopics.has(index) ? (
-                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-                      ) : (
-                        <Circle className="w-6 h-6 text-theme-secondary/50" />
-                      )}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <p className={`text-sm leading-relaxed ${
-                        completedSubtopics.has(index) 
-                          ? 'text-theme-secondary dark:text-green-300 line-through opacity-75' 
-                          : 'text-theme-secondary'
-                      }`}>
-                        {subtopic}
-                      </p>
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent the parent div's onClick from firing
-                            handleGetAIExplanation(subtopic);
-                          }}
-                          className="mt-2 flex items-center gap-1 text-xs text-theme-accent hover:opacity-80 transition-colors duration-300"
+                    {subtopics.map((subtopic, index) => {
+                      // Handle both string format (old) and object format (new)
+                      const subtopicTitle = typeof subtopic === 'string' ? subtopic : subtopic.title;
+                      const subtopicDescription = typeof subtopic === 'string' ? subtopic : subtopic.description;
+                      
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => handleSubtopicToggle(index)}
+                          className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors duration-200 cursor-pointer ${
+                            completedSubtopics.has(index)
+                              ? 'bg-green-500/10 border-green-500/30 dark:bg-green-400/10 dark:border-green-400/30'
+                              : 'bg-theme-hover border-theme hover:border-theme-accent'
+                          }`}
                         >
-                          <Brain className="w-3 h-3" />
-                          <span>Click here to study and get AI explanation</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                          <div className="mt-0.5">
+                            {completedSubtopics.has(index) ? (
+                              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <Circle className="w-6 h-6 text-theme-secondary/50" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium leading-relaxed mb-1 ${
+                              completedSubtopics.has(index) 
+                                ? 'text-theme-secondary dark:text-green-300 line-through opacity-75' 
+                                : 'text-theme-primary'
+                            }`}>
+                              {subtopicTitle}
+                            </p>
+                            {typeof subtopic === 'object' && (
+                              <p className={`text-xs leading-relaxed mb-2 transition-colors duration-300 ${
+                                completedSubtopics.has(index) 
+                                  ? theme === 'dark' 
+                                    ? 'text-gray-400 line-through opacity-75' 
+                                    : 'text-gray-500 line-through opacity-75'
+                                  : theme === 'dark'
+                                    ? 'text-gray-300'
+                                    : 'text-gray-600'
+                              }`}>
+                                {subtopic.description}
+                              </p>
+                            )}
+                              
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent the parent div's onClick from firing
+                                handleGetAIExplanation(subtopicTitle, subtopicDescription);
+                              }}
+                              className="flex items-center gap-1 text-xs text-theme-accent hover:opacity-80 transition-colors duration-300"
+                            >
+                              <Brain className="w-3 h-3" />
+                              <span>Click here to study and get AI explanation</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
                 )}
             </div>

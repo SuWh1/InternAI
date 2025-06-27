@@ -14,15 +14,38 @@ import {
   Youtube,
   FileText,
   RotateCcw,
-  Share2
+  Share2,
+  AlertTriangle
 } from 'lucide-react';
 import agentService from '../services/agentService';
 import lessonSlugService from '../services/lessonSlugService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import LessonRenderer from '../components/common/LessonRenderer';
+import MarkdownRenderer from '../components/common/MarkdownRenderer';
 import { useTheme } from '../contexts/ThemeContext';
 import type { GPTTopicResponse } from '../types/roadmap';
+
+// Safe wrapper for MarkdownRenderer that handles parsing errors
+interface SafeMarkdownRendererProps {
+  content: string;
+  onRenderingError?: (error: Error) => void;
+}
+
+
+
+const SafeMarkdownRenderer: React.FC<SafeMarkdownRendererProps> = ({ content, onRenderingError }) => {
+  try {
+    return <MarkdownRenderer content={content} />;
+  } catch (error) {
+    console.error('Error rendering markdown:', error);
+    onRenderingError?.(error as Error);
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600">Error rendering lesson content. Please try refreshing the page.</p>
+      </div>
+    );
+  }
+};
 
 const LessonPage: React.FC = () => {
   const params = useParams<{ 
@@ -37,12 +60,14 @@ const LessonPage: React.FC = () => {
   const [lesson, setLesson] = useState<GPTTopicResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [renderingError, setRenderingError] = useState<string | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
   const [estimatedReadTime, setEstimatedReadTime] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Handle both new slug format and legacy URL format
   let topic = '';
@@ -154,12 +179,14 @@ const LessonPage: React.FC = () => {
   const loadLessonContent = async (isRetry = false) => {
     setLoading(true);
     setError(null);
+    setRenderingError(null);
 
     try {
       const details = await agentService.getTopicDetails({
         topic: topic,
         context: context,
-        user_level: 'intermediate'
+        user_level: 'intermediate',
+        force_regenerate: isRetry
       });
       
       setLesson(details);
@@ -194,6 +221,30 @@ const LessonPage: React.FC = () => {
 
   const handleRetryLoad = () => {
     loadLessonContent();
+  };
+
+  const handleRegenerateLesson = async () => {
+    setIsRegenerating(true);
+    setRenderingError(null);
+    setLesson(null); // Clear any error content from backend
+    await loadLessonContent(true);
+    setIsRegenerating(false);
+  };
+
+  const handleRenderingError = (error: Error) => {
+    setRenderingError(error.message);
+  };
+
+  // Check if lesson content contains error messages
+  const isErrorContent = (content: string): boolean => {
+    const errorPatterns = [
+      /Error parsing lesson content/i,
+      /Error generating lesson/i, 
+      /Please try again/i,
+      /Failed to generate/i,
+      /Content generation failed/i
+    ];
+    return errorPatterns.some(pattern => pattern.test(content));
   };
 
   const handleShare = async () => {
@@ -659,15 +710,54 @@ const LessonPage: React.FC = () => {
                   </div>
                 )}
                 
-                <div className="prose prose-lg max-w-none">
-                  {lesson?.explanation ? (
-                    <LessonRenderer content={typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation)} />
-                  ) : (
-                    <div className="text-theme-secondary">
-                      No learning guide content available. Please try refreshing the lesson.
+                {renderingError || (lesson?.explanation && isErrorContent(typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation))) ? (
+                  <div className="text-center py-12">
+                    <div className="relative mb-8">
+                      <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto" />
+                      <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse opacity-40"></div>
                     </div>
-                  )}
-                </div>
+                    <h3 className="text-2xl font-semibold text-theme-primary mb-4">
+                      Oops!
+                    </h3>
+                    <p className="text-theme-secondary max-w-2xl mx-auto mb-6 leading-relaxed">
+                      We sincerely apologize, please try again!
+                    </p>
+                    
+                    <div className="flex items-center justify-center space-x-4">
+                      {isRegenerating ? (
+                        <div className="flex items-center space-x-3 px-6 py-3 bg-theme-accent text-white rounded-lg">
+                          <Brain className="w-5 h-5 animate-pulse" />
+                          <span>Regenerating lesson...</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleRegenerateLesson}
+                          className="px-6 py-3 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-all duration-300 flex items-center space-x-2"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span>Regenerate Lesson</span>
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => navigate(-1)}
+                        className="px-6 py-3 bg-theme-hover text-theme-primary rounded-lg hover:bg-theme-accent hover:text-white transition-all duration-300"
+                      >
+                        Go Back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="prose prose-lg max-w-none">
+                    {lesson?.explanation ? (
+                      <SafeMarkdownRenderer content={typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation)} onRenderingError={handleRenderingError} />
+                    ) : (
+                      <div className="text-theme-secondary">
+                        No learning guide content available. Please try refreshing the lesson.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -702,6 +792,86 @@ const LessonPage: React.FC = () => {
                   
                   <div className="space-y-3">
                     {renderStructuredResources(lesson.resources)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* YouTube Videos */}
+            {lesson?.youtube_videos && lesson.youtube_videos.length > 0 && (
+              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.25s'}}>
+                <div className="p-8">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Youtube className="w-6 h-6 text-red-500" />
+                    <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
+                      Popular Video Tutorials
+                    </h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {lesson.youtube_videos.map((video, index) => (
+                      <a
+                        key={index}
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-start space-x-4 p-4 rounded-lg bg-theme-hover border border-theme hover:border-red-500/30 hover:bg-red-500/5 transition-all duration-200 cursor-pointer"
+                      >
+                        {/* Thumbnail */}
+                        <div className="flex-shrink-0">
+                          {video.thumbnail ? (
+                            <img 
+                              src={video.thumbnail} 
+                              alt={video.title}
+                              className="w-24 h-18 object-cover rounded-lg border border-theme"
+                            />
+                          ) : (
+                            <div className="w-24 h-18 bg-red-500/20 rounded-lg border border-red-500/30 flex items-center justify-center">
+                              <Youtube className="w-8 h-8 text-red-500" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Video Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-theme-primary font-medium text-sm mb-2 group-hover:text-red-500 transition-colors line-clamp-2">
+                            {video.title}
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs text-theme-secondary mb-2">
+                            <span className="flex items-center gap-1">
+                              <Youtube className="w-3 h-3" />
+                              {video.channel}
+                            </span>
+                            {video.duration && (
+                              <span className="bg-theme-primary/80 text-theme-secondary px-2 py-1 rounded">
+                                {video.duration}
+                              </span>
+                            )}
+                            {video.view_count > 0 && (
+                              <span>
+                                {video.view_count > 1000000 
+                                  ? `${(video.view_count / 1000000).toFixed(1)}M views`
+                                  : video.view_count > 1000 
+                                  ? `${(video.view_count / 1000).toFixed(0)}K views`
+                                  : `${video.view_count} views`}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {video.description && (
+                            <p className="text-xs text-theme-secondary opacity-80 line-clamp-2 transition-colors duration-300">
+                              {video.description}
+                            </p>
+                          )}
+                        </div>
+                        
+                        {/* External Link Icon */}
+                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <ExternalLink className="w-4 h-4 text-theme-secondary" />
+                        </div>
+                      </a>
+                    ))}
                   </div>
                 </div>
               </div>

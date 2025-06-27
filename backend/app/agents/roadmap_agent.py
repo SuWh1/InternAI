@@ -1,5 +1,5 @@
 """
-Roadmap Agent - Generates personalized 3-month weekly internship preparation roadmap using OpenAI.
+Roadmap Agent - Generates personalized 3-month weekly internship preparation roadmap using Google Gemini.
 """
 
 import os
@@ -25,7 +25,7 @@ class RoadmapAgent(BaseAgent):
         self._debug_environment()
     
     def _debug_environment(self):
-        """Debug environment variable and OpenAI setup."""
+        """Debug environment variable and Gemini setup."""
         # Check if running in Docker or local environment
         is_docker = os.getenv("DOCKER_CONTAINER") == "true"
         self.log_info(f"Running in Docker: {is_docker}")
@@ -37,23 +37,23 @@ class RoadmapAgent(BaseAgent):
         else:
             self.log_info("Using Docker environment variables (no .env file needed)")
         
-        # Check OpenAI API key
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            self.log_info(f"OpenAI API key found (length: {len(openai_key)})")
+        # Check Gemini API key
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key:
+            self.log_info(f"Gemini API key found (length: {len(gemini_key)})")
             # Log first 8 and last 4 characters for debugging
-            self.log_info(f"OpenAI key preview: {openai_key[:8]}...{openai_key[-4:]}")
+            self.log_info(f"Gemini key preview: {gemini_key[:8]}...{gemini_key[-4:]}")
         else:
-            self.log_error("OPENAI_API_KEY environment variable not found!")
-            self.log_info("Available environment variables with 'OPENAI': " + 
-                         str([k for k in os.environ.keys() if 'OPENAI' in k.upper()]))
+            self.log_error("GEMINI_API_KEY environment variable not found!")
+            self.log_info("Available environment variables with 'GEMINI': " + 
+                         str([k for k in os.environ.keys() if 'GEMINI' in k.upper()]))
         
-        # Test OpenAI import
+        # Test Gemini import
         try:
-            from openai import AsyncOpenAI
-            self.log_info("OpenAI import successful")
+            from google import genai
+            self.log_info("Google Generative AI import successful")
         except ImportError as e:
-            self.log_error(f"Failed to import OpenAI: {e}")
+            self.log_error(f"Failed to import Google Generative AI: {e}")
 
     async def run(self, input_data: Dict[str, Any]) -> AgentResponse:
         """
@@ -104,13 +104,13 @@ class RoadmapAgent(BaseAgent):
         """Generate the personalized roadmap using OpenAI based on user data."""
         
         try:
-            self.log_info("Starting OpenAI roadmap generation")
+            self.log_info("Starting Gemini roadmap generation")
             
-            # Create user profile summary for OpenAI
+            # Create user profile summary for Gemini
             user_profile = self._create_user_profile_summary(onboarding_data, resume_summary)
             self.log_info(f"Created user profile (length: {len(user_profile)} chars)")
             
-            # Generate roadmap using OpenAI
+            # Generate roadmap using Gemini
             ai_roadmap = await self._generate_ai_roadmap(user_profile)
             
             # Create personalization factors for tracking
@@ -128,7 +128,7 @@ class RoadmapAgent(BaseAgent):
         except Exception as e:
             self.log_error(f"Error in AI roadmap generation: {str(e)}")
             self.log_error(f"Exception type: {type(e).__name__}")
-            # Fallback to basic structure if OpenAI fails
+            # Fallback to basic structure if Gemini fails
             self.log_info("Falling back to template roadmap")
             return await self._generate_fallback_roadmap(onboarding_data, resume_summary)
 
@@ -146,7 +146,7 @@ class RoadmapAgent(BaseAgent):
             return "medium"
 
     def _create_user_profile_summary(self, onboarding_data: Dict[str, Any], resume_summary: Dict[str, Any] = None) -> str:
-        """Create a comprehensive user profile summary for OpenAI prompt."""
+        """Create a comprehensive user profile summary for Gemini prompt."""
         
         profile_parts = []
         
@@ -208,53 +208,53 @@ class RoadmapAgent(BaseAgent):
         return "\n".join(profile_parts)
     
     async def _generate_ai_roadmap(self, user_profile: str) -> Dict[str, Any]:
-        """Generate complete roadmap using OpenAI."""
+        """Generate complete roadmap using Google Gemini."""
         
-        # Check if OpenAI API key is configured
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if not openai_api_key:
-            self.log_error("OpenAI API key not configured - check OPENAI_API_KEY environment variable")
-            raise Exception("OpenAI API key not configured")
+        # Check if Gemini API key is configured
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            self.log_error("Gemini API key not configured - check GEMINI_API_KEY environment variable")
+            raise Exception("Gemini API key not configured")
         
         try:
-            self.log_info("Importing OpenAI...")
-            # Import OpenAI
-            from openai import AsyncOpenAI
+            self.log_info("Importing Google Generative AI...")
+            from google import genai
+            from google.genai import types
             
-            self.log_info("Creating OpenAI client...")
-            client = AsyncOpenAI(api_key=openai_api_key)
+            self.log_info("Configuring Gemini client...")
+            client = genai.Client(api_key=gemini_api_key)
             
             # Create comprehensive prompt for roadmap generation
             prompt = self._create_roadmap_prompt(user_profile)
             self.log_info(f"Created prompt (length: {len(prompt)} chars)")
             
-            self.log_info("Calling OpenAI API...")
+            self.log_info("Calling Gemini API...")
             
-            response = await client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are an expert career coach specializing in tech internship preparation. Generate detailed, personalized 12-week roadmaps for students. Always respond with valid JSON only."
-                    },
-                    {
-                        "role": "user", 
-                        "content": prompt
-                    }
-                ],
-                max_tokens=3000,  # Increased for full roadmap
-                temperature=0.7,
-                response_format={"type": "json_object"}
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    response_mime_type='application/json'
+                )
             )
             
-            self.log_info("Received OpenAI response")
-            content = response.choices[0].message.content
+            self.log_info("Received Gemini response")
+            content = response.text
             self.log_info(f"Response content length: {len(content)} chars")
             self.log_info(f"Response preview: {content[:200]}...")
             
-            # Parse JSON response (guaranteed to be valid JSON due to response_format)
+            # Parse JSON response
             try:
-                roadmap_data = json.loads(content)
+                # Clean the response (remove any markdown formatting if present)
+                cleaned_content = content.strip()
+                if cleaned_content.startswith('```json'):
+                    cleaned_content = cleaned_content[7:]
+                if cleaned_content.endswith('```'):
+                    cleaned_content = cleaned_content[:-3]
+                cleaned_content = cleaned_content.strip()
+                
+                roadmap_data = json.loads(cleaned_content)
                 self.log_info("Successfully parsed JSON roadmap")
                 
                 # Validate structure
@@ -270,58 +270,57 @@ class RoadmapAgent(BaseAgent):
             except json.JSONDecodeError as e:
                 self.log_error(f"JSON parsing error: {str(e)}")
                 self.log_error(f"Raw content: {content}")
-                # This should rarely happen with response_format, but provide fallback
                 raise Exception(f"Failed to parse AI response as JSON: {str(e)}")
                 
         except Exception as e:
-            self.log_error(f"OpenAI API error: {str(e)}")
+            self.log_error(f"Gemini API error: {str(e)}")
             self.log_error(f"Error type: {type(e).__name__}")
             raise
     
     def _create_roadmap_prompt(self, user_profile: str) -> str:
-        """Create detailed prompt for OpenAI roadmap generation."""
+        """Create detailed prompt for Gemini roadmap generation using best practices."""
         
-        return f"""Generate a personalized 12-week internship preparation roadmap for this student:
+        return f"""You are an expert career coach specializing in tech internship preparation. Create a personalized 12-week internship preparation roadmap.
 
+STUDENT PROFILE:
 {user_profile}
 
-Return ONLY valid JSON with this exact structure (no additional text or markdown):
+TASK: Generate a comprehensive 12-week roadmap tailored to this student's background and goals.
+
+BEST PRACTICES:
+- Focus on practical, job-relevant skills over theory
+- Build from foundational to advanced concepts progressively
+- Include real-world projects that can be showcased in interviews
+- Emphasize skills that top tech companies actually look for
+- Make tasks specific and actionable, not generic advice
+
+REQUIREMENTS:
+- Exactly 12 weeks of content
+- 3-5 specific tasks per week
+- Realistic time estimates (8-25 hours/week based on urgency)
+- Include concrete deliverables students can showcase
+- Provide high-quality learning resources
+- Tailor difficulty to student's experience level
+
+OUTPUT FORMAT: Return valid JSON only, structured as:
 {{
     "weeks": [
         {{
             "week_number": 1,
-            "theme": "Week theme/title",
-            "focus_area": "main_focus_area_keyword",
-            "tasks": ["task1", "task2", "task3", "task4"],
+            "theme": "Descriptive week theme",
+            "focus_area": "main_skill_keyword", 
+            "tasks": ["specific actionable task 1", "specific actionable task 2", ...],
             "estimated_hours": 15,
-            "deliverables": ["deliverable1", "deliverable2"],
-            "resources": ["resource1", "resource2", "resource3"]
+            "deliverables": ["concrete deliverable 1", "concrete deliverable 2"],
+            "resources": ["high-quality resource 1", "high-quality resource 2", ...]
         }}
     ]
 }}
 
-Requirements:
-1. Generate exactly 12 weeks of content
-2. Each week should have 3-5 specific, actionable tasks
-3. Tailor content to the student's experience level, goals, and timeline
-4. Include relevant resources (websites, books, platforms)
-5. Estimate realistic weekly hours (8-25 hours depending on urgency)
-6. Create meaningful deliverables for each week
-7. Progression should build from foundational to advanced concepts
-8. Focus on practical skills needed for target internships
-
-Make it highly personalized based on:
-- Their experience level and background
-- Target internships and roles
-- Programming languages and tech stack
-- Timeline urgency
-- Previous experience
-
-Ensure tasks are specific and actionable, not generic advice.
-Return only the JSON, no other text."""
+Create a roadmap that would genuinely help this student land their target internship."""
     
     def _extract_json_from_response(self, content: str) -> Dict[str, Any]:
-        """Extract JSON from OpenAI response if parsing fails."""
+        """Extract JSON from Gemini response if parsing fails."""
         try:
             # Look for JSON content between ```json and ``` or { and }
             import re
@@ -360,22 +359,23 @@ Return only the JSON, no other text."""
         # Determine focus areas (simplified)
         focus_areas = []
         if "Software Engineer" in str(target_roles):
-            focus_areas.extend(["algorithms", "coding_practice", "system_design"])
+            focus_areas.extend(["algorithms", "coding_practice", "system_design", "data_structures", "object_oriented_programming", "testing", "version_control", "debugging"])
         if "Data Science" in str(target_roles):
-            focus_areas.extend(["python", "machine_learning", "statistics"])
+            focus_areas.extend(["python", "machine_learning", "statistics", "data_visualization", "data_cleaning", "big_data", "sql", "deep_learning", "pandas", "numpy"])
         if "Web Development" in str(preferred_tech_stack):
-            focus_areas.extend(["web_development", "apis", "databases"])
+            focus_areas.extend(["web_development", "apis", "databases", "frontend", "backend", "responsive_design", "javascript", "html_css", "frameworks", "authentication", "deployment"])
+        if "Mobile Development" in str(preferred_tech_stack):
+            focus_areas.extend(["mobile_development", "ui_design", "app_architecture", "native_apis", "cross_platform", "app_publishing", "mobile_testing"])
+        if "DevOps" in str(preferred_tech_stack):
+            focus_areas.extend(["ci_cd", "containerization", "cloud_services", "infrastructure_as_code", "monitoring", "security"])
         
         # Remove duplicates
         focus_areas = list(set(focus_areas))[:6]
         
         return {
             "experience_level": experience_level,
+            "programming_languages": programming_languages,
             "focus_areas": focus_areas,
-            "skill_assessment": {
-                "overall_score": 5,  # Default middle score since AI handles assessment
-                "level_category": experience_level.lower()
-            },
             "timeline_urgency": self._assess_timeline_urgency(onboarding_data.get("application_timeline", "")),
             "target_internships": target_internships,
             "has_resume": resume_summary is not None,
@@ -383,7 +383,7 @@ Return only the JSON, no other text."""
         }
     
     async def _generate_fallback_roadmap(self, onboarding_data: Dict[str, Any], resume_summary: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Generate a basic fallback roadmap if OpenAI fails."""
+        """Generate a basic fallback roadmap if Gemini fails."""
         
         self.log_info("Using fallback roadmap generation")
         

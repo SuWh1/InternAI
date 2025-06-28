@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
 import agentService from '../services/agentService';
 
 import ErrorMessage from '../components/common/ErrorMessage';
-import { SubtopicLoadingIcon } from '../components/common/LoadingSpinner';
+import TruncatedText from '../components/common/TruncatedText';
 import { useRoadmap } from '../hooks/useRoadmap';
 import { useTheme } from '../contexts/ThemeContext';
 import { isWeekUnlocked, isWeekCompleted, validateWeekNavigation } from '../utils/weekProgress';
@@ -381,7 +381,9 @@ const WeekDetailPage: React.FC = () => {
                 {isGeneratingSubtopics && subtopics.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="flex items-center space-x-3">
-                      <SubtopicLoadingIcon size="medium" />
+                      <div className="spin-animation">
+                        <LoaderCircle className="w-6 h-6 text-theme-accent" />
+                      </div>
                       <span className="text-theme-secondary text-sm">Generating learning content...</span>
                     </div>
                   </div>
@@ -419,7 +421,7 @@ const WeekDetailPage: React.FC = () => {
                               {subtopicTitle}
                             </p>
                             {typeof subtopic === 'object' && (
-                              <p className={`text-xs leading-relaxed mb-2 transition-colors duration-300 ${
+                              <div className={`text-xs leading-relaxed mb-2 transition-colors duration-300 ${
                                 completedSubtopics.has(index) 
                                   ? theme === 'dark' 
                                     ? 'text-gray-400 line-through opacity-75' 
@@ -428,8 +430,13 @@ const WeekDetailPage: React.FC = () => {
                                     ? 'text-gray-300'
                                     : 'text-gray-600'
                               }`}>
-                                {subtopic.description}
-                              </p>
+                                <TruncatedText 
+                                  text={subtopic.description} 
+                                  maxLength={80} 
+                                  className={completedSubtopics.has(index) ? 'line-through' : ''}
+                                  expandButtonClass={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}
+                                />
+                              </div>
                             )}
                               
                             <button

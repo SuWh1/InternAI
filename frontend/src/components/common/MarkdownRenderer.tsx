@@ -23,11 +23,19 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       if (!inline && match) {
         return (
           <div className="my-4">
-            <div className="flex items-center justify-between bg-gray-800 text-white px-4 py-2 rounded-t-lg text-sm">
+            <div className={`flex items-center justify-between px-4 py-2 rounded-t-lg text-sm ${
+              theme === 'dark' 
+                ? 'bg-gray-800 text-white' 
+                : 'bg-gray-100 text-gray-700 border-b border-gray-200'
+            }`}>
               <span className="font-medium">{language.toUpperCase()}</span>
               <button
                 onClick={() => navigator.clipboard.writeText(String(children))}
-                className="text-gray-300 hover:text-white transition-colors"
+                className={`transition-colors ${
+                  theme === 'dark'
+                    ? 'text-gray-300 hover:text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Copy
               </button>
@@ -37,6 +45,27 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
               language={language}
               PreTag="div"
               className="!mt-0 !rounded-t-none"
+              customStyle={{
+                fontSize: '0.875rem !important', // Force 14px exactly
+                lineHeight: '1.5 !important',
+                fontFamily: "'Fira Code', 'Monaco', 'Consolas', monospace !important",
+                margin: 0,
+                padding: '1rem',
+                maxWidth: '100%',
+                width: '100%',
+                overflowX: 'auto',
+                wordWrap: 'break-word',
+                whiteSpace: 'pre'
+              }}
+              codeTagProps={{
+                style: {
+                  fontSize: '0.875rem !important',
+                  lineHeight: '1.5 !important',
+                  fontFamily: "'Fira Code', 'Monaco', 'Consolas', monospace !important",
+                  whiteSpace: 'pre',
+                  wordWrap: 'break-word'
+                }
+              }}
             >
               {String(children).replace(/\n$/, '')}
             </SyntaxHighlighter>

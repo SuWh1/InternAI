@@ -107,8 +107,7 @@
 * {
   transition: background-color var(--animation-fast) var(--animation-smooth),
               border-color var(--animation-fast) var(--animation-smooth),
-              box-shadow var(--animation-medium) var(--animation-smooth),
-              transform var(--animation-fast) var(--animation-smooth-out);
+              box-shadow var(--animation-medium) var(--animation-smooth);
 }
 
 /* Card hover effects */
@@ -167,6 +166,37 @@
 
 .pulse {
   animation: pulse 2s infinite;
+}
+
+/* Spin animation for loading icons */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loadingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: loadingSpin 1s linear infinite;
+  transform-origin: center;
+  display: inline-block;
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite !important;
+  transform-origin: center !important;
+  display: inline-block !important;
 }
 
 /* Skeleton loading animation */
@@ -698,6 +728,67 @@ html {
   font-family: 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
 }
 
+/* React Syntax Highlighter consistent font sizing and overflow handling */
+.markdown-content pre[class*="language-"] {
+  font-size: 0.875rem !important; /* Force 14px */
+  line-height: 1.5 !important;
+  font-family: 'Fira Code', 'Monaco', 'Consolas', monospace !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  word-wrap: break-word !important;
+  white-space: pre !important;
+}
+
+.markdown-content pre[class*="language-"] code {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  white-space: pre !important;
+  word-wrap: break-word !important;
+}
+
+/* Comprehensive lesson content containment */
+.lesson-content,
+.markdown-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.lesson-content * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure all content elements stay within bounds */
+.lesson-content pre,
+.lesson-content code,
+.lesson-content table,
+.lesson-content img,
+.lesson-content video,
+.markdown-content pre,
+.markdown-content code,
+.markdown-content table,
+.markdown-content img,
+.markdown-content video {
+  max-width: 100% !important;
+  overflow-x: auto;
+}
+
+/* Special handling for tables */
+.lesson-content table,
+.markdown-content table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Prevent text from breaking out */
+.lesson-content,
+.markdown-content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
 /* List Styling */
 .text-content [class*="flex items-start gap-3"] {
   position: relative;
@@ -789,6 +880,27 @@ html {
   .text-content {
     font-size: 16px;
     line-height: 1.6;
+  }
+  
+  /* Enhanced mobile code block handling */
+  .markdown-content pre[class*="language-"],
+  .lesson-content pre {
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 0;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Ensure proper scrolling on mobile */
+  .lesson-content,
+  .markdown-content {
+    overflow-x: hidden;
+  }
+  
+  .lesson-content *,
+  .markdown-content * {
+    max-width: calc(100vw - 32px); /* Account for padding */
   }
 }
 

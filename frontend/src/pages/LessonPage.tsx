@@ -31,17 +31,47 @@ interface SafeMarkdownRendererProps {
   onRenderingError?: (error: Error) => void;
 }
 
-
+// Semantic color utility for theme-adaptive styling with soft, pleasant colors
+const useSemanticColors = (theme: string) => ({
+  error: {
+    bg: theme === 'dark' ? 'bg-red-500/10' : 'bg-red-50/70',
+    border: theme === 'dark' ? 'border-red-500/20' : 'border-red-200/60',
+    text: theme === 'dark' ? 'text-red-300' : 'text-red-700'
+  },
+  warning: {
+    bg: theme === 'dark' ? 'bg-amber-500/10' : 'bg-amber-50/70',
+    border: theme === 'dark' ? 'border-amber-500/20' : 'border-amber-200/60',
+    text: theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+  },
+  success: {
+    bg: theme === 'dark' ? 'bg-emerald-500/10' : 'bg-emerald-50/70',
+    border: theme === 'dark' ? 'border-emerald-500/20' : 'border-emerald-200/60',
+    text: theme === 'dark' ? 'text-emerald-300' : 'text-emerald-700'
+  },
+  info: {
+    bg: theme === 'dark' ? 'bg-sky-500/10' : 'bg-sky-50/70',
+    border: theme === 'dark' ? 'border-sky-500/20' : 'border-sky-200/60',
+    text: theme === 'dark' ? 'text-sky-300' : 'text-sky-700'
+  },
+  youtube: {
+    bg: theme === 'dark' ? 'bg-rose-500/8' : 'bg-rose-50/60',
+    border: theme === 'dark' ? 'border-rose-500/15' : 'border-rose-200/50',
+    text: theme === 'dark' ? 'text-rose-300' : 'text-rose-700'
+  }
+});
 
 const SafeMarkdownRenderer: React.FC<SafeMarkdownRendererProps> = ({ content, onRenderingError }) => {
+  const { theme } = useTheme();
+  const colors = useSemanticColors(theme);
+  
   try {
     return <MarkdownRenderer content={content} />;
   } catch (error) {
     console.error('Error rendering markdown:', error);
     onRenderingError?.(error as Error);
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-600">Error rendering lesson content. Please try refreshing the page.</p>
+      <div className={`p-4 ${colors.error.bg} border ${colors.error.border} rounded-lg`}>
+        <p className={colors.error.text}>Error rendering lesson content. Please try refreshing the page.</p>
       </div>
     );
   }
@@ -265,19 +295,22 @@ const LessonPage: React.FC = () => {
     }
   };
 
-  const formatResource = (resource: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return resource.replace(urlRegex, (url) => {
-      const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
-      const domain = new URL(url).hostname.replace('www.', '');
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-theme-accent hover:opacity-80 underline">
-        ${isYoutube ? '📺' : '🔗'} ${domain}
-      </a>`;
-    });
-  };
+  // Create clean display title from context (extract just "Week N - Topic")
+  const cleanDisplayTitle = context ? (() => {
+    const match = context.match(/^(Week \d+)[:\s]*([^-]+)(?:\s*-\s*(.*))?/);
+    if (match) {
+      const weekPart = match[1]; // "Week N"
+      const topicPart = match[2].trim(); // Topic name
+      return `${weekPart} - ${topicPart}`;
+    }
+    return context; // fallback to original if parsing fails
+  })() : null;
+
+
 
   const renderStructuredResources = (resources: any) => {
     if (!resources || !Array.isArray(resources)) return null;
+    const colors = useSemanticColors(theme);
 
     return resources.map((resource: any, index: number) => {
       // Handle structured resources with title, link, and type
@@ -286,19 +319,19 @@ const LessonPage: React.FC = () => {
         const isGithub = resource.link.includes('github.com');
         const isDocs = resource.type === 'documentation' || resource.link.includes('developer.mozilla.org') || resource.link.includes('/docs');
         
-        // Get appropriate icon
+        // Get appropriate icon and theme-adaptive colors
         let IconComponent = ExternalLink;
         let iconColor = 'text-theme-accent';
         
         if (isYoutube) {
           IconComponent = Youtube;
-          iconColor = 'text-red-500';
+          iconColor = colors.youtube.text;
         } else if (isGithub) {
           IconComponent = FileText; // Using FileText as a GitHub substitute
-          iconColor = 'text-gray-400 dark:text-gray-300';
+          iconColor = 'text-theme-secondary';
         } else if (isDocs) {
           IconComponent = FileText;
-          iconColor = 'text-blue-500';
+          iconColor = colors.info.text;
         }
         
         return (
@@ -314,7 +347,7 @@ const LessonPage: React.FC = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-theme-accent hover:text-theme-accent-dark font-medium text-sm mb-1 group-hover:underline">
-                {resource.title}
+                <SafeMarkdownRenderer content={resource.title || ''} />
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-theme-secondary opacity-70">
@@ -323,11 +356,11 @@ const LessonPage: React.FC = () => {
                 {resource.type && (
                   <>
                     <span className="text-theme-secondary opacity-50">•</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      resource.type === 'documentation' ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20' :
-                      resource.type === 'tutorial' ? 'bg-green-500/10 text-green-600 border border-green-500/20' :
-                      resource.type === 'video' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
-                      'bg-theme-accent/10 text-theme-accent border border-theme-accent/20'
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      resource.type === 'documentation' ? `${colors.info.bg} ${colors.info.text} ${colors.info.border}` :
+                      resource.type === 'tutorial' ? `${colors.success.bg} ${colors.success.text} ${colors.success.border}` :
+                      resource.type === 'video' ? `${colors.youtube.bg} ${colors.youtube.text} ${colors.youtube.border}` :
+                      'bg-theme-accent/10 text-theme-accent border-theme-accent/20'
                     }`}>
                       {resource.type}
                     </span>
@@ -342,64 +375,21 @@ const LessonPage: React.FC = () => {
         );
       }
       
-      // Handle simple string resources (fallback)
+      // Handle simple string resources (fallback) - let MarkdownRenderer handle all parsing
       if (typeof resource === 'string') {
-        // Try to extract URL from string if it contains one
-        const urlMatch = resource.match(/https?:\/\/[^\s]+/);
-        const hasUrl = urlMatch !== null;
-        
-        if (hasUrl) {
-          const url = urlMatch[0];
-          const title = resource.replace(url, '').trim().replace(/^[-•]\s*/, '');
-          const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
-          
-          return (
-            <a
-              key={index}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200 cursor-pointer"
-            >
-              <div className="flex-shrink-0 mt-1">
-                {isYoutube ? (
-                  <Youtube className="w-5 h-5 text-red-500 group-hover:scale-110 transition-transform duration-200" />
-                ) : (
-                  <ExternalLink className="w-5 h-5 text-theme-accent group-hover:scale-110 transition-transform duration-200" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-theme-accent hover:text-theme-accent-dark font-medium text-sm mb-1 group-hover:underline">
-                  {title || 'Resource Link'}
-                </div>
-                <div className="text-xs text-theme-secondary opacity-70">
-                  {new URL(url).hostname}
-                </div>
-              </div>
-              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <ExternalLink className="w-4 h-4 text-theme-secondary" />
-              </div>
-            </a>
-          );
-        } else {
-          // Plain text resource without URL
-          return (
-            <div 
-              key={index} 
-              className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme opacity-60"
-            >
-              <div className="flex-shrink-0 mt-1">
-                <FileText className="w-5 h-5 text-theme-secondary" />
-              </div>
-              <div className="text-sm text-theme-secondary leading-relaxed">
-                {resource}
-                <div className="text-xs text-yellow-600 mt-1">
-                  ⚠️ No direct link available - search online
-                </div>
-              </div>
+        return (
+          <div 
+            key={index} 
+            className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200"
+          >
+            <div className="flex-shrink-0 mt-1">
+              <FileText className="w-5 h-5 text-theme-secondary" />
             </div>
-          );
-        }
+            <div className="text-sm text-theme-secondary leading-relaxed">
+              <SafeMarkdownRenderer content={resource || ''} />
+            </div>
+          </div>
+        );
       }
       
       return null;
@@ -449,11 +439,12 @@ const LessonPage: React.FC = () => {
     };
 
     return tasksArray.map((task: any, index: number) => {
+      const colors = useSemanticColors(theme);
       const levelColors = {
-        'Beginner': 'bg-green-500/20 text-green-600 border-green-500/30',
-        'Intermediate': 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30',
-        'Advanced': 'bg-red-500/20 text-red-600 border-red-500/30',
-        'General': 'bg-purple-500/20 text-purple-600 border-purple-500/30'
+        'Beginner': `${colors.success.bg} ${colors.success.text} ${colors.success.border}`,
+        'Intermediate': `${colors.warning.bg} ${colors.warning.text} ${colors.warning.border}`,
+        'Advanced': `${colors.error.bg} ${colors.error.text} ${colors.error.border}`,
+        'General': 'bg-theme-accent/20 text-theme-accent border-theme-accent/30'
       };
 
       const levelColor = levelColors[task.level as keyof typeof levelColors] || levelColors.General;
@@ -462,10 +453,10 @@ const LessonPage: React.FC = () => {
       return (
         <div
           key={index}
-          className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-purple-500/30 transition-all duration-200"
+          className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent/30 transition-all duration-200"
         >
-          <div className="w-6 h-6 bg-purple-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span className="text-xs font-medium text-purple-600">{index + 1}</span>
+          <div className="w-6 h-6 bg-theme-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-xs font-medium text-theme-accent">{index + 1}</span>
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -474,15 +465,15 @@ const LessonPage: React.FC = () => {
               </span>
             </div>
             <div className="text-sm text-theme-secondary leading-relaxed mb-2">
-              {task.description}
+              <SafeMarkdownRenderer content={task.description || ''} />
             </div>
             {task.hint && (
-              <div className="text-xs text-theme-secondary/70 bg-blue-500/10 border border-blue-500/20 rounded-md p-2 mt-2">
-                <span className="text-purple-600 font-medium">💡 Hint: </span>
+              <div className={`text-xs text-theme-secondary/70 ${colors.info.bg} border ${colors.info.border} rounded-md p-2 mt-2`}>
+                <span className="text-theme-accent font-medium">💡 Hint: </span>
                 {isHintRevealed ? (
-                  <span className="transition-all duration-300 text-theme-secondary">
-                    {task.hint}
-                  </span>
+                  <div className="transition-all duration-300 text-theme-secondary">
+                    <SafeMarkdownRenderer content={task.hint || ''} />
+                  </div>
                 ) : (
                   <span 
                     onClick={() => handleRevealHint(index)}
@@ -515,17 +506,16 @@ const LessonPage: React.FC = () => {
           >
             <div className="flex-shrink-0 mt-1">
               {line.includes('youtube.com') || line.includes('youtu.be') ? (
-                <Youtube className="w-5 h-5 text-red-500" />
+                <Youtube className={`w-5 h-5 ${useSemanticColors(theme).youtube.text}`} />
               ) : line.includes('http') ? (
                 <ExternalLink className="w-5 h-5 text-theme-accent" />
               ) : (
                 <FileText className="w-5 h-5 text-theme-secondary" />
               )}
             </div>
-            <div 
-              className="text-sm text-theme-secondary leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: formatResource(line) }}
-            />
+            <div className="text-sm text-theme-secondary leading-relaxed">
+              <SafeMarkdownRenderer content={line} />
+            </div>
           </div>
         );
       }
@@ -568,16 +558,16 @@ const LessonPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                <div className={`mt-8 p-4 ${useSemanticColors(theme).info.bg} border ${useSemanticColors(theme).info.border} rounded-lg`}>
+                  <p className={`text-xs ${useSemanticColors(theme).info.text}`}>
                     ⏱️ <strong>This may take 30-60 seconds</strong> as we're creating an in-depth learning guide 
                     with practical code demonstrations and real-world applications to prepare you for professional coding.
                   </p>
                 </div>
                 
                 {showTimeoutWarning && (
-                  <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                  <div className={`mt-4 p-4 ${useSemanticColors(theme).warning.bg} border ${useSemanticColors(theme).warning.border} rounded-lg`}>
+                    <p className={`text-xs ${useSemanticColors(theme).warning.text}`}>
                       ⚠️ This is taking longer than usual. The AI might be generating very detailed content. 
                       You can wait a bit more or try refreshing if needed.
                     </p>
@@ -597,7 +587,7 @@ const LessonPage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 transition-colors duration-300">
             <div className="text-center">
-              <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-6" />
+              <AlertCircle className={`h-16 w-16 ${useSemanticColors(theme).error.text} mx-auto mb-6`} />
               <h2 className="text-2xl font-semibold text-theme-primary mb-4">Failed to Load Lesson</h2>
               <p className="text-theme-secondary mb-6 max-w-2xl mx-auto">{error}</p>
               
@@ -621,8 +611,8 @@ const LessonPage: React.FC = () => {
               </div>
               
               {retryCount >= 3 && (
-                <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg max-w-md mx-auto">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                <div className={`mt-6 p-4 ${useSemanticColors(theme).warning.bg} border ${useSemanticColors(theme).warning.border} rounded-lg max-w-md mx-auto`}>
+                  <p className={`text-sm ${useSemanticColors(theme).warning.text}`}>
                     💡 <strong>Tip:</strong> The AI is creating in-depth learning guides with real code examples. 
                     Try again later, or explore other topics for now.
                   </p>
@@ -674,9 +664,9 @@ const LessonPage: React.FC = () => {
               <h1 className="text-3xl font-bold text-theme-primary transition-colors duration-300">
                 {topic}
               </h1>
-              {context && (
+              {cleanDisplayTitle && (
                 <p className="text-theme-secondary mt-2 transition-colors duration-300">
-                  {context}
+                  {cleanDisplayTitle}
                 </p>
               )}
             </div>
@@ -703,8 +693,8 @@ const LessonPage: React.FC = () => {
                 
                 {lesson?.success && (
                   <div className="flex items-center space-x-2 mb-6">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600">
+                    <CheckCircle className={`w-4 h-4 ${useSemanticColors(theme).success.text}`} />
+                    <span className={`text-sm ${useSemanticColors(theme).success.text}`}>
                       {lesson.cached ? 'Retrieved from your learning library' : 'Fresh learning guide generated'}
                     </span>
                   </div>
@@ -712,10 +702,10 @@ const LessonPage: React.FC = () => {
                 
                 {renderingError || (lesson?.explanation && isErrorContent(typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation))) ? (
                   <div className="text-center py-12">
-                    <div className="relative mb-8">
-                      <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto" />
-                      <div className="absolute inset-0 bg-yellow-500/10 rounded-full animate-pulse opacity-40"></div>
-                    </div>
+                                          <div className="relative mb-8">
+                        <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
+                        <div className={`absolute inset-0 ${useSemanticColors(theme).warning.bg} rounded-full animate-pulse opacity-40`}></div>
+                      </div>
                     <h3 className="text-2xl font-semibold text-theme-primary mb-4">
                       Oops!
                     </h3>
@@ -748,14 +738,16 @@ const LessonPage: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="prose prose-lg max-w-none">
-                    {lesson?.explanation ? (
-                      <SafeMarkdownRenderer content={typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation)} onRenderingError={handleRenderingError} />
-                    ) : (
-                      <div className="text-theme-secondary">
-                        No learning guide content available. Please try refreshing the lesson.
-                      </div>
-                    )}
+                  <div className="lesson-content max-w-none overflow-x-hidden">
+                    <div className="w-full">
+                      {lesson?.explanation ? (
+                        <SafeMarkdownRenderer content={typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation)} onRenderingError={handleRenderingError} />
+                      ) : (
+                        <div className="text-theme-secondary">
+                          No learning guide content available. Please try refreshing the lesson.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -766,7 +758,7 @@ const LessonPage: React.FC = () => {
               <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.1s'}}>
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
-                    <Target className="w-6 h-6 text-purple-500" />
+                    <Target className="w-6 h-6 text-theme-accent" />
                     <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
                       Progressive Practice Tasks
                     </h2>
@@ -784,7 +776,7 @@ const LessonPage: React.FC = () => {
               <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.2s'}}>
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
-                    <ExternalLink className="w-6 h-6 text-blue-500" />
+                    <ExternalLink className={`w-6 h-6 ${useSemanticColors(theme).info.text}`} />
                     <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
                       Curated Learning Resources
                     </h2>
@@ -802,9 +794,9 @@ const LessonPage: React.FC = () => {
               <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.25s'}}>
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
-                    <Youtube className="w-6 h-6 text-red-500" />
+                    <Youtube className={`w-6 h-6 ${useSemanticColors(theme).youtube.text}`} />
                     <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
-                      Popular Video Tutorials
+                      Useful Video Tutorials
                     </h2>
                   </div>
                   
@@ -815,7 +807,7 @@ const LessonPage: React.FC = () => {
                         href={video.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-start space-x-4 p-4 rounded-lg bg-theme-hover border border-theme hover:border-red-500/30 hover:bg-red-500/5 transition-all duration-200 cursor-pointer"
+                        className={`group flex items-start space-x-4 p-4 rounded-lg bg-theme-hover border border-theme hover:${useSemanticColors(theme).youtube.border} hover:${useSemanticColors(theme).youtube.bg} transition-all duration-200 cursor-pointer`}
                       >
                         {/* Thumbnail */}
                         <div className="flex-shrink-0">
@@ -826,15 +818,15 @@ const LessonPage: React.FC = () => {
                               className="w-24 h-18 object-cover rounded-lg border border-theme"
                             />
                           ) : (
-                            <div className="w-24 h-18 bg-red-500/20 rounded-lg border border-red-500/30 flex items-center justify-center">
-                              <Youtube className="w-8 h-8 text-red-500" />
+                            <div className={`w-24 h-18 ${useSemanticColors(theme).youtube.bg} rounded-lg border ${useSemanticColors(theme).youtube.border} flex items-center justify-center`}>
+                              <Youtube className={`w-8 h-8 ${useSemanticColors(theme).youtube.text}`} />
                             </div>
                           )}
                         </div>
                         
                         {/* Video Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="text-theme-primary font-medium text-sm mb-2 group-hover:text-red-500 transition-colors line-clamp-2">
+                          <div className={`text-theme-primary font-medium text-sm mb-2 group-hover:${useSemanticColors(theme).youtube.text} transition-colors line-clamp-2`}>
                             {video.title}
                           </div>
                           
@@ -886,25 +878,25 @@ const LessonPage: React.FC = () => {
             {/* Quick Tips */}
             <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.3s'}}>
               <div className="flex items-center gap-2 mb-4">
-                <Lightbulb className="w-5 h-5 text-yellow-500" />
+                <Lightbulb className={`w-5 h-5 ${useSemanticColors(theme).warning.text}`} />
                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Study Tips</h3>
               </div>
               
               <div className="space-y-3 text-sm text-theme-secondary">
                 <div className="flex items-start space-x-2">
-                  <span className="text-yellow-500 mt-0.5">💡</span>
+                  <span className={`${useSemanticColors(theme).warning.text} mt-0.5`}>💡</span>
                   <span>Code along with the examples to build muscle memory</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-green-500 mt-0.5">✅</span>
+                  <span className={`${useSemanticColors(theme).success.text} mt-0.5`}>✅</span>
                   <span>Complete the progressive practice tasks in order</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-blue-500 mt-0.5">🔗</span>
+                  <span className={`${useSemanticColors(theme).info.text} mt-0.5`}>🔗</span>
                   <span>Explore the curated resources for deeper understanding</span>
                 </div>
                 <div className="flex items-start space-x-2">
-                  <span className="text-purple-500 mt-0.5">🔄</span>
+                  <span className="text-theme-accent mt-0.5">🔄</span>
                   <span>Apply concepts in your own projects for mastery</span>
                 </div>
               </div>

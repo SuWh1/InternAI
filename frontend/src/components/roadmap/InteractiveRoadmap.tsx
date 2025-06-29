@@ -522,7 +522,7 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                 <div className="text-xs text-theme-secondary transition-colors duration-300">{progressStats.completedWeeks}/{progressStats.totalWeeks} weeks</div>
               </div>
             </div>
-            <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+            <div className="w-20 bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
               <div 
                 className="bg-gradient-to-r from-purple-500 to-purple-600 h-2.5 rounded-full transition-all duration-500 shadow-sm" 
                 style={{ width: `${progressStats.overallProgress}%` }}

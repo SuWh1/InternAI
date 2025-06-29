@@ -12,6 +12,7 @@ export interface User {
 export interface AuthResponse {
   user: User;
   token: string;
+  refresh_token: string;
 }
 
 export interface GoogleAuthRequest {

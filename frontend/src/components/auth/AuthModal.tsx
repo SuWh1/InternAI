@@ -30,7 +30,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
 
-  const { login, register, loading, error } = useAuth();
+  const { login, register, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -95,15 +95,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  // Sync internal mode with defaultMode prop
+  // Sync internal mode with defaultMode prop and clear errors
   useEffect(() => {
     if (isOpen) {
       setMode(defaultMode);
       setFormError(null);
       setResetSent(false);
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      clearError(); // Clear auth store errors when modal opens
+    } else {
+      // Clear errors when modal closes
+      setFormError(null);
+      clearError();
     }
-  }, [defaultMode, isOpen]);
+  }, [defaultMode, isOpen, clearError]);
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
@@ -229,6 +234,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
     setFormError(null);
     setResetSent(false);
     setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+    clearError(); // Clear auth store errors when switching modes
   };
 
   return (

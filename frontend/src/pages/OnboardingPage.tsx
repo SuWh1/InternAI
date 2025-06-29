@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check, User, Code, Briefcase, Target, Rocket, Sparkles, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, User, Code, Briefcase, Target, Rocket, Sparkles, Search, X, ChevronDown } from 'lucide-react';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -166,6 +166,45 @@ const LocationAutocomplete: React.FC<{
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// Custom Select Component with animated dropdown arrow
+const CustomSelect: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  required?: boolean;
+}> = ({ value, onChange, placeholder, options, disabled = false, required = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+        disabled={disabled}
+        className="w-full px-4 py-3 pr-12 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm appearance-none cursor-pointer"
+      >
+        <option value="" disabled>{placeholder}</option>
+        {options.map(option => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+      
+      {/* Custom animated dropdown arrow */}
+      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+        <ChevronDown 
+          className={`w-5 h-5 text-purple-500 transition-all duration-300 ease-out ${
+            isOpen ? 'rotate-180 scale-110' : 'rotate-0 scale-100'
+          }`}
+        />
       </div>
     </div>
   );
@@ -434,32 +473,24 @@ const OnboardingPage: React.FC = () => {
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Current Academic Year <span className="text-red-500">*</span>
           </label>
-          <select
+          <CustomSelect
             value={formData.current_year}
-            onChange={(e) => updateFormData('current_year', e.target.value)}
-            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm"
-          >
-            <option value="" disabled>Select your current academic year</option>
-            {options?.current_year_options.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            onChange={(value) => updateFormData('current_year', value)}
+            placeholder="Select your current academic year"
+            options={options?.current_year_options.map(option => ({ value: option, label: option })) || []}
+          />
         </div>
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-500">
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Field of Study <span className="text-red-500">*</span>
           </label>
-          <select
+          <CustomSelect
             value={getMajorDisplayValue()}
-            onChange={(e) => handleMajorChange(e.target.value)}
-            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm"
-          >
-            <option value="" disabled>Select your field of study</option>
-            {['Computer Science', 'Software Engineering', 'Data Science', 'Information Technology', 'Electrical and Computer Engineering', 'Mechanical Engineering', 'Civil Engineering', 'Business Administration', 'Economics', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Psychology', 'Other'].map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            onChange={handleMajorChange}
+            placeholder="Select your field of study"
+            options={['Computer Science', 'Software Engineering', 'Data Science', 'Information Technology', 'Electrical and Computer Engineering', 'Mechanical Engineering', 'Civil Engineering', 'Business Administration', 'Economics', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Psychology', 'Other'].map(option => ({ value: option, label: option }))}
+          />
           {shouldShowOtherMajorInput() && (
             <input
               type="text"
@@ -508,7 +539,7 @@ const OnboardingPage: React.FC = () => {
             Frameworks & Tools <span className="text-theme-secondary font-normal">(Select all that apply)</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {['React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask', 'Spring', 'Express', 'Docker', 'AWS', 'Git', 'MongoDB', 'PostgreSQL', 'Redis'].map((tool, index) => (
+            {['React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask', 'FastAPI', 'Spring', 'Express', 'Docker', 'AWS', 'Git', 'MongoDB', 'PostgreSQL', 'Redis'].map((tool, index) => (
               <CustomSelector
                 key={tool}
                 type="checkbox"
@@ -544,38 +575,30 @@ const OnboardingPage: React.FC = () => {
             <label className="block text-sm font-semibold text-theme-primary mb-3">
               Overall Experience Level <span className="text-red-500">*</span>
             </label>
-            <select
+            <CustomSelect
               value={formData.experience_level}
-              onChange={(e) => updateFormData('experience_level', e.target.value)}
-              className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm"
-            >
-              <option value="" disabled>Select your experience level</option>
-              {['Beginner', 'Intermediate', 'Advanced'].map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+              onChange={(value) => updateFormData('experience_level', value)}
+              placeholder="Select your experience level"
+              options={['Beginner', 'Intermediate', 'Advanced'].map(option => ({ value: option, label: option }))}
+            />
           </div>
 
           <div className="animate-in slide-in-from-bottom duration-500 delay-1100">
             <label className="block text-sm font-semibold text-theme-primary mb-3">
               Skill Confidence <span className="text-red-500">*</span>
             </label>
-            <select
+            <CustomSelect
               value={formData.skill_confidence}
-              onChange={(e) => updateFormData('skill_confidence', e.target.value)}
-              className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm"
-            >
-              <option value="" disabled>How confident do you feel about your technical skills?</option>
-              {[
+              onChange={(value) => updateFormData('skill_confidence', value)}
+              placeholder="How confident do you feel about your technical skills?"
+              options={[
                 'Not confident at all',
                 'Somewhat confident',
                 'Moderately confident',
                 'Very confident',
                 'Extremely confident'
-              ].map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+              ].map(option => ({ value: option, label: option }))}
+            />
           </div>
         </div>
       </div>
@@ -741,16 +764,12 @@ const OnboardingPage: React.FC = () => {
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Application Timeline <span className="text-red-500">*</span>
           </label>
-          <select
+          <CustomSelect
             value={formData.application_timeline}
-            onChange={(e) => updateFormData('application_timeline', e.target.value)}
-            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm"
-          >
-            <option value="">When are you planning to apply?</option>
-            {options?.timeline_options.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            onChange={(value) => updateFormData('application_timeline', value)}
+            placeholder="When are you planning to apply?"
+            options={options?.timeline_options.map(option => ({ value: option, label: option })) || []}
+          />
         </div>
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-700">

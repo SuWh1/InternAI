@@ -35,7 +35,7 @@ const HeroSection = () => {
 
   return (
     <>
-      <section className="relative min-h-screen flex items-center bg-theme-primary pt-16 transition-colors duration-300 overflow-hidden">
+      <section className="relative min-h-screen flex items-center bg-theme-primary transition-colors duration-300 overflow-hidden">
         {/* Animated background gradient */}
         <motion.div
           className="absolute inset-0 opacity-30"

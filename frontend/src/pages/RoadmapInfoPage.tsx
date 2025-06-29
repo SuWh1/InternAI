@@ -1,9 +1,28 @@
-import { CheckCircle, MapPin, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle, MapPin, TrendingUp, ArrowRight } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import AnimatedSection from '../components/common/AnimatedSection';
+import AuthModal from '../components/auth/AuthModal';
 
 const RoadmapInfoPage = () => {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/my-roadmap');
+    } else {
+      setAuthModalMode('register'); 
+      setAuthModalOpen(true);
+    }
+  };
+
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <AnimatedSection className="text-center mb-12">
           <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
@@ -57,12 +76,45 @@ const RoadmapInfoPage = () => {
             <p className="text-blue-100 mb-6">
               Join thousands of students who have successfully landed internships with our AI-powered roadmap.
             </p>
-            <button className="bg-white text-theme-accent px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200">
-              Get Started Today
-            </button>
+            <motion.button 
+              onClick={handleGetStarted}
+              className="bg-white text-theme-accent px-8 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center group relative overflow-hidden mx-auto"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              animate={{
+                boxShadow: [
+                  "0 0 0 0 rgba(255, 255, 255, 0.7)",
+                  "0 0 0 10px rgba(255, 255, 255, 0)",
+                  "0 0 0 0 rgba(255, 255, 255, 0)",
+                ],
+              }}
+              transition={{
+                boxShadow: {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
+              }}
+            >
+              <span className="relative z-10">Get Started Today</span>
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-all duration-200 relative z-10" />
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600"
+                initial={{ x: "-100%" }}
+                whileHover={{ x: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            </motion.button>
           </div>
         </AnimatedSection>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authModalMode}
+      />
     </div>
   );
 };

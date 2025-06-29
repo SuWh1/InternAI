@@ -23,15 +23,35 @@ class AuthService {
         password,
       });
       
-      const { user, token } = response.data;
+      const { user, token, refresh_token } = response.data;
       
-      // Store token
+      // Store tokens
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('refresh_token', refresh_token);
       
       // Update store
       setUser(user);
     } catch (error: any) {
-      setError(error.message || 'Login failed');
+      // Parse error and provide specific message
+      let errorMessage = 'Login failed';
+      
+      if (error.statusCode === 401) {
+        errorMessage = 'Invalid email or password';
+      } else if (error.statusCode === 404) {
+        errorMessage = 'Account not found';
+      } else if (error.statusCode === 403) {
+        errorMessage = 'Account is disabled or suspended';
+      } else if (error.statusCode === 429) {
+        errorMessage = 'Too many login attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       throw error;
     } finally {
       setLoading(false);
@@ -51,17 +71,44 @@ class AuthService {
         name,
       });
       
-      const { user, token } = response.data;
+      const { user, token, refresh_token } = response.data;
       
-      // Store token
+      // Store tokens
       localStorage.setItem('auth_token', token);
+      localStorage.setItem('refresh_token', refresh_token);
       
       // Update store
       setUser(user);
       
       // Note: Onboarding redirect will be handled by OnboardingWrapper
     } catch (error: any) {
-      setError(error.message || 'Registration failed');
+      // Parse error and provide specific message
+      let errorMessage = 'Registration failed';
+      
+      // Check error message content for existing account (regardless of status code)
+      const errorText = (error.error || error.message || '').toLowerCase();
+      
+      if (error.statusCode === 409 || 
+          errorText.includes('already exists') || 
+          errorText.includes('already registered') ||
+          errorText.includes('email already') ||
+          errorText.includes('user already exists')) {
+        errorMessage = 'An account with this email already exists';
+      } else if (error.statusCode === 400) {
+        errorMessage = 'Invalid registration data. Please check your information';
+      } else if (error.statusCode === 422) {
+        errorMessage = 'Invalid email format or password requirements not met';
+      } else if (error.statusCode === 429) {
+        errorMessage = 'Too many registration attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       throw error;
     } finally {
       setLoading(false);
@@ -80,17 +127,35 @@ class AuthService {
         token: token,
       });
 
-      const { user, token: accessToken } = response.data;
+      const { user, token: accessToken, refresh_token } = response.data;
       
-      // Store token
+      // Store tokens
       localStorage.setItem('auth_token', accessToken);
+      localStorage.setItem('refresh_token', refresh_token);
       
       // Update store
       setUser(user);
     } catch (error: any) {
       console.error('Google login API error:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to authenticate with server';
-      setError(`Google sign-in failed: ${errorMessage}`);
+      
+      // Parse error and provide specific message
+      let errorMessage = 'Google sign-in failed';
+      
+      if (error.statusCode === 401) {
+        errorMessage = 'Google authentication failed. Please try again';
+      } else if (error.statusCode === 409) {
+        errorMessage = 'An account with this Google email already exists with a different sign-in method';
+      } else if (error.statusCode === 400) {
+        errorMessage = 'Invalid Google token. Please try signing in again';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error during Google sign-in. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = `Google sign-in failed: ${error.error}`;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = `Google sign-in failed: ${error.message}`;
+      }
+      
+      setError(errorMessage);
       throw error;
     } finally {
       setLoading(false);
@@ -115,6 +180,28 @@ class AuthService {
   async getCurrentUser(): Promise<User> {
     const response = await api.get<User>('/auth/me');
     return response.data;
+  }
+
+  async refreshTokens(): Promise<void> {
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await api.post<AuthResponse>('/auth/refresh', {
+      refresh_token: refreshToken,
+    });
+
+    const { user, token, refresh_token: newRefreshToken } = response.data;
+    
+    // Store new tokens
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('refresh_token', newRefreshToken);
+    
+    // Update store
+    const { setUser } = this.getStore();
+    setUser(user);
   }
 
   async refreshUserData(): Promise<void> {
@@ -157,8 +244,9 @@ class AuthService {
         const user = await this.getCurrentUser();
         setUser(user);
       } catch (error) {
-        // Token is invalid, clear it
+        // Tokens are invalid, clear them
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
         setUser(null);
       } finally {
         setLoading(false);

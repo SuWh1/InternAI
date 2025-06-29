@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import InteractiveRoadmap from '../components/roadmap/InteractiveRoadmap';
 import { useRoadmap } from '../hooks/useRoadmap';
+import Aurora from '../components/common/Aurora';
 
 const MyRoadmapPage = () => {
   const {
@@ -35,6 +36,7 @@ const MyRoadmapPage = () => {
   const [showResumeInput, setShowResumeInput] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [currentStep, setCurrentStep] = useState<number>(0);
 
   const personalizedMessages = [
     "Calibrating roadmap based on your unique skills...",
@@ -42,6 +44,12 @@ const MyRoadmapPage = () => {
     "Cross-referencing your experience with top internship requirements...",
     "Identifying projects that align with your career goals...",
     "Fine-tuning weekly goals for your schedule..."
+  ];
+
+  const progressSteps = [
+    "Analyzing your skills and experience profile",
+    "Understanding your career goals and aspirations", 
+    "Designing your path to success"
   ];
 
   const handleGenerateRoadmap = async () => {
@@ -72,7 +80,7 @@ const MyRoadmapPage = () => {
     await updateProgress(weekNumber, taskId, completed);
   };
 
-  // Handle ESC key to close modal
+  // Handle ESC key to close modal and manage step animations
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && showRegenerateConfirm) {
@@ -82,17 +90,35 @@ const MyRoadmapPage = () => {
 
     document.addEventListener('keydown', handleEscKey);
 
-    const intervalId = setInterval(() => {
+    // Personalized messages interval
+    const messageIntervalId = setInterval(() => {
       if (loading && roadmap !== null) {
         setCurrentMessageIndex(prevIndex => (prevIndex + 1) % personalizedMessages.length);
       }
     }, 3300);
 
+    // Progress steps sequential animation - cycle through one at a time
+    let stepTimeout: number;
+    
+    if (loading && !roadmap) {
+      // Start with first step
+      setCurrentStep(0);
+      
+      // Cycle through steps every 5 seconds
+      stepTimeout = setInterval(() => {
+        setCurrentStep(prevIndex => (prevIndex + 1) % progressSteps.length);
+      }, 5000) as unknown as number;
+    } else {
+      // Reset when not loading
+      setCurrentStep(0);
+    }
+
     return () => {
       document.removeEventListener('keydown', handleEscKey);
-      clearInterval(intervalId);
+      clearInterval(messageIntervalId);
+      if (stepTimeout) clearInterval(stepTimeout as unknown as ReturnType<typeof setInterval>);
     };
-  }, [showRegenerateConfirm, loading, roadmap]);
+  }, [showRegenerateConfirm, loading, roadmap, personalizedMessages.length, progressSteps.length]);
 
   // Calculate overall progress
   const overallProgress = progress.length > 0 
@@ -100,8 +126,18 @@ const MyRoadmapPage = () => {
     : 0;
 
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300 relative">
+      {/* Aurora Background */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
+        <Aurora
+          colorStops={["#9333EA", "#F472B6", "#A855F7"]}
+          blend={0.8}
+          amplitude={1.5}
+          speed={0.4}
+        />
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-8">
           <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
@@ -184,19 +220,21 @@ const MyRoadmapPage = () => {
             {!roadmap && loading && (
               <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
                 <div className="text-center">
-                  <div className="relative">
-                    <div className="relative mx-auto mb-6 w-16 h-16 flex items-center justify-center">
-                      <Play className="h-16 w-16 text-theme-accent animate-bounce" 
-                            style={{ 
-                              animationDuration: '1s',
-                              animationTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-                            }} />
-                      {/* Pulsing background ring */}
-                      <div className="absolute inset-0 bg-theme-accent/10 rounded-full animate-ping opacity-30"></div>
-                      {/* Secondary bounce ring */}
-                      <div className="absolute inset-2 bg-theme-accent/5 rounded-full animate-pulse"></div>
-                    </div>
-                  </div>
+                  {/* Simple jumping play button */}
+                  <motion.div
+                    className="mx-auto mb-6 w-20 h-20 flex items-center justify-center"
+                    animate={{ 
+                      y: [0, -10, 0],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{ 
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Play className="h-16 w-16 text-theme-accent" />
+                  </motion.div>
                   <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">
                     Creating Your Personalized Roadmap
                   </h2>
@@ -205,22 +243,40 @@ const MyRoadmapPage = () => {
                     internship preparation roadmap just for you. This will take a few moments...
                   </p>
                   
-                  {/* Progress Steps */}
-                  <div className="max-w-md mx-auto">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse"></div>
-                        <span className="text-sm text-theme-secondary transition-colors duration-300">Processing your background</span>
-                      </div>
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-150"></div>
-                        <span className="text-sm text-theme-secondary transition-colors duration-300">Generating personalized roadmap</span>
-                      </div>
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-300"></div>
-                        <span className="text-sm text-theme-secondary transition-colors duration-300">Finding matching internships</span>
-                      </div>
-                    </div>
+                  {/* Progress Steps - one at a time with smooth fade animation */}
+                  <div className="max-w-md mx-auto h-20 flex items-center justify-center">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentStep}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ 
+                          duration: 0.6,
+                          ease: "easeInOut"
+                        }}
+                        className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-theme-hover/50 w-full"
+                      >
+                        {/* Animated dot */}
+                        <motion.div
+                          className="w-3 h-3 rounded-full bg-theme-accent"
+                          animate={{
+                            scale: [1, 1.3, 1],
+                            opacity: [0.7, 1, 0.7]
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                        
+                                                 {/* Step text */}
+                         <span className="text-sm font-medium text-theme-primary">
+                           {progressSteps[currentStep]}
+                         </span>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
@@ -295,7 +351,6 @@ const MyRoadmapPage = () => {
                         disabled={loading}
                         className="px-8 py-3 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-all duration-300 flex items-center space-x-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Play className="w-5 h-5" />
                         <span>Generate My Roadmap</span>
                       </button>
                     </>

@@ -152,7 +152,6 @@ const WeekDetailPage: React.FC = () => {
     
     if (needsGeneration) {
       console.log(`Starting subtopics generation for week ${weekNum}: subtopics.length=${subtopics.length}, forceGeneration=${forceGeneration}, currentWeek=${week?.week_number}`);
-      setIsGeneratingSubtopics(true);
       setForceGeneration(false); // Reset the flag
       generateSubtopics(weekData.theme, weekData.focus_area);
     } else {
@@ -163,10 +162,15 @@ const WeekDetailPage: React.FC = () => {
   };
 
   const generateSubtopics = async (theme: string, focusArea: string) => {
-    const startTime = Date.now();
     const weekNum = parseInt(weekNumber || '1');
     
     console.log(`generateSubtopics called for week ${weekNum}, theme: ${theme}, focusArea: ${focusArea}`);
+    
+    // Set a timeout to show generating state only if request takes longer than 300ms (likely new generation)
+    const loadingTimeout = setTimeout(() => {
+      setIsGeneratingSubtopics(true);
+      console.log(`Request taking longer than 300ms, showing generating state`);
+    }, 300);
     
     try {
       console.log(`Making API call to agentService.generateSubtopics...`);
@@ -177,11 +181,20 @@ const WeekDetailPage: React.FC = () => {
         force_regenerate: false
       });
       
+      // Clear the loading timeout since we got a response
+      clearTimeout(loadingTimeout);
+      
       console.log(`API response received:`, response);
       
       if (response.success && response.subtopics && response.subtopics.length > 0) {
         console.log(`Setting ${response.subtopics.length} subtopics from API response`);
         setSubtopics(response.subtopics);
+        
+        // If we were showing generating state and got cached content, hide it immediately
+        if (response.cached) {
+          console.log(`Content was cached, hiding generating state immediately`);
+          setIsGeneratingSubtopics(false);
+        }
       } else {
         console.log(`API response invalid, using fallback subtopics`);
         // Fallback to default subtopics if AI generation fails
@@ -195,6 +208,9 @@ const WeekDetailPage: React.FC = () => {
         ]);
       }
     } catch (error) {
+      // Clear the loading timeout in case of error
+      clearTimeout(loadingTimeout);
+      
       console.error('Error generating subtopics:', error);
       console.log(`Using fallback subtopics due to error`);
       // Fallback subtopics
@@ -207,20 +223,9 @@ const WeekDetailPage: React.FC = () => {
         { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` }
       ]);
     } finally {
+      // Always clear the generating state when done
       console.log(`generateSubtopics finishing, clearing loading state`);
-      // Ensure loading is shown for at least 500ms for better UX
-      const elapsedTime = Date.now() - startTime;
-      const minDisplayTime = 500;
-      
-      if (elapsedTime < minDisplayTime) {
-        setTimeout(() => {
-          console.log(`Setting isGeneratingSubtopics to false after delay`);
-          setIsGeneratingSubtopics(false);
-        }, minDisplayTime - elapsedTime);
-      } else {
-        console.log(`Setting isGeneratingSubtopics to false immediately`);
-        setIsGeneratingSubtopics(false);
-      }
+      setIsGeneratingSubtopics(false);
     }
   };
 
@@ -294,34 +299,17 @@ const WeekDetailPage: React.FC = () => {
 
   if (error || roadmapError) {
     return (
-      <div className="min-h-screen pt-16 bg-theme-primary flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <ErrorMessage error={error || roadmapError || 'An error occurred'} />
       </div>
     );
   }
 
-  // Wait for data to be ready before rendering content
-  if (!dataReady) {
-    return (
-      <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <button
-              onClick={() => navigate('/my-roadmap')}
-              className="flex items-center space-x-2 text-theme-secondary hover:text-theme-primary transition-colors duration-300"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Roadmap</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  if (!week) {
+  // Only show "not found" if data is ready but still no week (actual error)
+  if (!week && dataReady && !loading) {
     return (
-      <div className="min-h-screen pt-16 bg-theme-primary flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
           <div className="text-theme-secondary/70 text-lg mb-2 transition-colors duration-300">Week not found</div>
           <button
@@ -335,10 +323,25 @@ const WeekDetailPage: React.FC = () => {
     );
   }
 
+  // Show loading state if week is not ready yet
+  if (!week) {
+    return (
+      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[200px]">
+            <div className="text-center">
+              <div className="text-theme-secondary/70 text-lg transition-colors duration-300">Loading week data...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const completionPercentage = getCompletionPercentage();
 
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
       {/* Header */}
       <div className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -565,7 +568,7 @@ const WeekDetailPage: React.FC = () => {
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-all duration-300 flex items-center justify-between group ${
                         isWeekUnlocked(week.week_number + 1, progress)
                           ? 'text-theme-secondary hover:bg-theme-hover cursor-pointer'
-                          : 'text-gray-600 dark:text-white cursor-not-allowed opacity-60'
+                          : 'text-theme-secondary cursor-not-allowed opacity-50'
                       }`}
                     >
                       <div className="flex items-center gap-2">

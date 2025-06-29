@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "very-secret-key")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes for testing, change to longer for production
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 days
     
     # CORS - accept as string, will be converted to list
     BACKEND_CORS_ORIGINS: str = ""

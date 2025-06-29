@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import timedelta
 from typing import Any
 
 from app.db.session import get_db
 from app.schemas.user import User, UserCreate, UserLogin, GoogleAuthRequest
-from app.schemas.auth import AuthResponse
+from app.schemas.auth import AuthResponse, RefreshTokenRequest
 from app.schemas.common import GenericResponse
 from app.crud.user import create_user, authenticate_user, authenticate_google_user
 from app.crud.onboarding import has_completed_onboarding
-from app.core.security import create_access_token, get_current_user
+from app.core.security import create_access_token, create_refresh_token, verify_refresh_token, get_current_user
 from app.core.config import settings
 from app.utils.google_auth import verify_google_token
 
@@ -37,10 +38,12 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) ->
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return {
         "user": user,
-        "token": access_token
+        "token": access_token,
+        "refresh_token": refresh_token
     }
 
 @router.post("/login", response_model=AuthResponse)
@@ -60,10 +63,12 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     return {
         "user": user,
-        "token": access_token
+        "token": access_token,
+        "refresh_token": refresh_token
     }
 
 @router.post("/google", response_model=AuthResponse)
@@ -104,17 +109,19 @@ async def google_login(auth_data: GoogleAuthRequest, db: AsyncSession = Depends(
         # Step 3: Add onboarding status
         user = await add_onboarding_status(user, db)
         
-        # Step 4: Create access token
+        # Step 4: Create access token and refresh token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": str(user.id)}, expires_delta=access_token_expires
         )
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
         
         print(f"DEBUG: Access token created successfully for user: {user.email}")
         
         return {
             "user": user,
-            "token": access_token
+            "token": access_token,
+            "refresh_token": refresh_token
         }
         
     except HTTPException:
@@ -126,6 +133,46 @@ async def google_login(auth_data: GoogleAuthRequest, db: AsyncSession = Depends(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error during Google authentication: {str(e)}",
         )
+
+@router.post("/refresh", response_model=AuthResponse)
+async def refresh_token(token_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)) -> Any:
+    """
+    Refresh access token using refresh token.
+    """
+    user_id = verify_refresh_token(token_data.refresh_token)
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Get user from database
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user = await add_onboarding_status(user, db)
+    
+    # Create new tokens
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
+    )
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    
+    return {
+        "user": user,
+        "token": access_token,
+        "refresh_token": refresh_token
+    }
 
 @router.post("/logout", response_model=GenericResponse)
 async def logout(response: Response) -> Any:

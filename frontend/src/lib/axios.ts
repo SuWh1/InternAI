@@ -1,6 +1,11 @@
 import axios from 'axios';
-import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import type { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types/api';
+
+// Extend axios config to include retry flag
+interface AxiosRequestConfigWithRetry extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 // Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -28,16 +33,51 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling and token refresh
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  (error: AxiosError<{ error?: string; message?: string }>) => {
-    // Handle 401 errors by clearing token
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
-      // You can dispatch a logout action here if needed
+  async (error: AxiosError<{ error?: string; message?: string }>) => {
+    const originalRequest = error.config as AxiosRequestConfigWithRetry;
+    
+    // Handle 401 errors with token refresh (but not for refresh endpoint itself)
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+      originalRequest._retry = true;
+      
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      if (refreshToken) {
+        try {
+          // Try to refresh the token
+          const { authService } = await import('../services/authService');
+          await authService.refreshTokens();
+          
+          // Retry the original request with the new token
+          const newToken = localStorage.getItem('auth_token');
+          if (newToken && originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and redirect to login
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+          
+          // Clear user state
+          const { useAuthStore } = await import('../stores/authStore');
+          useAuthStore.getState().logout();
+        }
+      } else {
+        // No refresh token, clear access token
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        
+        // Clear user state
+        const { useAuthStore } = await import('../stores/authStore');
+        useAuthStore.getState().logout();
+      }
     }
 
     // Transform error to match our ApiError interface

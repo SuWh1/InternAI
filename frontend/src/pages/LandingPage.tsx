@@ -20,7 +20,7 @@ const LandingPage = () => {
   const backgroundOpacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.5, 0.3]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-theme-primary transition-colors duration-300 relative">
+    <div ref={containerRef} className="bg-theme-primary transition-colors duration-300 relative overflow-hidden">
       {/* Animated background gradient */}
       <motion.div
         className="fixed inset-0 pointer-events-none"

@@ -43,6 +43,7 @@ export const useAuth = () => {
     isAuthenticated,
     loading,
     error,
+    clearError,
     login,
     register,
     googleLoginWithToken,

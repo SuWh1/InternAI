@@ -22,8 +22,8 @@ import { useAuthStore } from './stores/authStore';
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 20,
-    scale: 0.98,
+    y: 10,
+    scale: 0.99,
   },
   in: {
     opacity: 1,
@@ -32,8 +32,8 @@ const pageVariants = {
   },
   out: {
     opacity: 0,
-    y: -20,
-    scale: 0.98,
+    y: -10,
+    scale: 0.99,
   },
 };
 
@@ -61,6 +61,7 @@ function AnimatedRoutes() {
         exit="out"
         variants={pageVariants}
         transition={pageTransition}
+        className="overflow-hidden main-content"
       >
         <Routes location={location}>
           <Route path="/" element={<LandingPage />} />
@@ -104,7 +105,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-theme-primary overflow-x-hidden w-full animate-in fade-in duration-500 transition-colors">
+        <div className="bg-theme-primary overflow-x-hidden w-full animate-in fade-in duration-500 transition-colors">
           <OnboardingWrapper>
             <Navbar />
             <AnimatedRoutes />

@@ -3,7 +3,7 @@ import AnimatedSection from '../components/common/AnimatedSection';
 
 const InternshipsInfoPage = () => {
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <AnimatedSection className="text-center mb-12">
           <Briefcase className="h-16 w-16 text-purple-500 mx-auto mb-6" />

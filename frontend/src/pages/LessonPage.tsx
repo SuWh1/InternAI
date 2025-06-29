@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -98,6 +99,7 @@ const LessonPage: React.FC = () => {
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Handle both new slug format and legacy URL format
   let topic = '';
@@ -152,6 +154,25 @@ const LessonPage: React.FC = () => {
     return () => {
       if (timeoutWarning) {
         clearTimeout(timeoutWarning);
+      }
+    };
+  }, [loading]);
+
+    // Cycle through loading steps
+  useEffect(() => {
+    let stepInterval: number;
+    
+    if (loading) {
+      setCurrentStep(0);
+      
+      stepInterval = setInterval(() => {
+        setCurrentStep(prev => (prev + 1) % 3);
+      }, 7000);
+    }
+
+    return () => {
+      if (stepInterval) {
+        clearInterval(stepInterval);
       }
     };
   }, [loading]);
@@ -524,56 +545,82 @@ const LessonPage: React.FC = () => {
   };
 
   if (loading) {
+    const loadingSteps = [
+      "Breaking down core concepts",
+      "Creating code demonstrations", 
+      "Designing real-world practice tasks"
+    ];
+
     return (
-      <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-12 transition-colors duration-300">
             <div className="text-center">
-              <div className="relative mb-8">
-                <Brain className="h-16 w-16 text-theme-accent mx-auto animate-pulse" />
-                <div className="absolute inset-0 bg-theme-accent/10 rounded-full animate-ping opacity-20"></div>
+              {/* Animated Shiny Brain */}
+              <div className="mb-8">
+                <Brain className="h-16 w-16 mx-auto text-theme-accent animate-brain-pulse" />
               </div>
+              
               <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">
                 Expert AI is crafting your lesson...
               </h2>
               <p className="text-theme-secondary max-w-2xl mx-auto mb-8 transition-colors duration-300">
-                Creating an in-depth learning guide on <strong>{topic}</strong> 
-                with real code examples, practical demonstrations, and 3 progressive practice tasks.
+                Creating an in-depth learning guide on <strong>{topic}</strong> with real code examples, practical demonstrations and tasks.
               </p>
               
-              {/* Enhanced Loading Steps */}
-              <div className="max-w-md mx-auto">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center space-x-3 p-3 bg-theme-hover rounded-lg">
-                    <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Breaking down core concepts</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-3 p-3 bg-theme-hover rounded-lg">
-                    <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-150"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Creating code demonstrations</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-3 p-3 bg-theme-hover rounded-lg">
-                    <div className="w-2 h-2 bg-theme-accent rounded-full animate-pulse delay-300"></div>
-                    <span className="text-sm text-theme-secondary transition-colors duration-300">Designing real-world practice tasks</span>
-                  </div>
+              {/* Sequential Loading Step */}
+              <div className="max-w-md mx-auto mb-8">
+                <div className="min-h-[60px] flex items-center justify-center">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentStep}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ 
+                        duration: 0.6,
+                        ease: "easeInOut"
+                      }}
+                      className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-theme-hover/50 w-full"
+                    >
+                      {/* Animated dot */}
+                      <motion.div
+                        className="w-3 h-3 rounded-full bg-theme-accent"
+                        animate={{
+                          scale: [1, 1.3, 1],
+                          opacity: [0.7, 1, 0.7]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
+                      
+                      {/* Step text */}
+                      <span className="text-sm font-medium text-theme-primary">
+                        {loadingSteps[currentStep]}
+                      </span>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-                
-                <div className={`mt-8 p-4 ${useSemanticColors(theme).info.bg} border ${useSemanticColors(theme).info.border} rounded-lg`}>
-                  <p className={`text-xs ${useSemanticColors(theme).info.text}`}>
-                    ⏱️ <strong>This may take 30-60 seconds</strong> as we're creating an in-depth learning guide 
-                    with practical code demonstrations and real-world applications to prepare you for professional coding.
+              </div>
+              
+              {/* Simple Info Message */}
+              <div className={`p-4 ${useSemanticColors(theme).info.bg} border ${useSemanticColors(theme).info.border} rounded-lg max-w-md mx-auto`}>
+                <p className={`text-xs ${useSemanticColors(theme).info.text}`}>
+                  ⏱️ <strong>This may take a moment.</strong>
+                </p>
+              </div>
+              
+              {/* Timeout Warning (after 20 seconds) */}
+              {showTimeoutWarning && (
+                <div className={`mt-4 p-4 ${useSemanticColors(theme).warning.bg} border ${useSemanticColors(theme).warning.border} rounded-lg max-w-md mx-auto`}>
+                  <p className={`text-xs ${useSemanticColors(theme).warning.text}`}>
+                    ⚠️ This is taking longer than usual. The AI might be generating very detailed content. 
                   </p>
                 </div>
-                
-                {showTimeoutWarning && (
-                  <div className={`mt-4 p-4 ${useSemanticColors(theme).warning.bg} border ${useSemanticColors(theme).warning.border} rounded-lg`}>
-                    <p className={`text-xs ${useSemanticColors(theme).warning.text}`}>
-                      ⚠️ This is taking longer than usual. The AI might be generating very detailed content. 
-                      You can wait a bit more or try refreshing if needed.
-                    </p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -583,7 +630,7 @@ const LessonPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 transition-colors duration-300">
             <div className="text-center">
@@ -626,7 +673,7 @@ const LessonPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
       {/* Reading Progress Bar */}
       <div className="fixed top-16 left-0 right-0 z-30 h-1 bg-theme-hover">
         <div 

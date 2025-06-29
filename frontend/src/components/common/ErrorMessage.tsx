@@ -26,20 +26,20 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({
   };
 
   return (
-    <div className={`bg-red-50/50 border border-red-200 rounded-lg p-4 transition-colors duration-300 ${className}`}>
+    <div className={`bg-error border-2 border-error rounded-lg p-4 transition-colors duration-300 ${className}`}>
       <div className="flex items-start">
-        <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+        <AlertCircle className="h-5 w-5 text-error-icon mt-0.5 mr-3 flex-shrink-0" />
         <div className="flex-1">
-          <h3 className="text-sm font-medium text-red-800 mb-1">
+          <h3 className="text-sm font-bold text-error mb-1">
             Error
           </h3>
-          <p className="text-sm text-red-700">
+          <p className="text-sm font-semibold text-error">
             {getErrorMessage()}
           </p>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="mt-3 inline-flex items-center px-3 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-theme-primary hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-300"
+              className="mt-3 inline-flex items-center px-3 py-1 border-2 border-error shadow-sm text-xs font-bold rounded text-error bg-theme-primary hover:bg-theme-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-accent transition-colors duration-300"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
               Try Again

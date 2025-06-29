@@ -11,6 +11,7 @@ interface UseRoadmapReturn {
   roadmap: Roadmap | null;
   progress: RoadmapProgress[];
   loading: boolean;
+  dataReady: boolean;
   error: string | null;
   canRunPipeline: boolean;
   pipelineStatus: any;
@@ -25,13 +26,50 @@ export const useRoadmap = (): UseRoadmapReturn => {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [progress, setProgress] = useState<RoadmapProgress[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canRunPipeline, setCanRunPipeline] = useState(false);
   const [pipelineStatus, setPipelineStatus] = useState<any>(null);
 
-  // Check pipeline status on mount
+  // Load initial data on mount
   useEffect(() => {
-    refreshStatus();
+    const loadInitialData = async () => {
+      // Run both operations in parallel
+      await Promise.allSettled([
+        (async () => {
+          try {
+            const status = await agentService.getPipelineStatus();
+            setCanRunPipeline(status.can_run_pipeline);
+            setPipelineStatus(status);
+          } catch (err) {
+            console.error('Error checking pipeline status:', err);
+            setCanRunPipeline(false);
+          }
+        })(),
+        (async () => {
+          try {
+            const response = await agentService.getUserRoadmap();
+            
+            if (response.success && response.data.roadmap) {
+              setRoadmap(response.data.roadmap);
+              setProgress(response.data.progress || []);
+              
+              // Clean up old localStorage data since we're now using database
+              localStorage.removeItem('internai_roadmap');
+              localStorage.removeItem('internai_roadmap_progress');
+            }
+          } catch (err) {
+            // If error (like no roadmap found), that's fine - user hasn't generated one yet
+            console.debug('No roadmap found in database (user may need to generate one)');
+          }
+        })()
+      ]);
+      
+      // Mark data as ready after both API calls complete
+      setDataReady(true);
+    };
+
+    loadInitialData();
   }, []);
 
   const refreshStatus = useCallback(async () => {
@@ -159,11 +197,6 @@ export const useRoadmap = (): UseRoadmapReturn => {
     setError(null);
   }, []);
 
-  // Load roadmap and progress from database on mount
-  useEffect(() => {
-    refreshRoadmapData();
-  }, [refreshRoadmapData]);
-
   // Listen for focus events to refresh data when returning to the page
   useEffect(() => {
     const handleFocus = () => {
@@ -187,6 +220,7 @@ export const useRoadmap = (): UseRoadmapReturn => {
     roadmap,
     progress,
     loading,
+    dataReady,
     error,
     canRunPipeline,
     pipelineStatus,

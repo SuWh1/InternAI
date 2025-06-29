@@ -13,7 +13,7 @@ import type { WeekData } from '../types/roadmap';
 const WeekDetailPage: React.FC = () => {
   const { weekNumber } = useParams<{ weekNumber: string }>();
   const navigate = useNavigate();
-  const { roadmap, progress, updateProgress, loading: roadmapLoading, error: roadmapError } = useRoadmap();
+  const { roadmap, progress, updateProgress, loading: roadmapLoading, dataReady, error: roadmapError } = useRoadmap();
   const { theme } = useTheme();
   
   const [week, setWeek] = useState<WeekData | null>(null);
@@ -292,12 +292,29 @@ const WeekDetailPage: React.FC = () => {
     navigate(`/roadmap/week/${targetWeek}`);
   };
 
-
-
   if (error || roadmapError) {
     return (
       <div className="min-h-screen pt-16 bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <ErrorMessage error={error || roadmapError || 'An error occurred'} />
+      </div>
+    );
+  }
+
+  // Wait for data to be ready before rendering content
+  if (!dataReady) {
+    return (
+      <div className="min-h-screen pt-16 bg-theme-primary transition-colors duration-300">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-6">
+            <button
+              onClick={() => navigate('/my-roadmap')}
+              className="flex items-center space-x-2 text-theme-secondary hover:text-theme-primary transition-colors duration-300"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Roadmap</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

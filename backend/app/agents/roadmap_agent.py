@@ -100,6 +100,19 @@ class RoadmapAgent(BaseAgent):
                 error=f"Roadmap generation failed: {str(e)}"
             )
     
+    async def generate_roadmap(self, onboarding_data: Dict[str, Any], resume_summary: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Public method to generate roadmap directly.
+        
+        Args:
+            onboarding_data: User's onboarding information
+            resume_summary: Optional resume analysis
+        
+        Returns:
+            Dictionary containing the generated roadmap
+        """
+        return await self._generate_roadmap(onboarding_data, resume_summary)
+    
     async def _generate_roadmap(self, onboarding_data: Dict[str, Any], resume_summary: Dict[str, Any] = None) -> Dict[str, Any]:
         """Generate the personalized roadmap using OpenAI based on user data."""
         

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, GitBranch, Eye, EyeOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -31,6 +31,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [resetSent, setResetSent] = useState(false);
 
   const { login, register, loading, error, clearError } = useAuth();
+  const dragControls = useDragControls();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -261,9 +262,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
               animate="visible"
               exit="exit"
               drag
+              dragControls={dragControls}
               dragConstraints={{ top: -100, bottom: 100, left: -100, right: 100 }}
               dragElastic={0.1}
-              whileTap={{ cursor: "grabbing" }}
+              dragListener={false}
             >
               {/* Shimmer effect */}
               <motion.div
@@ -288,12 +290,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 <X className="h-5 w-5" />
               </motion.button>
 
-              {/* Header */}
+              {/* Header - Drag Handle */}
               <motion.div 
-                className="px-6 pt-8 pb-4 text-center"
+                className="px-6 pt-8 pb-4 text-center cursor-grab active:cursor-grabbing select-none"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
+                onPointerDown={(e) => dragControls.start(e)}
+                whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.02)" }}
+                style={{ borderRadius: "12px 12px 0 0" }}
               >
                 <motion.div 
                   className="flex items-center justify-center mb-4"

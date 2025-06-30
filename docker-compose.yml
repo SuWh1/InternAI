@@ -24,6 +24,7 @@ services:
       dockerfile: Dockerfile
     container_name: internai_backend
     environment:
+      - DOCKER_CONTAINER=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
       - SECRET_KEY=${SECRET_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -31,6 +32,8 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - DOCKER_CONTAINER=true
     ports:
       - "8000:8000"
     depends_on:

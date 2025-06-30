@@ -5,13 +5,13 @@ import { staggerContainer, staggerItem } from "../utils/animations";
 const audiences = [
   {
     icon: GraduationCap,
-    title: "First-Year Students",
+    title: "High School Students",
     description: "Just starting your CS journey? Perfect! We'll help you build foundational skills and create a timeline that works with your coursework.",
     color: "from-blue-500 to-purple-500",
   },
   {
     icon: Code,
-    title: "Second-Year Students",
+    title: "University Students",
     description: "Ready to level up? Get advanced project ideas, interview prep strategies, and networking tips to stand out from the crowd.",
     color: "from-purple-500 to-pink-500",
   },

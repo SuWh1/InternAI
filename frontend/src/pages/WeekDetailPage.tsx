@@ -50,7 +50,6 @@ const WeekDetailPage: React.FC = () => {
 
   useEffect(() => {
     // Only reset state when week number actually changes (not when roadmap data refreshes)
-    console.log(`Week navigation: changing to week ${weekNumber}`);
     setError(null);
     setWeek(null); // Reset week data so second useEffect can trigger
     setCompletedSubtopics(new Set());
@@ -66,10 +65,7 @@ const WeekDetailPage: React.FC = () => {
         setError(`Week ${weekNum} is locked. Complete the previous week to unlock it.`);
         return;
       }
-      console.log(`Week ${weekNumber}: roadmap and progress ready, calling loadWeekData()`);
       loadWeekData();
-    } else {
-      console.log(`Week ${weekNumber}: waiting for roadmap and progress data`);
     }
   }, [weekNumber]); // Only depend on weekNumber to prevent unnecessary resets
 
@@ -78,12 +74,8 @@ const WeekDetailPage: React.FC = () => {
     if (roadmap && progress.length > 0 && !week) {
       // Only load week data if we don't have it yet
       const weekNum = parseInt(weekNumber || '1');
-      console.log(`Second useEffect triggered for week ${weekNumber}: roadmap and progress available, week is null`);
       if (isWeekUnlocked(weekNum, progress)) {
-        console.log(`Week ${weekNumber} is unlocked, calling loadWeekData()`);
         loadWeekData();
-      } else {
-        console.log(`Week ${weekNumber} is locked`);
       }
     }
   }, [roadmap, progress, roadmapLoading, week]);
@@ -151,11 +143,8 @@ const WeekDetailPage: React.FC = () => {
     const needsGeneration = subtopics.length === 0 || forceGeneration || (week && week.week_number !== weekNum);
     
     if (needsGeneration) {
-      console.log(`Starting subtopics generation for week ${weekNum}: subtopics.length=${subtopics.length}, forceGeneration=${forceGeneration}, currentWeek=${week?.week_number}`);
       setForceGeneration(false); // Reset the flag
       generateSubtopics(weekData.theme, weekData.focus_area);
-    } else {
-      console.log(`Skipping subtopics generation for week ${weekNum}: subtopics.length=${subtopics.length}, forceGeneration=${forceGeneration}, currentWeek=${week?.week_number}`);
     }
     
     setError(null);
@@ -164,16 +153,12 @@ const WeekDetailPage: React.FC = () => {
   const generateSubtopics = async (theme: string, focusArea: string) => {
     const weekNum = parseInt(weekNumber || '1');
     
-    console.log(`generateSubtopics called for week ${weekNum}, theme: ${theme}, focusArea: ${focusArea}`);
-    
     // Set a timeout to show generating state only if request takes longer than 300ms (likely new generation)
     const loadingTimeout = setTimeout(() => {
       setIsGeneratingSubtopics(true);
-      console.log(`Request taking longer than 300ms, showing generating state`);
     }, 300);
     
     try {
-      console.log(`Making API call to agentService.generateSubtopics...`);
       const response = await agentService.generateSubtopics({
         topic: theme,
         context: `Week ${weekNum} - Focus area: ${focusArea}`,
@@ -184,19 +169,14 @@ const WeekDetailPage: React.FC = () => {
       // Clear the loading timeout since we got a response
       clearTimeout(loadingTimeout);
       
-      console.log(`API response received:`, response);
-      
       if (response.success && response.subtopics && response.subtopics.length > 0) {
-        console.log(`Setting ${response.subtopics.length} subtopics from API response`);
         setSubtopics(response.subtopics);
         
         // If we were showing generating state and got cached content, hide it immediately
         if (response.cached) {
-          console.log(`Content was cached, hiding generating state immediately`);
           setIsGeneratingSubtopics(false);
         }
       } else {
-        console.log(`API response invalid, using fallback subtopics`);
         // Fallback to default subtopics if AI generation fails
         setSubtopics([
           { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
@@ -212,7 +192,6 @@ const WeekDetailPage: React.FC = () => {
       clearTimeout(loadingTimeout);
       
       console.error('Error generating subtopics:', error);
-      console.log(`Using fallback subtopics due to error`);
       // Fallback subtopics
       setSubtopics([
         { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
@@ -224,7 +203,6 @@ const WeekDetailPage: React.FC = () => {
       ]);
     } finally {
       // Always clear the generating state when done
-      console.log(`generateSubtopics finishing, clearing loading state`);
       setIsGeneratingSubtopics(false);
     }
   };

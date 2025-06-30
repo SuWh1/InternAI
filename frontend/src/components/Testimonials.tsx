@@ -4,25 +4,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const testimonials = [
   {
-    name: "Sarah Chen",
-    role: "Sophomore at UC Berkeley",
-    company: "Landed Google STEP 2024",
+    name: "Fatikh Aidyn",
+    role: "2 year student at NU",
+    company: "Repathon CEO",
     content: "InternAI's roadmap was a game-changer. The weekly breakdown made everything manageable, and I never felt overwhelmed. The AI knew exactly what skills I needed to focus on.",
     rating: 5,
-    avatar: "SC"
+    avatar: "FA"
   },
   {
-    name: "Marcus Rodriguez",
-    role: "First-year at MIT",
-    company: "Microsoft Explore Intern",
-    content: "I was completely lost on where to start. InternAI gave me a clear path from beginner to interview-ready. The project suggestions were spot-on for my skill level.",
+    name: "Maxim Sarsekeyev",
+    role: "2-nd year student at KBTU",
+    company: "FoodSnap AI CEO",
+    content: "I was completely lost on where to start. InternAI gave me a clear path from beginner to making a great tech project. The project suggestions were spot-on for my skill level.",
     rating: 5,
-    avatar: "MR"
+    avatar: "MS"
   },
   {
-    name: "Emily Wang",
-    role: "Career Switcher",
-    company: "Amazon SDE Intern",
+    name: "Rassul Kerimzhanov",
+    role: "Admin at KBTU",
+    company: "BattleStack CEO",
     content: "As someone switching from finance to tech, I needed a fast-track plan. InternAI's personalized approach helped me land an internship in just 6 months.",
     rating: 5,
     avatar: "EW"

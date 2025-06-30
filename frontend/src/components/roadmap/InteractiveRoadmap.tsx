@@ -8,7 +8,8 @@ import ReactFlow, {
   MarkerType,
   useReactFlow,
   Panel,
-  ReactFlowProvider
+  ReactFlowProvider,
+  Position
 } from 'reactflow';
 import type { Node, Edge, Viewport } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -231,19 +232,29 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
     // Track bounds for content area
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     
-    // Create a flowing river-like layout that moves left to right in a gentle S-curve
+    // Create S-shaped layout from top to bottom with first and last nodes centered
     roadmap.weeks.forEach((week, index) => {
-      // Create flowing S-curve layout
-      const progressRatio = index / Math.max(totalWeeks - 1, 1);
-      const amplitude = 200; // Height of the S-curve
-      const wavelength = 1.5; // How many S-curves across the width
+      // Clear S-shape layout with proper spacing - nodes have breathing room
+      // Layout: Creates a recognizable S-pattern with generous spacing between nodes
+      const sShapePositions = [
+        { x: 650, y: 120 },    // Node 1: center top - start of S
+        { x: 800, y: 350 },    // Node 2: curve right
+        { x: 1000, y: 580 },   // Node 3: far right - top curve of S
+        { x: 1100, y: 810 },   // Node 4: maximum right
+        { x: 950, y: 1040 },   // Node 5: start curving back left
+        { x: 650, y: 1270 },   // Node 6: center - middle of S
+        { x: 350, y: 1500 },   // Node 7: curve left
+        { x: 200, y: 1730 },   // Node 8: far left - bottom curve of S  
+        { x: 150, y: 1960 },   // Node 9: maximum left
+        { x: 300, y: 2190 },   // Node 10: start curving back right
+        { x: 550, y: 2420 },   // Node 11: curve back toward center
+        { x: 650, y: 2650 }    // Node 12: center bottom - end of S
+      ];
       
-      // Base position moving left to right
-      const baseX = 150 + (index * 400);
-      
-      // S-curve calculation
-      const sineValue = Math.sin(progressRatio * Math.PI * wavelength);
-      const y = 300 + sineValue * amplitude; // Center around y=300
+      // Get position for current node, fallback to center if index exceeds array
+      const position = sShapePositions[index] || { x: 600, y: 100 + (index * 250) };
+      const baseX = position.x;
+      const y = position.y;
       
       // Update bounds tracking
       const nodeLeft = baseX - nodeWidth / 2;
@@ -298,16 +309,35 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
       
       nodes.push(weekNode);
       
-      // Connect to previous step with flowing animated edges
+      // Connect to previous step with flowing animated edges from sides
       if (index > 0) {
         const prevWeekId = `week-${roadmap.weeks[index - 1].week_number}`;
         const isCompleted = weekProgress?.completion_percentage === 100;
+        
+        // Get positions to determine connection sides
+        const prevPosition = sShapePositions[index - 1] || { x: 600, y: 100 };
+        const currentPosition = position;
+        
+        // Determine source and target positions based on node positions
+        let sourcePosition, targetPosition;
+        
+        if (currentPosition.x > prevPosition.x) {
+          // Current node is to the right, connect from right side of prev to left side of current
+          sourcePosition = Position.Right;
+          targetPosition = Position.Left;
+        } else {
+          // Current node is to the left, connect from left side of prev to right side of current  
+          sourcePosition = Position.Left;
+          targetPosition = Position.Right;
+        }
         
         edges.push({
           id: `edge-${prevWeekId}-${weekNode.id}`,
           source: prevWeekId,
           target: weekNode.id,
-          type: 'smoothstep',
+          sourcePosition,
+          targetPosition,
+          type: 'bezier',
           animated: !isLocked,
           style: { 
             stroke: isLocked ? '#9ca3af' : isCompleted ? '#10b981' : isCurrentStep ? '#3b82f6' : '#e5e7eb',
@@ -321,7 +351,7 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
             height: 20,
             color: isLocked ? '#9ca3af' : isCompleted ? '#10b981' : isCurrentStep ? '#3b82f6' : '#e5e7eb'
           }
-        });
+        } as Edge);
       }
     });
 

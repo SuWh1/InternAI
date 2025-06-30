@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Clock, 
-  ChevronDown, 
-  ChevronRight, 
-  CheckCircle, 
-  Circle, 
-  Target,
-  BookOpen,
-  List,
   Crown,
   Sparkles,
   Lock
 } from 'lucide-react';
-
 
 interface WeekNodeProps {
   data: {
@@ -46,19 +38,12 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
     week_number,
     theme,
     focus_area,
-    tasks,
     estimated_hours,
-    deliverables,
-    resources,
-    is_expanded,
     is_last_step = false,
     is_current_step = false,
     is_locked = false,
     step_index = 0,
     completed_tasks = [],
-    onExpand,
-    onTaskToggle,
-    onGetDetails
   } = data;
 
   // Initialize and sync local state with actual progress data
@@ -96,29 +81,6 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
   const completionPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   const isCompleted = completionPercentage === 100;
 
-  const handleExpand = () => {
-    onExpand?.(week_number, is_locked);
-  };
-
-  const handleTaskToggle = (taskIndex: number) => {
-    if (is_locked) return;
-    
-    const newCompletedTasks = new Set(completedTasks);
-    const isCompleting = !newCompletedTasks.has(taskIndex);
-    
-    if (newCompletedTasks.has(taskIndex)) {
-      newCompletedTasks.delete(taskIndex);
-    } else {
-      newCompletedTasks.add(taskIndex);
-    }
-    setCompletedTasks(newCompletedTasks);
-    onTaskToggle?.(week_number, taskIndex, isCompleting, is_locked);
-  };
-
-  const handleGetDetails = () => {
-    onGetDetails?.(theme, `Week ${week_number} focus area: ${focus_area}`, is_locked);
-  };
-
   // Animation variants
   const nodeVariants = {
     initial: {
@@ -144,39 +106,6 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         duration: 0.2,
         type: "spring" as const,
         stiffness: 400,
-        damping: 25
-      }
-    }
-  };
-
-  const expandedContentVariants = {
-    hidden: {
-      opacity: 0,
-      height: 0,
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut" as const
-      }
-    },
-    visible: {
-      opacity: 1,
-      height: "auto",
-      transition: {
-        duration: 0.3,
-        ease: "easeInOut" as const,
-        staggerChildren: 0.05
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { 
-      opacity: 1, 
-      x: 0,
-      transition: {
-        type: "spring" as const,
-        stiffness: 300,
         damping: 25
       }
     }
@@ -210,7 +139,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
       
       <motion.div 
         className={`
-          bg-theme-secondary rounded-lg border-2 transition-all duration-300 
+          bg-theme-secondary rounded-lg border-2 transition-all duration-300 w-64
           ${is_locked 
             ? 'border-theme opacity-50 cursor-not-allowed' 
             : 'shadow-lg'
@@ -223,7 +152,6 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
                 ? 'border-theme'
                 : ''
           }
-          ${is_expanded ? 'min-w-80' : 'w-64'}
           ${!is_locked && is_last_step ? 'shadow-2xl ring-4 ring-yellow-300 ring-opacity-50' : ''}
           relative overflow-hidden
         `}
@@ -318,78 +246,59 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
         }`}
       />
 
-      {/* Header */}
-      <div className="p-4 border-b border-theme transition-colors duration-300">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2">
-            <motion.div 
-              className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
-                ${is_locked 
-                  ? 'bg-theme-secondary text-theme-secondary border border-theme' 
-                  : is_last_step 
-                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
-                    : is_current_step
-                      ? 'bg-purple-500 text-white shadow-lg'
-                      : isCompleted 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-theme-accent/80 text-white'
-                }
-              `}
-              animate={is_current_step && !is_locked ? { 
-                scale: [1, 1.1, 1] 
-              } : {}}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              {is_locked ? <Lock className="w-4 h-4" /> : is_last_step ? <Crown className="w-4 h-4" /> : week_number}
-            </motion.div>
-            <div className="flex-1">
-              <h3 className={`font-semibold text-sm transition-colors duration-300 ${
-                is_locked ? 'text-theme-primary' :
-                is_last_step ? 'text-yellow-800 font-bold' : 
-                is_current_step ? 'text-purple-500 font-bold' : 
-                'text-theme-primary'
-              }`}>
-                {is_locked 
-                  ? `🔒 ${theme} - Locked` 
-                  : is_last_step 
-                    ? `🎉 ${theme} - Final Step!` 
-                    : is_current_step 
-                      ? `➡️ ${theme} - Current Step` 
-                      : theme
-                }
-              </h3>
-              <p className={`text-xs transition-colors duration-300 ${
-                is_locked ? 'text-theme-secondary' :
-                is_last_step ? 'text-yellow-600' : 
-                is_current_step ? 'text-purple-500/80' : 
-                'text-theme-secondary'
-              }`}>
-                {is_locked ? 'Complete the previous week to unlock' : focus_area}
-              </p>
-            </div>
-          </div>
-          <motion.button
-            onClick={handleExpand}
-            disabled={is_locked}
-            className={`p-1 rounded transition-colors ${
-              is_locked ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-100'
-            }`}
-            animate={{ rotate: is_expanded ? 180 : 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+      {/* Header - No longer a border-b since there's no expanded content */}
+      <div className="p-4">
+        <div className="flex items-center space-x-2 mb-2">
+          <motion.div 
+            className={`
+              w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
+              ${is_locked 
+                ? 'bg-theme-secondary text-theme-secondary border border-theme' 
+                : is_last_step 
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white shadow-lg' 
+                  : is_current_step
+                    ? 'bg-purple-500 text-white shadow-lg'
+                    : isCompleted 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-theme-accent/80 text-white'
+              }
+            `}
+            animate={is_current_step && !is_locked ? { 
+              scale: [1, 1.1, 1] 
+            } : {}}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
           >
-            {is_locked ? (
-              <Lock className="w-4 h-4 text-gray-400" />
-            ) : is_expanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-600" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            )}
-          </motion.button>
+            {is_locked ? <Lock className="w-4 h-4" /> : is_last_step ? <Crown className="w-4 h-4" /> : week_number}
+          </motion.div>
+          <div className="flex-1">
+            <h3 className={`font-semibold text-sm transition-colors duration-300 ${
+              is_locked ? 'text-theme-primary' :
+              is_last_step ? 'text-yellow-800 font-bold' : 
+              is_current_step ? 'text-purple-500 font-bold' : 
+              'text-theme-primary'
+            }`}>
+              {is_locked 
+                ? `🔒 ${theme} - Locked` 
+                : is_last_step 
+                  ? `🎉 ${theme} - Final Step!` 
+                  : is_current_step 
+                    ? `➡️ ${theme} - Current Step` 
+                    : theme
+              }
+            </h3>
+            <p className={`text-xs transition-colors duration-300 ${
+              is_locked ? 'text-theme-secondary' :
+              is_last_step ? 'text-yellow-600' : 
+              is_current_step ? 'text-purple-500/80' : 
+              'text-theme-secondary'
+            }`}>
+              {is_locked ? 'Complete the previous week to unlock' : focus_area}
+            </p>
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -433,115 +342,6 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
           </motion.div>
         </div>
       </div>
-
-      {/* Expanded content */}
-      <AnimatePresence>
-        {is_expanded && !is_locked && (
-          <motion.div 
-            className="p-4 space-y-4"
-            variants={expandedContentVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-          >
-            {/* Tasks */}
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center space-x-2 mb-2">
-                <List className="w-4 h-4 text-blue-500" />
-                <span className="font-medium text-sm text-gray-700">Tasks</span>
-              </div>
-              <div className="space-y-2">
-                {tasks.map((task, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="flex items-start space-x-2"
-                    variants={itemVariants}
-                    whileHover={{ x: 4 }}
-                  >
-                    <motion.button
-                      onClick={() => handleTaskToggle(index)}
-                      className="mt-0.5 flex-shrink-0"
-                      whileHover={{ scale: 1.2 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      {completedTasks.has(index) ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-gray-400 hover:text-blue-500" />
-                      )}
-                    </motion.button>
-                    <span className={`text-xs ${
-                      completedTasks.has(index) 
-                        ? 'text-gray-500 line-through' 
-                        : 'text-gray-700'
-                    }`}>
-                      {task}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Deliverables */}
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center space-x-2 mb-2">
-                <Target className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-sm text-gray-700">Deliverables</span>
-              </div>
-              <div className="space-y-1">
-                {deliverables.map((deliverable, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="text-xs text-gray-600"
-                    variants={itemVariants}
-                    whileHover={{ x: 4 }}
-                  >
-                    • {deliverable}
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Resources */}
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center space-x-2 mb-2">
-                <BookOpen className="w-4 h-4 text-purple-500" />
-                <span className="font-medium text-sm text-gray-700">Resources</span>
-              </div>
-              <div className="space-y-1">
-                {resources.map((resource, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="text-xs text-gray-600"
-                    variants={itemVariants}
-                    whileHover={{ x: 4 }}
-                  >
-                    • {resource}
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Get Details Button */}
-            <motion.button
-              onClick={handleGetDetails}
-              className="w-full bg-blue-500 text-white text-xs py-2 px-3 rounded hover:bg-blue-600 transition-colors flex items-center justify-center space-x-1 relative overflow-hidden"
-              variants={itemVariants}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <BookOpen className="w-3 h-3 relative z-10" />
-              <span className="relative z-10">Get Detailed Explanation</span>
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600"
-                initial={{ x: "-100%" }}
-                whileHover={{ x: 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
       </motion.div>
     </div>
   );

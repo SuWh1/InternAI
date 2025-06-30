@@ -126,7 +126,6 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   onProgressUpdate,
   className = ''
 }) => {
-  const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<{
     topic: string;
@@ -138,23 +137,6 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   const [isFocusing, setIsFocusing] = useState(false);
 
   // Callback functions (must be declared before useMemo)
-  const handleNodeExpand = useCallback((weekNumber: number, isLocked?: boolean) => {
-    // Prevent expansion of locked nodes
-    if (isLocked) {
-      return;
-    }
-    
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(weekNumber)) {
-        newSet.delete(weekNumber);
-      } else {
-        newSet.add(weekNumber);
-      }
-      return newSet;
-    });
-  }, []);
-
   const handleTaskToggle = useCallback((weekNumber: number, taskIndex: number, isCompleted: boolean, isLocked?: boolean) => {
     // Prevent task toggling for locked nodes
     if (isLocked) {
@@ -192,6 +174,8 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
         details: {
           success: false,
           explanation: 'Failed to load detailed explanation. Please try again.',
+          resources: [],
+          subtasks: [],
           cached: false
         }
       } : null);
@@ -290,19 +274,17 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
           deliverables: week.deliverables,
           resources: week.resources,
           is_completed: weekProgress?.completion_percentage === 100 || false,
-          is_expanded: expandedNodes.has(week.week_number),
           is_last_step: isLastStep,
           is_current_step: isCurrentStep,
           is_locked: isLocked,
           step_index: index,
           completed_tasks: weekProgress?.completed_tasks || [],
-          onExpand: handleNodeExpand,
           onTaskToggle: handleTaskToggle,
           onGetDetails: handleGetTopicDetails
         },
         style: {
-          width: expandedNodes.has(week.week_number) ? 438 : nodeWidth,
-          height: expandedNodes.has(week.week_number) ? 'auto' : nodeHeight
+          width: nodeWidth,
+          height: nodeHeight
         },
         draggable: true
       };
@@ -365,7 +347,7 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
     };
 
     return { initialNodes: nodes, initialEdges: edges, contentBounds: bounds };
-  }, [roadmap, progress, expandedNodes, currentStepIndex]);
+  }, [roadmap, progress, currentStepIndex]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -374,8 +356,6 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   const resetLayout = useCallback(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
-
-
 
   // Update nodes when dependencies change
   React.useEffect(() => {
@@ -601,8 +581,6 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
             </button>
           </div>
         </Panel>
-
-
 
         <InitialZoomHandler />
         <FocusOnCurrentStep 

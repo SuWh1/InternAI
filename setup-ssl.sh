@@ -24,15 +24,39 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if domain is provided
-if [ -z "$1" ]; then
-    print_error "Usage: $0 <your-domain.com> [email@example.com]"
-    print_error "Example: $0 myapp.azurewebsites.net admin@mycompany.com"
-    exit 1
+# Try to detect domain from nginx configuration
+DOMAIN=""
+if [ -f "frontend/nginx-domain.conf" ]; then
+    DOMAIN=$(grep "server_name" frontend/nginx-domain.conf | head -1 | awk '{print $2}' | sed 's/;//')
+    if [ "$DOMAIN" != "" ] && [ "$DOMAIN" != "_" ]; then
+        print_status "Detected domain from configuration: $DOMAIN"
+    else
+        DOMAIN=""
+    fi
 fi
 
-DOMAIN=$1
-EMAIL=${2:-"admin@$DOMAIN"}
+# If no domain detected or provided, ask user
+if [ -z "$1" ] && [ -z "$DOMAIN" ]; then
+    echo ""
+    echo "🔐 SSL Certificate Setup"
+    echo "======================="
+    echo ""
+    read -p "Enter your domain name (e.g., mydomain.com): " DOMAIN
+    if [ -z "$DOMAIN" ]; then
+        print_error "No domain provided. Exiting."
+        exit 1
+    fi
+elif [ ! -z "$1" ]; then
+    DOMAIN=$1
+fi
+
+# Get email for Let's Encrypt
+if [ -z "$2" ]; then
+    read -p "Enter your email for Let's Encrypt notifications (or press Enter for admin@$DOMAIN): " INPUT_EMAIL
+    EMAIL=${INPUT_EMAIL:-"admin@$DOMAIN"}
+else
+    EMAIL=$2
+fi
 
 print_status "Setting up SSL certificates for domain: $DOMAIN"
 print_status "Email for Let's Encrypt: $EMAIL"
@@ -42,10 +66,21 @@ print_status "Creating SSL directories..."
 mkdir -p ssl-certs
 mkdir -p certbot-challenges
 
-# Update nginx configuration with actual domain
-print_status "Updating nginx configuration..."
-sed -i "s/YOUR_DOMAIN/$DOMAIN/g" frontend/nginx.conf
-sed -i "s/server_name _;/server_name $DOMAIN;/g" frontend/nginx.conf
+# Check if domain-specific nginx config exists
+if [ -f "frontend/nginx-domain.conf" ]; then
+    print_status "Using existing domain-specific nginx configuration..."
+else
+    print_status "Creating nginx configuration for $DOMAIN..."
+    # If no domain config exists, create one (fallback)
+    if [ -f "frontend/nginx.conf" ]; then
+        cp frontend/nginx.conf frontend/nginx-domain.conf
+        sed -i "s/YOUR_DOMAIN/$DOMAIN/g" frontend/nginx-domain.conf
+        sed -i "s/server_name _;/server_name $DOMAIN www.$DOMAIN;/g" frontend/nginx-domain.conf
+    else
+        print_error "No nginx configuration found. Please run setup-domain.sh first."
+        exit 1
+    fi
+fi
 
 # Install certbot if not already installed
 if ! command -v certbot &> /dev/null; then

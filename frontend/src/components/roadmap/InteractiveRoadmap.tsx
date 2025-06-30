@@ -68,8 +68,8 @@ const FocusOnCurrentStep: React.FC<{
       if (currentNode) {
         onFocusStart?.();
         // Calculate center of the node (position + half width/height) with 20% offset to top-left
-        const nodeWidth = currentNode.data?.is_expanded ? 438 : 375;
-        const nodeHeight = currentNode.data?.is_expanded ? 300 : 200; // estimate expanded height
+        const nodeWidth = 375;
+        const nodeHeight = 200; // fixed node height
         const centerX = currentNode.position.x + nodeWidth / 2 - nodeWidth * 0.2;
         const centerY = currentNode.position.y + nodeHeight / 2 - nodeHeight * 0.2;
         

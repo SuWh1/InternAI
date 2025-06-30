@@ -19,13 +19,11 @@ interface WeekNodeProps {
     deliverables: string[];
     resources: string[];
     is_completed: boolean;
-    is_expanded: boolean;
     is_last_step?: boolean;
     is_current_step?: boolean;
     is_locked?: boolean;
     step_index?: number;
     completed_tasks?: string[];
-    onExpand?: (weekNumber: number, isLocked?: boolean) => void;
     onTaskToggle?: (weekNumber: number, taskIndex: number, isCompleted: boolean, isLocked?: boolean) => void;
     onGetDetails?: (topic: string, context: string, isLocked?: boolean) => void;
   };
@@ -347,4 +345,4 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
   );
 };
 
-export default WeekNode; 
+export default WeekNode;

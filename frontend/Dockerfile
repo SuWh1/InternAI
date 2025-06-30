@@ -3,6 +3,14 @@ FROM node:18-alpine as builder
 
 WORKDIR /app
 
+# Accept build arguments
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_API_BASE_URL
+
+# Set as environment variables for the build process
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Copy package files
 COPY package*.json ./
 

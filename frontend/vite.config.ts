@@ -9,4 +9,21 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
   },
+  build: {
+    // Optimize bundle
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate large dependencies
+          'react-vendor': ['react', 'react-dom'],
+          'router-vendor': ['react-router-dom'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+          'flow-vendor': ['reactflow'],
+          'query-vendor': ['@tanstack/react-query'],
+        },
+      },
+    },
+    // Increase chunk size warning limit for large libraries
+    chunkSizeWarningLimit: 1000,
+  },
 })

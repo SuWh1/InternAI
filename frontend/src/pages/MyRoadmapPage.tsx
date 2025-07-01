@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MapPin, 
@@ -14,8 +14,11 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import InteractiveRoadmap from '../components/roadmap/InteractiveRoadmap';
-import { useRoadmap } from '../hooks/useRoadmap';
-import Aurora from '../components/common/Aurora';
+import { useRoadmapQuery } from '../hooks/useRoadmapQuery';
+import type { RoadmapNode } from '../types/roadmap';
+
+// Lazy load Aurora for better performance
+const Aurora = lazy(() => import('../components/common/Aurora'));
 
 const MyRoadmapPage = () => {
   const {
@@ -30,7 +33,7 @@ const MyRoadmapPage = () => {
     updateProgress,
     refreshStatus,
     clearError
-  } = useRoadmap();
+  } = useRoadmapQuery();
 
   const [resumeText, setResumeText] = useState('');
   const [showResumeInput, setShowResumeInput] = useState(false);
@@ -72,7 +75,7 @@ const MyRoadmapPage = () => {
     setShowRegenerateConfirm(false);
   };
 
-  const handleNodeClick = (node: any) => {
+  const handleNodeClick = (node: RoadmapNode) => {
     console.log('Node clicked:', node);
   };
 
@@ -122,39 +125,76 @@ const MyRoadmapPage = () => {
 
   // Calculate overall progress
   const overallProgress = progress.length > 0 
-    ? Math.round(progress.reduce((sum, week) => sum + week.completion_percentage, 0) / progress.length)
+    ? Math.round(progress.reduce((sum: number, week: any) => sum + week.completion_percentage, 0) / progress.length)
     : 0;
 
   return (
-    <div className="min-h-screen bg-theme-primary transition-colors duration-300 relative">
+    <div className="min-h-screen bg-theme-primary transition-colors duration-300 relative" style={{ position: 'relative' }}>
       {/* Aurora Background */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
-        <Aurora
-          colorStops={["#9333EA", "#F472B6", "#A855F7"]}
-          blend={0.8}
-          amplitude={1.5}
-          speed={0.4}
-        />
+        <Suspense fallback={<div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 w-full h-full" />}>
+          <Aurora
+            colorStops={["#9333EA", "#F472B6", "#A855F7"]}
+            blend={0.8}
+            amplitude={1.5}
+            speed={0.4}
+          />
+        </Suspense>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div 
+        className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
         {/* Header */}
-        <div className="text-center mb-8">
-          <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
-          <h1 className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300">
+        <motion.div 
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
+        >
+          <motion.div
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 200 }}
+          >
+            <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
+          </motion.div>
+          <motion.h1 
+            className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
             My Career Roadmap
-          </h1>
-          <p className="text-xl text-theme-secondary transition-colors duration-300">
+          </motion.h1>
+          <motion.p 
+            className="text-xl text-theme-secondary transition-colors duration-300"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
             Your personalized journey to landing your dream internship
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Only show content after data is ready to prevent state flashing */}
         {dataReady && (
-          <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+          >
             {/* Error Display */}
             {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <motion.div 
+                className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <AlertCircle className="w-5 h-5 text-red-500" />
@@ -167,7 +207,7 @@ const MyRoadmapPage = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Loading State for Regeneration */}
@@ -284,7 +324,12 @@ const MyRoadmapPage = () => {
 
             {/* Roadmap Status & Controls */}
             {!roadmap && !loading ? (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300">
+              <motion.div 
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 mb-8 transition-colors duration-300"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
                 <div className="text-center">
                   {!canRunPipeline ? (
                     <>
@@ -346,21 +391,29 @@ const MyRoadmapPage = () => {
                         )}
                       </div>
                       
-                      <button
+                      <motion.button
                         onClick={handleGenerateRoadmap}
                         disabled={loading}
                         className="px-8 py-3 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-all duration-300 flex items-center space-x-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
                       >
                         <span>Generate My Roadmap</span>
-                      </button>
+                      </motion.button>
                     </>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ) : roadmap && !loading ? (
               <>
                 {/* Progress Overview */}
-                <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 mb-8 transition-colors duration-300">
+                <motion.div 
+                  className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 mb-8 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">Progress Overview</h2>
                     <div className="flex items-center space-x-4">
@@ -369,46 +422,92 @@ const MyRoadmapPage = () => {
                         <span className="text-2xl font-bold text-theme-accent">{overallProgress}%</span>
                         <span className="text-theme-secondary transition-colors duration-300">Complete</span>
                       </div>
-                      <button
+                      <motion.button
                         onClick={handleRegenerateClick}
-                        className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 hover:scale-105 transition-all duration-300 flex items-center space-x-2 shadow-sm"
+                        className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-300 flex items-center space-x-2 shadow-sm"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
                       >
                         <RefreshCw className="w-4 h-4" />
                         <span>Regenerate</span>
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                   
                   {/* Progress Summary */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-theme-accent/10 rounded-lg border border-theme transition-colors duration-300">
+                  <motion.div 
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.1,
+                          delayChildren: 0.5
+                        }
+                      }
+                    }}
+                  >
+                    <motion.div 
+                      className="text-center p-4 bg-theme-accent/10 rounded-lg border border-theme transition-colors duration-300"
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <CheckCircle className="h-8 w-8 text-theme-accent mx-auto mb-2" />
                       <div className="text-2xl font-bold text-theme-accent">
-                        {progress.filter(w => w.completion_percentage === 100).length}
+                        {progress.filter((w: any) => w.completion_percentage === 100).length}
                       </div>
                       <div className="text-sm text-theme-secondary transition-colors duration-300">Weeks Completed</div>
-                    </div>
+                    </motion.div>
                     
-                    <div className="text-center p-4 bg-green-500/10 rounded-lg border border-theme transition-colors duration-300">
+                    <motion.div 
+                      className="text-center p-4 bg-green-500/10 rounded-lg border border-theme transition-colors duration-300"
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <Calendar className="h-8 w-8 text-green-500 mx-auto mb-2" />
                       <div className="text-2xl font-bold text-green-600">
                         {roadmap.weeks.length}
                       </div>
                       <div className="text-sm text-theme-secondary transition-colors duration-300">Total Weeks</div>
-                    </div>
+                    </motion.div>
                     
-                    <div className="text-center p-4 bg-purple-500/10 rounded-lg border border-theme transition-colors duration-300">
+                    <motion.div 
+                      className="text-center p-4 bg-purple-500/10 rounded-lg border border-theme transition-colors duration-300"
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        visible: { opacity: 1, y: 0 }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <MapPin className="h-8 w-8 text-purple-500 mx-auto mb-2" />
                       <div className="text-2xl font-bold text-purple-600">
                         {roadmap.personalization_factors.focus_areas.length}
                       </div>
                       <div className="text-sm text-theme-secondary transition-colors duration-300">Focus Areas</div>
-                    </div>
-                  </div>
-                </div>
+                    </motion.div>
+                  </motion.div>
+                </motion.div>
 
                 {/* Interactive Roadmap */}
-                <div className="bg-theme-secondary rounded-xl shadow-sm border border-theme overflow-hidden transition-colors duration-300">
+                <motion.div 
+                  className="bg-theme-secondary rounded-xl shadow-sm border border-theme overflow-hidden transition-colors duration-300"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
                   <div className="p-6 border-b border-theme">
                     <h2 className="text-xl font-semibold text-theme-primary mb-2 transition-colors duration-300">Interactive Roadmap</h2>
                     <p className="text-theme-secondary text-sm transition-colors duration-300">
@@ -424,10 +523,10 @@ const MyRoadmapPage = () => {
                       onProgressUpdate={handleProgressUpdate}
                     />
                   </div>
-                </div>
+                </motion.div>
               </>
             ) : null}
-          </>
+          </motion.div>
         )}
 
         {/* Regenerate Confirmation Modal */}
@@ -512,7 +611,7 @@ const MyRoadmapPage = () => {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

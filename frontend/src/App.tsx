@@ -1,29 +1,33 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect } from 'react';
-import LandingPage from './pages/LandingPage';
-import RoadmapInfoPage from './pages/RoadmapInfoPage';
-import ResumeReviewInfoPage from './pages/ResumeReviewInfoPage';
-import InternshipsInfoPage from './pages/InternshipsInfoPage';
-import MyRoadmapPage from './pages/MyRoadmapPage';
-import MyResumePage from './pages/MyResumePage';
-import MyInternshipsPage from './pages/MyInternshipsPage';
-import OnboardingPage from './pages/OnboardingPage';
-import WeekDetailPage from './pages/WeekDetailPage';
-import LessonPage from './pages/LessonPage';
+import { useEffect, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './stores/authStore';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import LoadingSpinner, { PageLoadingSpinner } from './components/common/LoadingSpinner';
 
-// Page transition variants
+// Lazy load pages for better performance
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const RoadmapInfoPage = lazy(() => import('./pages/RoadmapInfoPage'));
+const ResumeReviewInfoPage = lazy(() => import('./pages/ResumeReviewInfoPage'));
+const InternshipsInfoPage = lazy(() => import('./pages/InternshipsInfoPage'));
+const MyRoadmapPage = lazy(() => import('./pages/MyRoadmapPage'));
+const MyResumePage = lazy(() => import('./pages/MyResumePage'));
+const MyInternshipsPage = lazy(() => import('./pages/MyInternshipsPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const WeekDetailPage = lazy(() => import('./pages/WeekDetailPage'));
+const LessonPage = lazy(() => import('./pages/LessonPage'));
+
+// Page transition variants - optimized to prevent white flashes
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 10,
-    scale: 0.99,
+    y: 8,
+    scale: 0.98,
   },
   in: {
     opacity: 1,
@@ -32,15 +36,16 @@ const pageVariants = {
   },
   out: {
     opacity: 0,
-    y: -10,
-    scale: 0.99,
+    y: -8,
+    scale: 0.98,
   },
 };
 
 const pageTransition = {
   type: 'spring' as const,
-  damping: 20,
-  stiffness: 300,
+  damping: 25,
+  stiffness: 400,
+  duration: 0.3,
 };
 
 // Component to handle animated routes
@@ -62,7 +67,10 @@ function AnimatedRoutes() {
         variants={pageVariants}
         transition={pageTransition}
         className="overflow-hidden main-content"
+        style={{ position: 'relative' }}
       >
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingSpinner />}>
         <Routes location={location}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
@@ -76,6 +84,8 @@ function AnimatedRoutes() {
           <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
           <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
         </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </motion.div>
     </AnimatePresence>
   );
@@ -105,7 +115,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <div className="bg-theme-primary overflow-x-hidden w-full animate-in fade-in duration-500 transition-colors">
+        <div className="min-h-screen bg-theme-primary overflow-x-hidden w-full transition-colors duration-200" style={{ position: 'relative' }}>
           <OnboardingWrapper>
             <Navbar />
             <AnimatedRoutes />

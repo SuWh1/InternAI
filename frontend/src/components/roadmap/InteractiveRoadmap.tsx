@@ -24,9 +24,7 @@ import type {
 } from '../../types/roadmap';
 import { isWeekUnlocked } from '../../utils/weekProgress';
 
-const nodeTypes = {
-  week: WeekNode,
-};
+// WeekNode import stays the same, nodeTypes will be memoized inside component
 
 // Component to handle initial zoom - must be inside ReactFlow
 const InitialZoomHandler: React.FC = () => {
@@ -135,6 +133,11 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [focusTrigger, setFocusTrigger] = useState(0);
   const [isFocusing, setIsFocusing] = useState(false);
+
+  // Memoize nodeTypes to prevent React Flow warnings
+  const nodeTypes = useMemo(() => ({
+    week: WeekNode,
+  }), []);
 
   // Callback functions (must be declared before useMemo)
   const handleTaskToggle = useCallback((weekNumber: number, taskIndex: number, isCompleted: boolean, isLocked?: boolean) => {
@@ -319,7 +322,7 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
           target: weekNode.id,
           sourcePosition,
           targetPosition,
-          type: 'bezier',
+          type: 'smoothstep',
           animated: !isLocked,
           style: { 
             stroke: isLocked ? '#9ca3af' : isCompleted ? '#10b981' : isCurrentStep ? '#3b82f6' : '#e5e7eb',

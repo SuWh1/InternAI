@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types/api';
+import { TIMEOUTS } from '../utils/constants';
 
 // Extend axios config to include retry flag
 interface AxiosRequestConfigWithRetry extends InternalAxiosRequestConfig {
@@ -16,7 +17,7 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000, // Increased to 60 seconds for comprehensive AI content generation
+  timeout: TIMEOUTS.API_REQUEST,
 });
 
 // Request interceptor to add auth token

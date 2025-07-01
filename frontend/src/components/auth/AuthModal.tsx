@@ -256,6 +256,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           <div className="flex min-h-full items-center justify-center p-6">
             <motion.div 
               className="relative w-[420px] transform overflow-hidden rounded-xl bg-theme-secondary shadow-xl border border-theme transition-all duration-300"
+              style={{ position: 'relative' }}
               onClick={(e) => e.stopPropagation()}
               variants={modalVariants}
               initial="hidden"

@@ -24,6 +24,11 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
+    // Ensure we're in browser environment
+    if (typeof window === 'undefined') {
+      return 'light'; // Default fallback for SSR
+    }
+    
     // Check localStorage first, then system preference
     const savedTheme = localStorage.getItem('theme') as Theme;
     if (savedTheme) {
@@ -38,12 +43,42 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return 'light';
   });
 
+  const applyTheme = (newTheme: Theme) => {
+    // Ensure we're running in browser environment
+    if (typeof window === 'undefined') return;
+    
+    const root = window.document?.documentElement;
+    const body = window.document?.body;
+    
+    // Check if DOM elements exist
+    if (!root || !body) return;
+    
+    // Remove old theme classes
+    root.classList.remove('light', 'dark');
+    body.classList.remove('light', 'dark');
+    
+    // Add new theme classes
+    root.classList.add(newTheme);
+    body.classList.add(newTheme);
+    
+    // Set CSS custom properties immediately for faster rendering
+    if (newTheme === 'dark') {
+      root.style.setProperty('--bg-primary', '#080808');
+      root.style.setProperty('--bg-secondary', '#151515');
+      root.style.setProperty('--text-primary', '#F0F0F0');
+      body.style.backgroundColor = '#080808';
+    } else {
+      root.style.setProperty('--bg-primary', '#FAFAFA');
+      root.style.setProperty('--bg-secondary', '#EFEFEF');
+      root.style.setProperty('--text-primary', '#121212');
+      body.style.backgroundColor = '#FAFAFA';
+    }
+  };
+
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(newTheme);
+    applyTheme(newTheme);
   };
 
   const toggleTheme = () => {
@@ -51,7 +86,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setTheme(newTheme);
   };
 
+  // Apply theme immediately on mount
   useEffect(() => {
+    applyTheme(theme);
+  }, []);
+
+  useEffect(() => {
+    // Ensure we're in browser environment
+    if (typeof window === 'undefined') return;
+    
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
       // Only set theme based on system preference if no theme is manually set

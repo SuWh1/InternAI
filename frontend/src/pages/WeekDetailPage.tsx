@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
 import agentService from '../services/agentService';
 
@@ -246,13 +247,10 @@ const WeekDetailPage: React.FC = () => {
 
   const handleGetAIExplanation = (subtopicTitle: string, subtopicDescription?: string) => {
     const weekNum = parseInt(weekNumber || '1');
-    // Use description for better context if available, otherwise fall back to title
-    const detailedContext = subtopicDescription || subtopicTitle;
-    const context = `Week ${weekNum}: ${week?.theme} - ${detailedContext}`;
-    
-    // Import the lesson slug service dynamically to avoid circular dependencies
-    import('../services/lessonSlugService').then(({ lessonSlugService }) => {
-      const lessonUrl = lessonSlugService.createLessonUrl(subtopicTitle, context, weekNum);
+    // Create lesson URL directly using slug utilities
+    import('../utils/slugify').then(({ createLessonSlug }) => {
+      const slug = createLessonSlug(subtopicTitle, weekNum);
+      const lessonUrl = `/lesson/${slug}`;
       navigate(lessonUrl);
     });
   };
@@ -305,13 +303,11 @@ const WeekDetailPage: React.FC = () => {
   if (!week) {
     return (
       <div className="min-h-screen bg-theme-primary transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <div className="text-theme-secondary/70 text-lg transition-colors duration-300">Loading week data...</div>
+                  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-center min-h-[200px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-2 border-theme-hover border-t-theme-accent transition-colors duration-300" />
             </div>
           </div>
-        </div>
       </div>
     );
   }
@@ -319,55 +315,111 @@ const WeekDetailPage: React.FC = () => {
   const completionPercentage = getCompletionPercentage();
 
   return (
-    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+    <motion.div 
+      className="min-h-screen bg-theme-primary transition-colors duration-300"
+      style={{ position: 'relative' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
+    >
       {/* Header */}
-      <div className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300">
+      <motion.div 
+        className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-4 mb-4">
-            <button
+          <motion.div 
+            className="flex items-center gap-4 mb-4"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <motion.button
               onClick={() => navigate('/my-roadmap')}
               className="flex items-center gap-2 text-theme-secondary hover:text-theme-primary transition-colors duration-300"
+              whileHover={{ x: -5 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.2 }}
             >
               <ArrowLeft className="w-5 h-5" />
               Back to Roadmap
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
           
           <div className="flex items-start justify-between">
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
               <h1 className="text-3xl font-bold text-theme-primary mb-2 transition-colors duration-300">
                 Week {week.week_number}: {week.theme}
               </h1>
               <p className="text-theme-secondary mb-4 transition-colors duration-300">
                 Focus Area: <span className="font-medium text-theme-accent">{week.focus_area}</span>
               </p>
-            </div>
+            </motion.div>
             
-            <div className="text-right min-w-[100px]">
-              <div className="text-2xl font-bold text-theme-accent mb-1 font-mono">
+            <motion.div 
+              className="text-right min-w-[100px]"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <motion.div 
+                className="text-2xl font-bold text-theme-accent mb-1 font-mono"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.6, type: "spring", stiffness: 200 }}
+              >
                 {completionPercentage}%
-              </div>
+              </motion.div>
               <div className="text-sm text-theme-secondary transition-colors duration-300">Complete</div>
-              <div className="w-24 h-2 bg-theme-hover rounded-full mt-2">
-                <div 
-                  className="h-full bg-theme-accent rounded-full transition-[width] duration-200"
-                  style={{ width: `${completionPercentage}%` }}
+              <motion.div 
+                className="w-24 h-2 bg-theme-hover rounded-full mt-2 overflow-hidden"
+                initial={{ width: 0 }}
+                animate={{ width: 96 }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+              >
+                <motion.div 
+                  className="h-full bg-theme-accent rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${completionPercentage}%` }}
+                  transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
                 />
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div 
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.5 }}
+      >
         <div className="grid gap-8 lg:grid-cols-3">
           
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <motion.div 
+            className="lg:col-span-2 space-y-8"
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+          >
             
             {/* Studying Section */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+              whileHover={{ y: -2 }}
+            >
               <div className="flex items-center gap-2 mb-6">
                 <Brain className="w-6 h-6 text-purple-600" />
                 <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
@@ -376,24 +428,35 @@ const WeekDetailPage: React.FC = () => {
               </div>
               
 
-                {isGeneratingSubtopics && subtopics.length === 0 ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="flex items-center space-x-3">
+                                  {isGeneratingSubtopics && subtopics.length === 0 ? (
+                    <div className="flex items-center justify-center py-8">
                       <div className="spin-animation">
                         <LoaderCircle className="w-6 h-6 text-theme-accent" />
                       </div>
-                      <span className="text-theme-secondary text-sm">Generating learning content...</span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+                  ) : (
+                  <motion.div 
+                    className="space-y-4"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.1,
+                          delayChildren: 0.3
+                        }
+                      }
+                    }}
+                  >
                     {subtopics.map((subtopic, index) => {
                       // Handle both string format (old) and object format (new)
                       const subtopicTitle = typeof subtopic === 'string' ? subtopic : subtopic.title;
                       const subtopicDescription = typeof subtopic === 'string' ? subtopic : subtopic.description;
                       
                       return (
-                        <div
+                        <motion.div
                           key={index}
                           onClick={() => handleSubtopicToggle(index)}
                           className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors duration-200 cursor-pointer ${
@@ -401,6 +464,16 @@ const WeekDetailPage: React.FC = () => {
                               ? 'bg-green-500/10 border-green-500/30 dark:bg-green-400/10 dark:border-green-400/30'
                               : 'bg-theme-hover border-theme hover:border-theme-accent'
                           }`}
+                          variants={{
+                            hidden: { opacity: 0, y: 20 },
+                            visible: { opacity: 1, y: 0 }
+                          }}
+                          whileHover={{ 
+                            scale: 1.02,
+                            y: -2,
+                            transition: { duration: 0.2 }
+                          }}
+                          whileTap={{ scale: 0.98 }}
                         >
                           <div className="mt-0.5">
                             {completedSubtopics.has(index) ? (
@@ -448,21 +521,32 @@ const WeekDetailPage: React.FC = () => {
                               <span>Click here to study and get AI explanation</span>
                             </button>
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
-                </div>
+                </motion.div>
                 )}
-            </div>
+            </motion.div>
 
 
-          </div>
+          </motion.div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+          >
             
             {/* Time Estimate */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.0 }}
+              whileHover={{ y: -2, scale: 1.02 }}
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-theme-accent" />
                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Time Estimate</h3>
@@ -473,10 +557,16 @@ const WeekDetailPage: React.FC = () => {
                 </div>
                 <div className="text-sm text-theme-secondary transition-colors duration-300">hours this week</div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Quick Tips */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.1 }}
+              whileHover={{ y: -2, scale: 1.02 }}
+            >
               <div className="flex items-center gap-2 mb-6">
                 <Lightbulb className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Quick Tips</h3>
@@ -516,38 +606,50 @@ const WeekDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Navigation */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300">
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.2 }}
+              whileHover={{ y: -2, scale: 1.02 }}
+            >
               <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300">Navigate</h3>
               <div className="space-y-2">
                 {week && week.week_number > 1 && (
-                  <button
+                  <motion.button
                     onClick={() => handleNavigation(week.week_number - 1)}
                     className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300 flex items-center gap-2"
+                    whileHover={{ x: 5 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
                     Week {week.week_number - 1}
-                  </button>
+                  </motion.button>
                 )}
-                <button
+                <motion.button
                   onClick={() => navigate('/my-roadmap')}
                   className="w-full text-left px-3 py-2 text-sm text-theme-accent hover:bg-theme-accent/10 rounded-md transition-colors duration-300 font-medium"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   📊 Full Roadmap
-                </button>
+                </motion.button>
                 
                 {/* Next Week Navigation */}
                 {week && roadmap && week.week_number < roadmap.weeks.length && (
                   <div className="relative">
-                    <button
+                    <motion.button
                       onClick={() => handleNavigation(week.week_number + 1)}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-all duration-300 flex items-center justify-between group ${
                         isWeekUnlocked(week.week_number + 1, progress)
                           ? 'text-theme-secondary hover:bg-theme-hover cursor-pointer'
                           : 'text-theme-secondary cursor-not-allowed opacity-50'
                       }`}
+                      whileHover={isWeekUnlocked(week.week_number + 1, progress) ? { x: 5 } : {}}
+                      whileTap={isWeekUnlocked(week.week_number + 1, progress) ? { scale: 0.98 } : {}}
                     >
                       <div className="flex items-center gap-2">
                         {isWeekUnlocked(week.week_number + 1, progress) ? (
@@ -557,19 +659,17 @@ const WeekDetailPage: React.FC = () => {
                         )}
                         <span>Week {week.week_number + 1}</span>
                       </div>
-                    </button>
-                    
-
+                    </motion.button>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
 
-    </div>
+    </motion.div>
   );
 };
 

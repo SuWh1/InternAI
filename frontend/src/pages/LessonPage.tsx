@@ -19,7 +19,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import agentService from '../services/agentService';
-import lessonSlugService from '../services/lessonSlugService';
+import { createLessonSlug, parseLessonSlug } from '../utils/slugify';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import MarkdownRenderer from '../components/common/MarkdownRenderer';
@@ -89,7 +89,6 @@ const LessonPage: React.FC = () => {
   const { theme } = useTheme();
   
   const [lesson, setLesson] = useState<GPTTopicResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [renderingError, setRenderingError] = useState<string | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -107,11 +106,11 @@ const LessonPage: React.FC = () => {
   let weekNumber = '';
 
   if (params.slug) {
-    // New slug-based URL
-    const lessonData = lessonSlugService.getLessonData(params.slug);
+    // Parse slug to get lesson data
+    const lessonData = parseLessonSlug(params.slug);
     if (lessonData) {
       topic = lessonData.topic;
-      context = lessonData.context;
+      context = `Week ${lessonData.weekNumber}: ${lessonData.topic}`;
       weekNumber = lessonData.weekNumber.toString();
     }
   } else if (params.topic && params.context) {
@@ -122,13 +121,17 @@ const LessonPage: React.FC = () => {
     
     // Create a slug for this lesson and redirect to clean URL
     const weekNum = parseInt(weekNumber || '1');
-    const newUrl = lessonSlugService.createLessonUrl(topic, context, weekNum);
+    const slug = createLessonSlug(topic, weekNum);
+    const newUrl = `/lesson/${slug}`;
     
     // Replace the current URL with the clean one
     setTimeout(() => {
       navigate(newUrl, { replace: true });
     }, 100);
   }
+
+  // Always start with loading state - minimum 2 seconds
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (topic) {
@@ -144,7 +147,7 @@ const LessonPage: React.FC = () => {
     let timeoutWarning: number;
     
     if (loading) {
-      timeoutWarning = setTimeout(() => {
+      timeoutWarning = window.setTimeout(() => {
         setShowTimeoutWarning(true);
       }, 20000);
     } else {
@@ -165,7 +168,7 @@ const LessonPage: React.FC = () => {
     if (loading) {
       setCurrentStep(0);
       
-      stepInterval = setInterval(() => {
+      stepInterval = window.setInterval(() => {
         setCurrentStep(prev => (prev + 1) % 3);
       }, 7000);
     }
@@ -228,7 +231,9 @@ const LessonPage: React.FC = () => {
   };
 
   const loadLessonContent = async (isRetry = false) => {
-    setLoading(true);
+    const startTime = Date.now();
+    const minimumLoadingTime = 2000; // 2 seconds
+    
     setError(null);
     setRenderingError(null);
 
@@ -266,11 +271,18 @@ const LessonPage: React.FC = () => {
         setError('Failed to load lesson content. Please check your connection and try again.');
       }
     } finally {
-      setLoading(false);
+      // Ensure minimum loading time has passed
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
+      
+      setTimeout(() => {
+        setLoading(false);
+      }, remainingTime);
     }
   };
 
   const handleRetryLoad = () => {
+    setLoading(true);
     loadLessonContent();
   };
 
@@ -278,6 +290,7 @@ const LessonPage: React.FC = () => {
     setIsRegenerating(true);
     setRenderingError(null);
     setLesson(null); // Clear any error content from backend
+    setLoading(true);
     await loadLessonContent(true);
     setIsRegenerating(false);
   };
@@ -356,12 +369,22 @@ const LessonPage: React.FC = () => {
         }
         
         return (
-          <a
+          <motion.a
             key={index}
             href={resource.link}
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200 cursor-pointer"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            whileHover={{ 
+              scale: 1.02,
+              y: -2,
+              transition: { duration: 0.2 }
+            }}
+            whileTap={{ scale: 0.98 }}
           >
             <div className="flex-shrink-0 mt-1">
               <IconComponent className={`w-5 h-5 ${iconColor} group-hover:scale-110 transition-transform duration-200`} />
@@ -392,16 +415,25 @@ const LessonPage: React.FC = () => {
             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <ExternalLink className="w-4 h-4 text-theme-secondary" />
             </div>
-          </a>
+          </motion.a>
         );
       }
       
       // Handle simple string resources (fallback) - let MarkdownRenderer handle all parsing
       if (typeof resource === 'string') {
         return (
-          <div 
+          <motion.div 
             key={index} 
             className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            whileHover={{ 
+              scale: 1.02,
+              y: -2,
+              transition: { duration: 0.2 }
+            }}
           >
             <div className="flex-shrink-0 mt-1">
               <FileText className="w-5 h-5 text-theme-secondary" />
@@ -409,7 +441,7 @@ const LessonPage: React.FC = () => {
             <div className="text-sm text-theme-secondary leading-relaxed">
               <SafeMarkdownRenderer content={resource || ''} />
             </div>
-          </div>
+          </motion.div>
         );
       }
       
@@ -472,9 +504,19 @@ const LessonPage: React.FC = () => {
       const isHintRevealed = revealedHints.has(index);
 
       return (
-        <div
+        <motion.div
           key={index}
           className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent/30 transition-all duration-200"
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 }
+          }}
+          whileHover={{ 
+            scale: 1.02,
+            y: -2,
+            transition: { duration: 0.2 }
+          }}
+          whileTap={{ scale: 0.98 }}
         >
           <div className="w-6 h-6 bg-theme-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
             <span className="text-xs font-medium text-theme-accent">{index + 1}</span>
@@ -511,7 +553,7 @@ const LessonPage: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       );
     });
   };
@@ -521,9 +563,18 @@ const LessonPage: React.FC = () => {
     return text.split('\n').map((line, index) => {
       if (line.trim()) {
         return (
-          <div 
+          <motion.div 
             key={index} 
             className="flex items-start space-x-3 p-3 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent transition-all duration-200"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            whileHover={{ 
+              scale: 1.02,
+              y: -2,
+              transition: { duration: 0.2 }
+            }}
           >
             <div className="flex-shrink-0 mt-1">
               {line.includes('youtube.com') || line.includes('youtu.be') ? (
@@ -537,7 +588,7 @@ const LessonPage: React.FC = () => {
             <div className="text-sm text-theme-secondary leading-relaxed">
               <SafeMarkdownRenderer content={line} />
             </div>
-          </div>
+          </motion.div>
         );
       }
       return null;
@@ -683,29 +734,48 @@ const LessonPage: React.FC = () => {
       </div>
 
       {/* Header */}
-      <div className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300">
+      <motion.div 
+        className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-4 mb-6">
-            <button
+          <motion.div 
+            className="flex items-center gap-4 mb-6"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <motion.button
               onClick={() => navigate(-1)}
               className="flex items-center gap-2 text-theme-secondary hover:text-theme-primary transition-colors duration-300"
+              whileHover={{ x: -5 }}
+              whileTap={{ scale: 0.95 }}
             >
               <ArrowLeft className="w-5 h-5" />
               {weekNumber ? `Back to Week ${weekNumber}` : 'Back'}
-            </button>
+            </motion.button>
             
             <div className="flex-1" />
             
-            <button
+            <motion.button
               onClick={handleShare}
               className="flex items-center gap-2 px-3 py-2 text-theme-secondary hover:text-theme-primary hover:bg-theme-hover rounded-lg transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Share2 className="w-4 h-4" />
               <span className="text-sm">Share</span>
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
           
-          <div className="flex items-center gap-3">
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             <BookOpen className="w-8 h-8 text-theme-accent" />
             <div>
               <h1 className="text-3xl font-bold text-theme-primary transition-colors duration-300">
@@ -717,19 +787,46 @@ const LessonPage: React.FC = () => {
                 </p>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div 
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
         <div className="grid gap-8 lg:grid-cols-4">
           
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-8">
+          <motion.div 
+            className="lg:col-span-3 space-y-8"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.15,
+                  delayChildren: 0.4
+                }
+              }
+            }}
+          >
             
             {/* Lesson Content */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up">
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
+              variants={{
+                hidden: { opacity: 0, y: 30 },
+                visible: { opacity: 1, y: 0 }
+              }}
+              whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+              transition={{ duration: 0.3 }}
+            >
               <div className="p-8">
                 <div className="flex items-center gap-2 mb-6">
                   <Brain className="w-6 h-6 text-theme-accent" />
@@ -749,10 +846,10 @@ const LessonPage: React.FC = () => {
                 
                 {renderingError || (lesson?.explanation && isErrorContent(typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation))) ? (
                   <div className="text-center py-12">
-                                          <div className="relative mb-8">
-                        <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
-                        <div className={`absolute inset-0 ${useSemanticColors(theme).warning.bg} rounded-full animate-pulse opacity-40`}></div>
-                      </div>
+                    <div className="relative mb-8">
+                      <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
+                      <div className={`absolute inset-0 ${useSemanticColors(theme).warning.bg} rounded-full animate-pulse opacity-40`}></div>
+                    </div>
                     <h3 className="text-2xl font-semibold text-theme-primary mb-4">
                       Oops!
                     </h3>
@@ -798,11 +895,19 @@ const LessonPage: React.FC = () => {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* Subtasks */}
             {lesson?.subtasks && (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.1s'}}>
+              <motion.div 
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                transition={{ duration: 0.3 }}
+              >
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
                     <Target className="w-6 h-6 text-theme-accent" />
@@ -811,16 +916,38 @@ const LessonPage: React.FC = () => {
                     </h2>
                   </div>
                   
-                  <div className="space-y-4">
+                  <motion.div 
+                    className="space-y-4"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.1,
+                          delayChildren: 0.2
+                        }
+                      }
+                    }}
+                  >
                     {renderStructuredSubtasks(lesson.subtasks)}
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Resources */}
             {lesson?.resources && (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.2s'}}>
+              <motion.div 
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                transition={{ duration: 0.3 }}
+              >
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
                     <ExternalLink className={`w-6 h-6 ${useSemanticColors(theme).info.text}`} />
@@ -829,16 +956,38 @@ const LessonPage: React.FC = () => {
                     </h2>
                   </div>
                   
-                  <div className="space-y-3">
+                  <motion.div 
+                    className="space-y-3"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.08,
+                          delayChildren: 0.1
+                        }
+                      }
+                    }}
+                  >
                     {renderStructuredResources(lesson.resources)}
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* YouTube Videos */}
             {lesson?.youtube_videos && lesson.youtube_videos.length > 0 && (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.25s'}}>
+              <motion.div 
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                transition={{ duration: 0.3 }}
+              >
                 <div className="p-8">
                   <div className="flex items-center gap-2 mb-6">
                     <Youtube className={`w-6 h-6 ${useSemanticColors(theme).youtube.text}`} />
@@ -847,14 +996,38 @@ const LessonPage: React.FC = () => {
                     </h2>
                   </div>
                   
-                  <div className="space-y-4">
+                  <motion.div 
+                    className="space-y-4"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.12,
+                          delayChildren: 0.1
+                        }
+                      }
+                    }}
+                  >
                     {lesson.youtube_videos.map((video, index) => (
-                      <a
+                      <motion.a
                         key={index}
                         href={video.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`group flex items-start space-x-4 p-4 rounded-lg bg-theme-hover border border-theme hover:${useSemanticColors(theme).youtube.border} hover:${useSemanticColors(theme).youtube.bg} transition-all duration-200 cursor-pointer`}
+                        variants={{
+                          hidden: { opacity: 0, x: -20 },
+                          visible: { opacity: 1, x: 0 }
+                        }}
+                        whileHover={{ 
+                          scale: 1.02,
+                          x: 5,
+                          transition: { duration: 0.2 }
+                        }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         {/* Thumbnail */}
                         <div className="flex-shrink-0">
@@ -909,21 +1082,40 @@ const LessonPage: React.FC = () => {
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <ExternalLink className="w-4 h-4 text-theme-secondary" />
                         </div>
-                      </a>
+                      </motion.a>
                     ))}
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            
-
-
+          <motion.div 
+            className="space-y-6"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                  delayChildren: 0.8
+                }
+              }
+            }}
+          >
             {/* Quick Tips */}
-            <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.3s'}}>
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              variants={{
+                hidden: { opacity: 0, x: 30 },
+                visible: { opacity: 1, x: 0 }
+              }}
+              whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
+              transition={{ duration: 0.3 }}
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Lightbulb className={`w-5 h-5 ${useSemanticColors(theme).warning.text}`} />
                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Study Tips</h3>
@@ -947,31 +1139,43 @@ const LessonPage: React.FC = () => {
                   <span>Apply concepts in your own projects for mastery</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Navigation */}
             {weekNumber && (
-              <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300 animate-slide-up" style={{animationDelay: '0.4s'}}>
+              <motion.div 
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+                variants={{
+                  hidden: { opacity: 0, x: 30 },
+                  visible: { opacity: 1, x: 0 }
+                }}
+                whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
+                transition={{ duration: 0.3 }}
+              >
                 <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300">Navigation</h3>
                 <div className="space-y-2">
-                  <button
+                  <motion.button
                     onClick={() => navigate(`/roadmap/week/${weekNumber}`)}
                     className="w-full text-left px-3 py-2 text-sm text-theme-accent hover:bg-theme-accent/10 rounded-md transition-colors duration-300 font-medium"
+                    whileHover={{ x: 5 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     📚 Week {weekNumber} Overview
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
                     onClick={() => navigate('/my-roadmap')}
                     className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
+                    whileHover={{ x: 5 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     🗺️ Full Roadmap
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

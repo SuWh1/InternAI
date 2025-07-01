@@ -128,32 +128,44 @@ export default function Aurora(props: AuroraProps) {
 
   useEffect(() => {
     const ctn = ctnDom.current;
-    if (!ctn) return;
+    if (!ctn || typeof window === 'undefined') return;
 
-    const renderer = new Renderer({
+    let renderer: Renderer | null = null;
+    let program: Program | null = null;
+    let mesh: Mesh | null = null;
+    let animateId = 0;
+    let isDestroyed = false;
+    
+    const resize = () => {
+      if (!ctn || !program || isDestroyed || typeof window === 'undefined') return;
+      try {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        renderer?.setSize(width, height);
+        if (program?.uniforms?.uResolution) {
+          program.uniforms.uResolution.value = [width, height];
+        }
+      } catch (error) {
+        console.warn('Aurora resize error:', error);
+      }
+    };
+
+    try {
+      renderer = new Renderer({
       alpha: true,
       premultipliedAlpha: true,
       antialias: true,
     });
+      
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.canvas.style.backgroundColor = "transparent";
 
-    let program: Program | undefined;
-
-    function resize() {
-      if (!ctn) return;
-      // Use full viewport dimensions to cover scrollbar area
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      renderer.setSize(width, height);
-      if (program) {
-        program.uniforms.uResolution.value = [width, height];
-      }
+    if (typeof window !== 'undefined') {
+      window.addEventListener("resize", resize);
     }
-    window.addEventListener("resize", resize);
 
     const geometry = new Triangle(gl);
     if (geometry.attributes.uv) {
@@ -172,41 +184,83 @@ export default function Aurora(props: AuroraProps) {
         uTime: { value: 0 },
         uAmplitude: { value: amplitude },
         uColorStops: { value: colorStopsArray },
-        uResolution: { value: [window.innerWidth, window.innerHeight] },
+        uResolution: { value: typeof window !== 'undefined' ? [window.innerWidth, window.innerHeight] : [1920, 1080] },
         uBlend: { value: blend },
       },
     });
 
-    const mesh = new Mesh(gl, { geometry, program });
+      mesh = new Mesh(gl, { geometry, program });
     ctn.appendChild(gl.canvas);
 
-    let animateId = 0;
     const update = (t: number) => {
+        if (isDestroyed || !program || !renderer) return;
+        
+        try {
       animateId = requestAnimationFrame(update);
       const { time = t * 0.01, speed = 1.0 } = propsRef.current;
-      if (program) {
+          
         program.uniforms.uTime.value = time * speed * 0.1;
         program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
         program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
+          
         const stops = propsRef.current.colorStops ?? colorStops;
         program.uniforms.uColorStops.value = stops.map((hex: string) => {
           const c = new Color(hex);
           return [c.r, c.g, c.b];
         });
+          
+                     if (mesh) {
         renderer.render({ scene: mesh });
+           }
+        } catch (error) {
+          console.warn('Aurora render error:', error);
+          isDestroyed = true;
       }
     };
+      
     animateId = requestAnimationFrame(update);
-
     resize();
 
+    } catch (error) {
+      console.error('Aurora initialization error:', error);
+      isDestroyed = true;
+    }
+
     return () => {
+      isDestroyed = true;
+      
+      // Cancel animation frame
+      if (animateId) {
       cancelAnimationFrame(animateId);
-      window.removeEventListener("resize", resize);
-      if (ctn && gl.canvas.parentNode === ctn) {
-        ctn.removeChild(gl.canvas);
       }
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      
+      // Remove event listeners
+      if (typeof window !== 'undefined') {
+        window.removeEventListener("resize", resize);
+      }
+      
+      // Clean up DOM
+      if (ctn && renderer?.gl?.canvas?.parentNode === ctn) {
+        try {
+          ctn.removeChild(renderer.gl.canvas);
+        } catch (error) {
+          console.warn('Aurora canvas cleanup error:', error);
+        }
+      }
+      
+      // Dispose WebGL resources
+      try {
+        // Lose WebGL context to free memory
+        const loseContext = renderer?.gl?.getExtension("WEBGL_lose_context");
+        loseContext?.loseContext();
+        
+        // Clear references
+        program = null;
+        mesh = null;
+        renderer = null;
+      } catch (error) {
+        console.warn('Aurora WebGL cleanup error:', error);
+      }
     };
   }, [amplitude]);
 

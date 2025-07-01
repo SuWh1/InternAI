@@ -1,4 +1,6 @@
 import apiService from './apiService';
+import { TTLCache } from '../utils/lruCache';
+import { TIMEOUTS } from '../utils/constants';
 import type { 
   AgentPipelineRequest, 
   AgentPipelineResponse, 
@@ -7,7 +9,7 @@ import type {
 } from '../types/roadmap';
 
 class AgentService {
-  private gptCache = new Map<string, GPTTopicResponse>();
+  private gptCache = new TTLCache<string, GPTTopicResponse>();
 
   /**
    * Run the complete agent pipeline to generate roadmap and recommendations
@@ -162,11 +164,8 @@ class AgentService {
   /**
    * Get cache statistics
    */
-  getCacheStats(): { size: number; keys: string[] } {
-    return {
-      size: this.gptCache.size,
-      keys: Array.from(this.gptCache.keys())
-    };
+  getCacheStats(): { size: number; maxSize: number } {
+    return this.gptCache.getStats();
   }
 
   /**

@@ -52,10 +52,11 @@ const Testimonials = () => {
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <section className="py-20 bg-theme-primary transition-colors duration-300 relative overflow-hidden">
+    <section className="py-20 bg-theme-primary transition-colors duration-300 relative overflow-hidden" style={{ position: 'relative' }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
           className="text-center mb-10"
+          style={{ position: 'relative' }}
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -71,6 +72,7 @@ const Testimonials = () => {
 
         <motion.div 
           className="relative bg-theme-secondary rounded-2xl p-8 lg:p-12 border border-theme transition-colors duration-300 shadow-lg group"
+          style={{ position: 'relative' }}
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}

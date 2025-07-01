@@ -55,7 +55,8 @@ const HowItWorks = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
           className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          style={{ position: 'relative' }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
@@ -70,10 +71,11 @@ const HowItWorks = () => {
 
         <motion.div 
           className="grid md:grid-cols-3 gap-8 lg:gap-12 relative"
-          variants={staggerContainer}
+          style={{ position: 'relative' }}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
+          variants={staggerContainer}
         >
           {/* Animated connection lines */}
           <svg className="absolute top-1/2 left-0 w-full h-2 -translate-y-1/2 hidden md:block pointer-events-none">

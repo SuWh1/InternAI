@@ -100,7 +100,7 @@ const Navbar = () => {
 
   return (
     <>
-      <header>
+      <header className="relative">
         <motion.nav 
           className="bg-theme-secondary shadow-sm border-b border-theme fixed top-0 z-50 w-full transition-colors duration-300"
           initial="hidden"

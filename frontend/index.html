@@ -16,10 +16,43 @@
     </script>
     <script>
       (function() {
-        const theme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
-          document.documentElement.classList.add('dark');
+        function applyTheme() {
+          const theme = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const isDark = theme === 'dark' || (!theme && prefersDark);
+          
+          const root = document.documentElement;
+          const body = document.body;
+          
+          // Check if elements exist
+          if (!root || !body) return;
+          
+          if (isDark) {
+            // Apply dark theme immediately
+            root.classList.add('dark');
+            body.classList.add('dark');
+            root.style.setProperty('--bg-primary', '#080808');
+            root.style.setProperty('--bg-secondary', '#151515');
+            root.style.setProperty('--text-primary', '#F0F0F0');
+            body.style.backgroundColor = '#080808';
+            body.style.color = '#F0F0F0';
+          } else {
+            // Apply light theme immediately
+            root.classList.add('light');
+            body.classList.add('light');
+            root.style.setProperty('--bg-primary', '#FAFAFA');
+            root.style.setProperty('--bg-secondary', '#EFEFEF');
+            root.style.setProperty('--text-primary', '#121212');
+            body.style.backgroundColor = '#FAFAFA';
+            body.style.color = '#121212';
+          }
+        }
+
+        // Apply theme when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyTheme);
+        } else {
+          applyTheme();
         }
       })();
     </script>

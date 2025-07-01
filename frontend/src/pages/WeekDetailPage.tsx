@@ -303,11 +303,11 @@ const WeekDetailPage: React.FC = () => {
   if (!week) {
     return (
       <div className="min-h-screen bg-theme-primary transition-colors duration-300">
-                  <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center justify-center min-h-[200px]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[200px]">
               <div className="animate-spin rounded-full h-12 w-12 border-2 border-theme-hover border-t-theme-accent transition-colors duration-300" />
-            </div>
           </div>
+        </div>
       </div>
     );
   }
@@ -428,13 +428,13 @@ const WeekDetailPage: React.FC = () => {
               </div>
               
 
-                                  {isGeneratingSubtopics && subtopics.length === 0 ? (
-                    <div className="flex items-center justify-center py-8">
+                {isGeneratingSubtopics && subtopics.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
                       <div className="spin-animation">
                         <LoaderCircle className="w-6 h-6 text-theme-accent" />
-                      </div>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
                   <motion.div 
                     className="space-y-4"
                     initial="hidden"

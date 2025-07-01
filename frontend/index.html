@@ -17,8 +17,8 @@
     <script>
       (function() {
         function applyTheme() {
-          const theme = localStorage.getItem('theme');
-          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           const isDark = theme === 'dark' || (!theme && prefersDark);
           
           const root = document.documentElement;

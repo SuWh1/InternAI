@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
@@ -22,34 +21,8 @@ const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const WeekDetailPage = lazy(() => import('./pages/WeekDetailPage'));
 const LessonPage = lazy(() => import('./pages/LessonPage'));
 
-// Page transition variants - optimized to prevent white flashes
-const pageVariants = {
-  initial: {
-    opacity: 0,
-    y: 8,
-    scale: 0.98,
-  },
-  in: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-  },
-  out: {
-    opacity: 0,
-    y: -8,
-    scale: 0.98,
-  },
-};
-
-const pageTransition = {
-  type: 'spring' as const,
-  damping: 25,
-  stiffness: 400,
-  duration: 0.3,
-};
-
-// Component to handle animated routes
-function AnimatedRoutes() {
+// Component to handle routes
+function AppRoutes() {
   const location = useLocation();
 
   // Scroll to top on route change
@@ -58,20 +31,9 @@ function AnimatedRoutes() {
   }, [location.pathname]);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={pageVariants}
-        transition={pageTransition}
-        className="overflow-hidden main-content"
-        style={{ position: 'relative' }}
-      >
-        <ErrorBoundary>
-          <Suspense fallback={<PageLoadingSpinner />}>
-        <Routes location={location}>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoadingSpinner />}>
+        <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
           <Route path="/roadmap" element={<RoadmapInfoPage />} />
@@ -84,10 +46,8 @@ function AnimatedRoutes() {
           <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
           <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
         </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      </motion.div>
-    </AnimatePresence>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
@@ -118,7 +78,9 @@ function App() {
         <div className="min-h-screen bg-theme-primary overflow-x-hidden w-full transition-colors duration-200" style={{ position: 'relative' }}>
           <OnboardingWrapper>
             <Navbar />
-            <AnimatedRoutes />
+            <main className="pt-16">
+              <AppRoutes />
+            </main>
           </OnboardingWrapper>
         </div>
       </Router>

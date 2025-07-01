@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   MapPin, 
   Calendar, 
@@ -21,6 +22,7 @@ import type { RoadmapNode } from '../types/roadmap';
 const Aurora = lazy(() => import('../components/common/Aurora'));
 
 const MyRoadmapPage = () => {
+  const { theme } = useTheme();
   const {
     roadmap,
     progress,
@@ -133,12 +135,12 @@ const MyRoadmapPage = () => {
       {/* Aurora Background */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
         <Suspense fallback={<div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 w-full h-full" />}>
-          <Aurora
-            colorStops={["#9333EA", "#F472B6", "#A855F7"]}
-            blend={0.8}
-            amplitude={1.5}
-            speed={0.4}
-          />
+        <Aurora
+          theme={theme}
+          blend={0.8}
+          amplitude={1.5}
+          speed={0.4}
+        />
         </Suspense>
       </div>
       
@@ -160,7 +162,7 @@ const MyRoadmapPage = () => {
             animate={{ scale: 1, rotate: 0 }}
             transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 200 }}
           >
-            <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
+          <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
           </motion.div>
           <motion.h1 
             className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300"

@@ -113,14 +113,31 @@ interface AuroraProps {
   blend?: number;
   time?: number;
   speed?: number;
+  theme?: 'light' | 'dark';
 }
 
 export default function Aurora(props: AuroraProps) {
   const {
-    colorStops = ["#5227FF", "#7cff67", "#5227FF"],
+    colorStops,
     amplitude = 1.0,
     blend = 0.5,
+    theme = 'dark',
   } = props;
+
+  // Theme-adaptive color sets
+  const getThemeColors = () => {
+    if (colorStops) return colorStops; // Use custom colors if provided
+    
+    if (theme === 'light') {
+      // Purple-focused lighter versions for light theme
+      return ["#C084FC", "#DDD6FE", "#A78BFA"]; // Light purple, very light purple, medium purple
+    } else {
+      // Current colors for dark theme
+      return ["#9333EA", "#F472B6", "#A855F7"]; // Purple, pink, purple
+    }
+  };
+
+  const themeColors = getThemeColors();
   const propsRef = useRef<AuroraProps>(props);
   propsRef.current = props;
 
@@ -164,7 +181,7 @@ export default function Aurora(props: AuroraProps) {
     gl.canvas.style.backgroundColor = "transparent";
 
     if (typeof window !== 'undefined') {
-      window.addEventListener("resize", resize);
+    window.addEventListener("resize", resize);
     }
 
     const geometry = new Triangle(gl);
@@ -172,7 +189,7 @@ export default function Aurora(props: AuroraProps) {
       delete (geometry.attributes).uv;
     }
 
-    const colorStopsArray = colorStops.map((hex) => {
+    const colorStopsArray = themeColors.map((hex) => {
       const c = new Color(hex);
       return [c.r, c.g, c.b];
     });
@@ -203,8 +220,14 @@ export default function Aurora(props: AuroraProps) {
         program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
         program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
           
-        const stops = propsRef.current.colorStops ?? colorStops;
-        program.uniforms.uColorStops.value = stops.map((hex: string) => {
+        // Get current theme colors with fallback
+        const currentProps = propsRef.current;
+        const currentColorStops = currentProps.colorStops || (
+          currentProps.theme === 'light' 
+            ? ["#C084FC", "#DDD6FE", "#A78BFA"] 
+            : ["#9333EA", "#F472B6", "#A855F7"]
+        );
+        program.uniforms.uColorStops.value = currentColorStops.map((hex: string) => {
           const c = new Color(hex);
           return [c.r, c.g, c.b];
         });
@@ -236,7 +259,7 @@ export default function Aurora(props: AuroraProps) {
       
       // Remove event listeners
       if (typeof window !== 'undefined') {
-        window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", resize);
       }
       
       // Clean up DOM
@@ -262,7 +285,7 @@ export default function Aurora(props: AuroraProps) {
         console.warn('Aurora WebGL cleanup error:', error);
       }
     };
-  }, [amplitude]);
+  }, [amplitude, theme]);
 
   return <div ref={ctnDom} className="w-full h-full" />;
 } 

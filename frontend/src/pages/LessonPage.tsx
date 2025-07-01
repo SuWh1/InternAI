@@ -276,7 +276,7 @@ const LessonPage: React.FC = () => {
       const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
       
       setTimeout(() => {
-        setLoading(false);
+      setLoading(false);
       }, remainingTime);
     }
   };
@@ -788,7 +788,7 @@ const LessonPage: React.FC = () => {
               )}
             </div>
           </motion.div>
-        </div>
+          </div>
       </motion.div>
 
       {/* Content */}
@@ -846,10 +846,10 @@ const LessonPage: React.FC = () => {
                 
                 {renderingError || (lesson?.explanation && isErrorContent(typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation))) ? (
                   <div className="text-center py-12">
-                    <div className="relative mb-8">
-                      <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
-                      <div className={`absolute inset-0 ${useSemanticColors(theme).warning.bg} rounded-full animate-pulse opacity-40`}></div>
-                    </div>
+                                          <div className="relative mb-8">
+                        <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
+                        <div className={`absolute inset-0 ${useSemanticColors(theme).warning.bg} rounded-full animate-pulse opacity-40`}></div>
+                      </div>
                     <h3 className="text-2xl font-semibold text-theme-primary mb-4">
                       Oops!
                     </h3>
@@ -933,7 +933,7 @@ const LessonPage: React.FC = () => {
                   >
                     {renderStructuredSubtasks(lesson.subtasks)}
                   </motion.div>
-                </div>
+                  </div>
               </motion.div>
             )}
 
@@ -973,7 +973,7 @@ const LessonPage: React.FC = () => {
                   >
                     {renderStructuredResources(lesson.resources)}
                   </motion.div>
-                </div>
+                  </div>
               </motion.div>
             )}
 
@@ -1085,7 +1085,7 @@ const LessonPage: React.FC = () => {
                       </motion.a>
                     ))}
                   </motion.div>
-                </div>
+                  </div>
               </motion.div>
             )}
           </motion.div>
@@ -1174,7 +1174,7 @@ const LessonPage: React.FC = () => {
               </motion.div>
             )}
           </motion.div>
-        </div>
+          </div>
       </motion.div>
     </div>
   );

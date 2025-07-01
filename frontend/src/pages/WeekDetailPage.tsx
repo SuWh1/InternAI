@@ -515,9 +515,9 @@ const WeekDetailPage: React.FC = () => {
                                 e.stopPropagation(); // Prevent the parent div's onClick from firing
                                 handleGetAIExplanation(subtopicTitle, subtopicDescription);
                               }}
-                              className="flex items-center gap-1 text-xs text-theme-accent hover:opacity-80 transition-colors duration-300"
+                              className="flex items-center gap-2 text-sm font-medium text-theme-accent hover:opacity-80 transition-colors duration-300 mt-2 px-3 py-1.5 bg-theme-accent/10 rounded-md hover:bg-theme-accent/20"
                             >
-                              <Brain className="w-3 h-3" />
+                              <Brain className="w-4 h-4" />
                               <span>Click here to study and get AI explanation</span>
                             </button>
                           </div>

@@ -10,13 +10,18 @@ import {
   CheckCircle, 
   Clock,
   Brain,
-  Lightbulb,
   Target,
   Youtube,
   FileText,
   RotateCcw,
   Share2,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle,
+  Send,
+  Bot,
+  User,
+  Minimize2,
+  Maximize2
 } from 'lucide-react';
 import agentService from '../services/agentService';
 import { createLessonSlug, parseLessonSlug } from '../utils/slugify';
@@ -170,8 +175,75 @@ const LessonPage: React.FC = () => {
     context?: string; 
     weekNumber?: string;
   }>();
+
   const navigate = useNavigate();
   const { theme } = useTheme();
+
+  // Add CSS for user message text and scrollbars
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .user-message-content * {
+        color: #000000 !important;
+      }
+      .user-message-content p {
+        color: #000000 !important;
+      }
+      .user-message-content span {
+        color: #000000 !important;
+      }
+      .user-message-content div {
+        color: #000000 !important;
+      }
+      
+      /* Chat scrollbar styles */
+      .chat-messages::-webkit-scrollbar {
+        width: 8px;
+      }
+      .chat-messages::-webkit-scrollbar-track {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+        border-radius: 4px;
+      }
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)'};
+        border-radius: 4px;
+      }
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)'};
+      }
+      
+      /* Chat input scrollbar styles */
+      .chat-input::-webkit-scrollbar {
+        width: 6px;
+      }
+      .chat-input::-webkit-scrollbar-track {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+        border-radius: 3px;
+      }
+      .chat-input::-webkit-scrollbar-thumb {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)'};
+        border-radius: 3px;
+      }
+      .chat-input::-webkit-scrollbar-thumb:hover {
+        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)'};
+      }
+      
+      /* Firefox scrollbar styles */
+      .chat-messages {
+        scrollbar-width: thin;
+        scrollbar-color: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05)'};
+      }
+      .chat-input {
+        scrollbar-width: thin;
+        scrollbar-color: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05)'};
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [theme]);
   
   const [lesson, setLesson] = useState<GPTTopicResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +256,18 @@ const LessonPage: React.FC = () => {
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: number;
+    type: 'ai' | 'user';
+    content: string;
+    timestamp: Date;
+  }>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [chatMessagesEndRef, setChatMessagesEndRef] = useState<HTMLDivElement | null>(null);
 
   // Handle both new slug format and legacy URL format
   let topic = '';
@@ -340,6 +424,19 @@ const LessonPage: React.FC = () => {
         const readTime = Math.ceil(wordCount / 200);
         setEstimatedReadTime(readTime);
       }
+
+      // Initialize chat with welcome message if not already done
+      setChatMessages(prev => {
+        if (prev.length === 0) {
+          return [{
+            id: 1,
+            type: 'ai' as const,
+            content: `Hi! I'm here to help you understand this lesson on **${topic}**. Ask me about any concepts, code examples, or practice tasks you'd like me to explain!`,
+            timestamp: new Date()
+          }];
+        }
+        return prev;
+      });
     } catch (error: any) {
       console.error('Error loading lesson content:', error);
       
@@ -413,6 +510,63 @@ const LessonPage: React.FC = () => {
       // You could show a toast notification here
     }
   };
+
+  // Chat handlers
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isSendingMessage) return;
+    
+    const userMessage = {
+      id: Date.now(),
+      type: 'user' as const,
+      content: chatInput.trim(),
+      timestamp: new Date()
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsSendingMessage(true);
+    
+    // TODO: Implement AI response logic here
+    // For now, add a placeholder response
+    const funnyResponses = [
+      "🤖 Beep boop! My AI brain is still downloading updates... Chat feature coming soon! 🚀",
+      "🧠 *AI neurons firing* Almost ready to help you ace this lesson! Stay tuned! ⚡",
+      "🎯 Currently teaching myself how to be even more helpful... Chat magic incoming! ✨",
+      "🔮 The AI oracle sees... a fully functional chat assistant in your near future! 🌟",
+      "🚧 Under construction! Building the perfect study buddy for you... 🛠️",
+      "🎮 Loading AI awesomeness... 99% complete! Chat feature unlocking soon! 🔓"
+    ];
+    
+    setTimeout(() => {
+      const randomResponse = funnyResponses[Math.floor(Math.random() * funnyResponses.length)];
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'ai' as const,
+        content: randomResponse,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, aiResponse]);
+      setIsSendingMessage(false);
+    }, 1500);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (chatMessagesEndRef) {
+      chatMessagesEndRef.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
+  }, [chatMessages, chatMessagesEndRef]);
 
   // Create clean display title from context (extract just "Week N - Topic")
   const cleanDisplayTitle = context ? (() => {
@@ -689,7 +843,7 @@ const LessonPage: React.FC = () => {
 
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-12 transition-colors duration-300">
             <div className="text-center">
               {/* Animated Shiny Brain */}
@@ -767,7 +921,7 @@ const LessonPage: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 transition-colors duration-300">
             <div className="text-center">
               <AlertCircle className={`h-16 w-16 ${useSemanticColors(theme).error.text} mx-auto mb-6`} />
@@ -825,7 +979,7 @@ const LessonPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <motion.div 
             className="flex items-center gap-4 mb-6"
             initial={{ opacity: 0, x: -20 }}
@@ -878,16 +1032,16 @@ const LessonPage: React.FC = () => {
 
       {/* Content */}
       <motion.div 
-        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 overflow-hidden"
+        className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 overflow-hidden"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
       >
-        <div className="grid gap-8 lg:grid-cols-4 overflow-hidden">
+        <div className={`grid gap-8 overflow-hidden ${isChatExpanded ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
           
           {/* Main Content */}
           <motion.div 
-            className="lg:col-span-3 space-y-8 overflow-hidden"
+            className={`space-y-8 overflow-hidden ${isChatExpanded ? '' : 'lg:col-span-3'}`}
             initial="hidden"
             animate="visible"
             variants={{
@@ -1175,7 +1329,7 @@ const LessonPage: React.FC = () => {
             )}
           </motion.div>
 
-          {/* Sidebar */}
+                    {/* Sidebar */}
           <motion.div 
             className="space-y-6 overflow-hidden"
             initial="hidden"
@@ -1191,45 +1345,166 @@ const LessonPage: React.FC = () => {
               }
             }}
           >
-            {/* Quick Tips */}
+            {/* AI Chat Assistant - Main Element */}
             <motion.div 
-              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300 h-fit"
               variants={{
                 hidden: { opacity: 0, x: 30 },
                 visible: { opacity: 1, x: 0 }
               }}
-              whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
+              whileHover={{ y: -2, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
               transition={{ duration: 0.3 }}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Lightbulb className={`w-5 h-5 ${useSemanticColors(theme).warning.text}`} />
-                <h3 className="font-semibold text-theme-primary transition-colors duration-300">Study Tips</h3>
+              {/* Chat Header */}
+              <div className="flex items-center justify-between p-5 border-b border-theme">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Bot className="w-6 h-6 text-theme-accent" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-theme-primary transition-colors duration-300">AI Assistant</h3>
+                    <p className="text-xs text-theme-secondary">Ready to help with this lesson</p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={() => setIsChatExpanded(!isChatExpanded)}
+                  className="text-theme-secondary hover:text-theme-primary transition-colors duration-300 p-1 rounded-md hover:bg-theme-hover"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {isChatExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </motion.button>
               </div>
-              
-              <div className="space-y-3 text-sm text-theme-secondary">
-                <div className="flex items-start space-x-2">
-                  <span className={`${useSemanticColors(theme).warning.text} mt-0.5`}>💡</span>
-                  <span>Code along with the examples to build muscle memory</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className={`${useSemanticColors(theme).success.text} mt-0.5`}>✅</span>
-                  <span>Complete the progressive practice tasks in order</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className={`${useSemanticColors(theme).info.text} mt-0.5`}>🔗</span>
-                  <span>Explore the curated resources for deeper understanding</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <span className="text-theme-accent mt-0.5">🔄</span>
-                  <span>Apply concepts in your own projects for mastery</span>
-                </div>
-              </div>
+
+              <AnimatePresence>
+                {isChatExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    {/* Messages Area - Expanded */}
+                    <div className="h-[600px] overflow-y-auto p-5 space-y-4 bg-theme-hover/20 chat-messages">
+                      {chatMessages.map((message) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`flex items-start gap-3 max-w-[90%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              message.type === 'ai' 
+                                ? 'bg-theme-accent text-white shadow-lg' 
+                                : 'bg-theme-primary text-theme-secondary border-2 border-theme'
+                            }`}>
+                              {message.type === 'ai' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                            </div>
+                            <div 
+                            className={`rounded-xl px-4 py-3 shadow-sm ${
+                              message.type === 'user'
+                                ? 'bg-theme-accent rounded-br-md'
+                                : 'bg-theme-secondary border border-theme text-theme-primary rounded-bl-md'
+                            }`}
+                            style={message.type === 'user' ? { 
+                              color: '#000000',
+                              '--tw-prose-body': '#000000',
+                              '--tw-prose-headings': '#000000',
+                              '--tw-prose-lead': '#000000',
+                              '--tw-prose-links': '#000000',
+                              '--tw-prose-bold': '#000000',
+                              '--tw-prose-counters': '#000000',
+                              '--tw-prose-bullets': '#000000',
+                              '--tw-prose-hr': '#000000',
+                              '--tw-prose-quotes': '#000000',
+                              '--tw-prose-quote-borders': '#000000',
+                              '--tw-prose-captions': '#000000',
+                              '--tw-prose-code': '#000000',
+                              '--tw-prose-pre-code': '#000000',
+                              '--tw-prose-pre-bg': 'rgba(0,0,0,0.1)',
+                              '--tw-prose-th-borders': '#000000',
+                              '--tw-prose-td-borders': '#000000'
+                            } as React.CSSProperties : {}}>
+                              <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'user-message-content' : ''}`}>
+                                <MarkdownRenderer content={message.content} />
+                              </div>
+                              <div className={`text-xs mt-2 ${
+                                message.type === 'user' ? '' : 'opacity-70 text-theme-secondary'
+                              }`}
+                              style={message.type === 'user' ? { color: 'rgba(0, 0, 0, 0.7)' } : {}}>
+                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                      
+                      {/* Typing indicator */}
+                      {isSendingMessage && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex justify-start"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full bg-theme-accent text-white flex items-center justify-center shadow-lg">
+                              <Bot className="w-4 h-4" />
+                            </div>
+                            <div className="bg-theme-secondary border border-theme text-theme-primary rounded-xl rounded-bl-md px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-theme-accent rounded-full animate-bounce"></div>
+                                <div className="w-2 h-2 bg-theme-accent rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                <div className="w-2 h-2 bg-theme-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      
+                      {/* Auto-scroll target */}
+                      <div ref={setChatMessagesEndRef} />
+                    </div>
+
+                    {/* Input Area - Enhanced */}
+                    <div className="p-5 border-t border-theme bg-theme-hover/10">
+                      <div className="flex gap-3">
+                        <textarea
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={handleKeyPress}
+                          placeholder="Ask me anything about this lesson, concepts, or practice tasks..."
+                          className="flex-1 resize-none rounded-xl border border-theme bg-theme-hover px-4 py-3 text-sm text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 shadow-sm chat-input"
+                          rows={2}
+                          disabled={isSendingMessage}
+                        />
+                        <motion.button
+                          onClick={handleSendMessage}
+                          disabled={!chatInput.trim() || isSendingMessage}
+                          className="px-4 py-3 bg-theme-accent text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center shadow-lg"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Send className="w-5 h-5" />
+                        </motion.button>
+                      </div>
+                      <div className="text-xs text-theme-secondary mt-3 opacity-70 flex items-center gap-2">
+                        <span>💡</span>
+                        <span>Press Enter to send, Shift+Enter for new line</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Navigation */}
             {weekNumber && (
               <motion.div 
-                className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+                className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-5 transition-colors duration-300"
                 variants={{
                   hidden: { opacity: 0, x: 30 },
                   visible: { opacity: 1, x: 0 }
@@ -1237,7 +1512,10 @@ const LessonPage: React.FC = () => {
                 whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
                 transition={{ duration: 0.3 }}
               >
-                <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300">Navigation</h3>
+                <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-theme-accent" />
+                  Navigation
+                </h3>
                 <div className="space-y-2">
                   <motion.button
                     onClick={() => navigate(`/roadmap/week/${weekNumber}`)}

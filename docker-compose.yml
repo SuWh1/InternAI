@@ -34,7 +34,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -54,8 +54,8 @@ services:
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
     volumes:
       - ./ssl-certs:/etc/letsencrypt:ro
       - ./certbot-challenges:/var/www/certbot:ro
@@ -68,7 +68,7 @@ services:
     image: adminer
     container_name: internai_adminer
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - db
     restart: unless-stopped

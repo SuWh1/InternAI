@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, GitBranch, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
@@ -238,7 +239,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
     clearError(); // Clear auth store errors when switching modes
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -611,7 +612,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

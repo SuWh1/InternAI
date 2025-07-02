@@ -275,7 +275,7 @@ const WeekDetailPage: React.FC = () => {
 
   if (error || roadmapError) {
     return (
-      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <ErrorMessage error={error || roadmapError || 'An error occurred'} />
       </div>
     );
@@ -285,7 +285,7 @@ const WeekDetailPage: React.FC = () => {
   // Only show "not found" if data is ready but still no week (actual error)
   if (!week && dataReady && !loading) {
     return (
-      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
           <div className="text-theme-secondary/70 text-lg mb-2 transition-colors duration-300">Week not found</div>
           <button
@@ -302,7 +302,7 @@ const WeekDetailPage: React.FC = () => {
   // Show loading state if week is not ready yet
   if (!week) {
     return (
-      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[200px]">
               <div className="animate-spin rounded-full h-12 w-12 border-2 border-theme-hover border-t-theme-accent transition-colors duration-300" />
@@ -316,7 +316,7 @@ const WeekDetailPage: React.FC = () => {
 
   return (
     <motion.div 
-      className="min-h-screen bg-theme-primary transition-colors duration-300"
+      className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300"
       style={{ position: 'relative' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -325,7 +325,7 @@ const WeekDetailPage: React.FC = () => {
       {/* Header */}
       <motion.div 
         className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300"
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
       >
@@ -350,7 +350,7 @@ const WeekDetailPage: React.FC = () => {
           
           <div className="flex items-start justify-between">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
@@ -397,16 +397,16 @@ const WeekDetailPage: React.FC = () => {
 
       {/* Content */}
       <motion.div 
-        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
-        initial={{ opacity: 0, y: 30 }}
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 overflow-hidden"
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.5 }}
       >
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-3 overflow-hidden">
           
           {/* Main Content */}
           <motion.div 
-            className="lg:col-span-2 space-y-8"
+            className="lg:col-span-2 space-y-8 overflow-hidden"
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.7 }}
@@ -415,7 +415,7 @@ const WeekDetailPage: React.FC = () => {
             {/* Studying Section */}
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.8 }}
               whileHover={{ y: -2 }}
@@ -465,7 +465,7 @@ const WeekDetailPage: React.FC = () => {
                               : 'bg-theme-hover border-theme hover:border-theme-accent'
                           }`}
                           variants={{
-                            hidden: { opacity: 0, y: 20 },
+                            hidden: { opacity: 0, y: 8 },
                             visible: { opacity: 1, y: 0 }
                           }}
                           whileHover={{ 
@@ -533,7 +533,7 @@ const WeekDetailPage: React.FC = () => {
 
           {/* Sidebar */}
           <motion.div 
-            className="space-y-6"
+            className="space-y-6 overflow-hidden"
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.9 }}
@@ -542,7 +542,7 @@ const WeekDetailPage: React.FC = () => {
             {/* Time Estimate */}
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
               whileHover={{ y: -2, scale: 1.02 }}
@@ -562,7 +562,7 @@ const WeekDetailPage: React.FC = () => {
             {/* Quick Tips */}
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.1 }}
               whileHover={{ y: -2, scale: 1.02 }}
@@ -611,7 +611,7 @@ const WeekDetailPage: React.FC = () => {
             {/* Navigation */}
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.2 }}
               whileHover={{ y: -2, scale: 1.02 }}

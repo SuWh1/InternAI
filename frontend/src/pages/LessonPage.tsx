@@ -61,12 +61,97 @@ const useSemanticColors = (theme: string) => ({
   }
 });
 
+// Utility function to filter out duplicate Resources and Tasks sections from lesson content
+const filterLessonContent = (content: string): string => {
+  if (!content || typeof content !== 'string') return '';
+  
+  const lines = content.split('\n');
+  const filteredLines: string[] = [];
+  let isSkipping = false;
+  let currentHeadingLevel = 0;
+  
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{1,6})\s*(.+)$/);
+    
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const title = headingMatch[2].trim().toLowerCase();
+      
+      // Check if this is a section we want to skip (Resources, Tasks, Subtasks, etc.)
+      if (title.match(/^(resources?|learning\s*resources?|additional\s*resources?|useful\s*resources?|curated\s*.*resources?|tasks?|subtasks?|practice\s*tasks?|progressive\s*practice\s*tasks?|exercises?|activities?|assignments?|homework|to\s*do|action\s*items?)$/i)) {
+        isSkipping = true;
+        currentHeadingLevel = level;
+        continue;
+      }
+      
+      // If we're skipping and hit a heading of same or higher level, stop skipping
+      if (isSkipping && level <= currentHeadingLevel) {
+        isSkipping = false;
+      }
+    }
+    
+    // Only add lines if we're not in a section we're skipping
+    if (!isSkipping) {
+      filteredLines.push(line);
+    }
+  }
+  
+  return filteredLines.join('\n').trim();
+};
+
+// Utility function to safely extract content and prevent "undefined" strings
+const safeContentExtractor = (content: any): string => {
+  // Handle null or undefined
+  if (content === null || content === undefined) {
+    return '';
+  }
+  
+  // Handle string content directly
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  
+  // Handle objects by extracting meaningful content
+  if (typeof content === 'object') {
+    try {
+      // Filter out undefined/null values from objects
+      const cleanObject = Object.fromEntries(
+        Object.entries(content).filter(([_, value]) => value !== undefined && value !== null)
+      );
+      
+      // If empty object after cleaning, return empty string
+      if (Object.keys(cleanObject).length === 0) {
+        return '';
+      }
+      
+      // Convert to JSON only if we have valid content
+      return JSON.stringify(cleanObject, null, 2);
+    } catch (error) {
+      console.warn('Error processing object content:', error);
+      return '';
+    }
+  }
+  
+  // Handle numbers, booleans, etc.
+  return String(content);
+};
+
 const SafeMarkdownRenderer: React.FC<SafeMarkdownRendererProps> = ({ content, onRenderingError }) => {
   const { theme } = useTheme();
   const colors = useSemanticColors(theme);
   
+  // Validate content before rendering
+  const safeContent = content?.trim();
+  if (!safeContent || safeContent === 'undefined' || safeContent === 'null') {
+    return (
+      <div className={`p-4 ${colors.warning.bg} border ${colors.warning.border} rounded-lg`}>
+        <p className={colors.warning.text}>No content available for this section.</p>
+      </div>
+    );
+  }
+  
   try {
-    return <MarkdownRenderer content={content} />;
+    return <MarkdownRenderer content={safeContent} />;
   } catch (error) {
     console.error('Error rendering markdown:', error);
     onRenderingError?.(error as Error);
@@ -376,7 +461,7 @@ const LessonPage: React.FC = () => {
             rel="noopener noreferrer"
             className="group flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200 cursor-pointer"
             variants={{
-              hidden: { opacity: 0, y: 20 },
+              hidden: { opacity: 0, y: 8 },
               visible: { opacity: 1, y: 0 }
             }}
             whileHover={{ 
@@ -389,12 +474,12 @@ const LessonPage: React.FC = () => {
             <div className="flex-shrink-0 mt-1">
               <IconComponent className={`w-5 h-5 ${iconColor} group-hover:scale-110 transition-transform duration-200`} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-theme-accent hover:text-theme-accent-dark font-medium text-sm mb-1 group-hover:underline">
-                <SafeMarkdownRenderer content={resource.title || ''} />
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="text-theme-accent hover:text-theme-accent-dark font-medium text-sm mb-1 group-hover:underline break-words overflow-hidden">
+                <SafeMarkdownRenderer content={safeContentExtractor(resource.title)} />
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-theme-secondary opacity-70">
+                <span className="text-theme-secondary opacity-70 break-all">
                   {new URL(resource.link).hostname}
                 </span>
                 {resource.type && (
@@ -426,7 +511,7 @@ const LessonPage: React.FC = () => {
             key={index} 
             className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent hover:bg-theme-accent/5 transition-all duration-200"
             variants={{
-              hidden: { opacity: 0, y: 20 },
+              hidden: { opacity: 0, y: 8 },
               visible: { opacity: 1, y: 0 }
             }}
             whileHover={{ 
@@ -438,8 +523,8 @@ const LessonPage: React.FC = () => {
             <div className="flex-shrink-0 mt-1">
               <FileText className="w-5 h-5 text-theme-secondary" />
             </div>
-            <div className="text-sm text-theme-secondary leading-relaxed">
-              <SafeMarkdownRenderer content={resource || ''} />
+            <div className="text-sm text-theme-secondary leading-relaxed break-words overflow-hidden">
+              <SafeMarkdownRenderer content={safeContentExtractor(resource)} />
             </div>
           </motion.div>
         );
@@ -508,7 +593,7 @@ const LessonPage: React.FC = () => {
           key={index}
           className="flex items-start space-x-3 p-4 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent/30 transition-all duration-200"
           variants={{
-            hidden: { opacity: 0, y: 20 },
+            hidden: { opacity: 0, y: 8 },
             visible: { opacity: 1, y: 0 }
           }}
           whileHover={{ 
@@ -521,21 +606,21 @@ const LessonPage: React.FC = () => {
           <div className="w-6 h-6 bg-theme-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
             <span className="text-xs font-medium text-theme-accent">{index + 1}</span>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 overflow-hidden">
             <div className="flex items-center gap-2 mb-2">
               <span className={`text-xs px-2 py-1 rounded-full border ${levelColor}`}>
                 {task.level}
               </span>
             </div>
-            <div className="text-sm text-theme-secondary leading-relaxed mb-2">
-              <SafeMarkdownRenderer content={task.description || ''} />
+            <div className="text-sm text-theme-secondary leading-relaxed mb-2 break-words overflow-hidden">
+              <SafeMarkdownRenderer content={safeContentExtractor(task.description)} />
             </div>
             {task.hint && (
               <div className={`text-xs text-theme-secondary/70 ${colors.info.bg} border ${colors.info.border} rounded-md p-2 mt-2`}>
                 <span className="text-theme-accent font-medium">💡 Hint: </span>
                 {isHintRevealed ? (
-                  <div className="transition-all duration-300 text-theme-secondary">
-                    <SafeMarkdownRenderer content={task.hint || ''} />
+                  <div className="transition-all duration-300 text-theme-secondary break-words overflow-hidden">
+                    <SafeMarkdownRenderer content={safeContentExtractor(task.hint)} />
                   </div>
                 ) : (
                   <span 
@@ -567,7 +652,7 @@ const LessonPage: React.FC = () => {
             key={index} 
             className="flex items-start space-x-3 p-3 rounded-lg bg-theme-hover border border-theme hover:border-theme-accent transition-all duration-200"
             variants={{
-              hidden: { opacity: 0, y: 20 },
+              hidden: { opacity: 0, y: 8 },
               visible: { opacity: 1, y: 0 }
             }}
             whileHover={{ 
@@ -585,8 +670,8 @@ const LessonPage: React.FC = () => {
                 <FileText className="w-5 h-5 text-theme-secondary" />
               )}
             </div>
-            <div className="text-sm text-theme-secondary leading-relaxed">
-              <SafeMarkdownRenderer content={line} />
+            <div className="text-sm text-theme-secondary leading-relaxed break-words overflow-hidden">
+              <SafeMarkdownRenderer content={safeContentExtractor(line)} />
             </div>
           </motion.div>
         );
@@ -603,7 +688,7 @@ const LessonPage: React.FC = () => {
     ];
 
     return (
-      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-12 transition-colors duration-300">
             <div className="text-center">
@@ -625,9 +710,9 @@ const LessonPage: React.FC = () => {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentStep}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
+                      exit={{ opacity: 0, y: -8 }}
                       transition={{ 
                         duration: 0.6,
                         ease: "easeInOut"
@@ -681,7 +766,7 @@ const LessonPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-8 transition-colors duration-300">
             <div className="text-center">
@@ -724,7 +809,7 @@ const LessonPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-primary transition-colors duration-300">
+    <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
       {/* Reading Progress Bar */}
       <div className="fixed top-16 left-0 right-0 z-30 h-1 bg-theme-hover">
         <div 
@@ -736,7 +821,7 @@ const LessonPage: React.FC = () => {
       {/* Header */}
       <motion.div 
         className="bg-theme-secondary shadow-sm border-b border-theme transition-colors duration-300"
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
@@ -772,7 +857,7 @@ const LessonPage: React.FC = () => {
           
           <motion.div 
             className="flex items-center gap-3"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
@@ -793,16 +878,16 @@ const LessonPage: React.FC = () => {
 
       {/* Content */}
       <motion.div 
-        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
-        initial={{ opacity: 0, y: 30 }}
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 overflow-hidden"
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.3 }}
       >
-        <div className="grid gap-8 lg:grid-cols-4">
+        <div className="grid gap-8 lg:grid-cols-4 overflow-hidden">
           
           {/* Main Content */}
           <motion.div 
-            className="lg:col-span-3 space-y-8"
+            className="lg:col-span-3 space-y-8 overflow-hidden"
             initial="hidden"
             animate="visible"
             variants={{
@@ -821,7 +906,7 @@ const LessonPage: React.FC = () => {
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
               variants={{
-                hidden: { opacity: 0, y: 30 },
+                hidden: { opacity: 0, y: 12 },
                 visible: { opacity: 1, y: 0 }
               }}
               whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
@@ -885,7 +970,7 @@ const LessonPage: React.FC = () => {
                   <div className="lesson-content max-w-none overflow-x-hidden">
                     <div className="w-full">
                       {lesson?.explanation ? (
-                        <SafeMarkdownRenderer content={typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation)} onRenderingError={handleRenderingError} />
+                        <SafeMarkdownRenderer content={safeContentExtractor(filterLessonContent(lesson.explanation))} onRenderingError={handleRenderingError} />
                       ) : (
                         <div className="text-theme-secondary">
                           No learning guide content available. Please try refreshing the lesson.
@@ -902,7 +987,7 @@ const LessonPage: React.FC = () => {
               <motion.div 
                 className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
                 variants={{
-                  hidden: { opacity: 0, y: 30 },
+                  hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
                 whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
@@ -942,7 +1027,7 @@ const LessonPage: React.FC = () => {
               <motion.div 
                 className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
                 variants={{
-                  hidden: { opacity: 0, y: 30 },
+                  hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
                 whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
@@ -982,7 +1067,7 @@ const LessonPage: React.FC = () => {
               <motion.div 
                 className="bg-theme-secondary rounded-lg shadow-sm border border-theme transition-colors duration-300"
                 variants={{
-                  hidden: { opacity: 0, y: 30 },
+                  hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
                 whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
@@ -1092,7 +1177,7 @@ const LessonPage: React.FC = () => {
 
           {/* Sidebar */}
           <motion.div 
-            className="space-y-6"
+            className="space-y-6 overflow-hidden"
             initial="hidden"
             animate="visible"
             variants={{

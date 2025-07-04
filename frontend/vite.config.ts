@@ -10,20 +10,30 @@ export default defineConfig({
     port: 5173,
   },
   build: {
-    // Optimize bundle
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate large dependencies
-          'react-vendor': ['react', 'react-dom'],
-          'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['framer-motion', 'lucide-react'],
-          'flow-vendor': ['reactflow'],
-          'query-vendor': ['@tanstack/react-query'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor'
+            }
+            if (id.includes('react-router-dom')) {
+              return 'router-vendor'
+            }
+            if (id.includes('framer-motion') || id.includes('lucide-react')) {
+              return 'ui-vendor'
+            }
+            if (id.includes('reactflow')) {
+              return 'flow-vendor'
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'query-vendor'
+            }
+            return 'vendor'
+          }
         },
       },
     },
-    // Increase chunk size warning limit for large libraries
     chunkSizeWarningLimit: 1000,
   },
 })

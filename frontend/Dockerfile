@@ -19,13 +19,6 @@ RUN npm ci
 
 # Copy source code
 COPY . .
-
-# Copy build script
-# COPY build-with-env.sh ./
-
-# Build the application with debug output
-RUN chmod +x build-with-env.sh && ./build-with-env.sh
-
 # Production stage
 FROM nginx:alpine
 

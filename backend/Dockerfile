@@ -15,14 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Copy and set permissions for entrypoint
-COPY entrypoint.sh .
-# Fix CRLF line endings from Windows and make the script executable
-RUN sed -i 's/\\r$//' ./entrypoint.sh && \
-    chmod +x ./entrypoint.sh
-
 # Expose port
 EXPOSE 8000
 
 # Run the application
-ENTRYPOINT ["./entrypoint.sh"] 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 

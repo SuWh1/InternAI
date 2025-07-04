@@ -59,14 +59,5 @@ services:
       - /app/node_modules
     restart: unless-stopped
 
-  adminer:
-    image: adminer
-    container_name: internai_adminer_dev
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    restart: unless-stopped
-
 volumes:
   postgres_data_dev: 

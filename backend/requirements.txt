@@ -17,3 +17,6 @@ google-auth-oauthlib==1.1.0
 google-genai
 python-dotenv==1.0.0
 google-api-python-client==2.147.0
+slowapi==0.1.9
+limits==3.3.0
+redis==5.0.1

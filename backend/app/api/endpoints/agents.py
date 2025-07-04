@@ -3,6 +3,7 @@ Agent pipeline API endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 import asyncio
@@ -10,6 +11,7 @@ import os
 from datetime import datetime
 
 from app.core.security import get_current_user
+from app.core.rate_limit import limiter, RateLimits
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.agents import AgentPipelineRequest, AgentPipelineResponse, AgentErrorResponse
@@ -39,8 +41,10 @@ router = APIRouter()
     summary="Run the complete agent pipeline",
     description="Execute the multi-agent pipeline to generate personalized roadmap and internship recommendations"
 )
+@limiter.limit(RateLimits.AI_PIPELINE_RUN)
 async def run_agent_pipeline(
-    request: AgentPipelineRequest,
+    request: Request,
+    pipeline_request: AgentPipelineRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -91,8 +95,8 @@ async def run_agent_pipeline(
         # Prepare pipeline input
         pipeline_input = {
             "onboarding_data": onboarding_dict,
-            "resume_text": request.resume_text,
-            "resume_file_path": request.resume_file_path
+            "resume_text": pipeline_request.resume_text,
+            "resume_file_path": pipeline_request.resume_file_path
         }
         
         # Initialize and run pipeline
@@ -160,7 +164,9 @@ async def run_agent_pipeline(
     summary="Get agent pipeline status",
     description="Check if user can run the agent pipeline based on their onboarding status"
 )
+@limiter.limit(RateLimits.API_READ)
 async def get_pipeline_status(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -212,7 +218,9 @@ async def get_pipeline_status(
     summary="Get user's roadmap",
     description="Retrieve the current roadmap and progress for the authenticated user"
 )
+@limiter.limit(RateLimits.API_READ)
 async def get_user_roadmap(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -260,7 +268,9 @@ async def get_user_roadmap(
     summary="Update roadmap progress",
     description="Update progress tracking for the user's roadmap"
 )
+@limiter.limit(RateLimits.API_WRITE)
 async def update_roadmap_progress_endpoint(
+    request: Request,
     progress_data: List[Dict[str, Any]],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -306,8 +316,10 @@ async def update_roadmap_progress_endpoint(
     summary="Get detailed explanation for a topic using Gemini",
     description="Generate detailed explanations for roadmap topics using Google Gemini and store them in database"
 )
+@limiter.limit(RateLimits.AI_TOPIC_DETAILS)
 async def get_topic_details(
-    request: Dict[str, Any],
+    request: Request,
+    topic_request: Dict[str, Any],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -322,10 +334,10 @@ async def get_topic_details(
     """
     
     try:
-        topic = request.get("topic", "")
-        context = request.get("context", "")
-        user_level = request.get("user_level", "intermediate")
-        force_regenerate = request.get("force_regenerate", False)
+        topic = topic_request.get("topic", "")
+        context = topic_request.get("context", "")
+        user_level = topic_request.get("user_level", "intermediate")
+        force_regenerate = topic_request.get("force_regenerate", False)
         
         if not topic:
             raise HTTPException(
@@ -877,26 +889,27 @@ def post_process_content(content_data: Dict[str, Any]) -> Dict[str, Any]:
     summary="Generate subtopics for a learning topic",
     description="Generate AI-powered subtopics for a specific learning topic and store them in the database"
 )
+@limiter.limit(RateLimits.AI_SUBTOPICS)
 async def generate_subtopics(
-    request: Dict[str, Any],
+    request: Request,
+    subtopic_request: Dict[str, Any],
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Generate subtopics for a learning topic using AI.
+    Generate subtopics for a specific learning topic using AI and store them in the database.
     
     Request should contain:
-    - topic: The main topic/theme to generate subtopics for
-    - context: Optional context (e.g., week number, focus area)
+    - topic: The main topic to generate subtopics for
+    - context: Optional context about the topic
     - user_level: User's experience level (beginner, intermediate, advanced)
-    - force_regenerate: Whether to force regeneration even if content exists
+    - force_regenerate: Whether to force regeneration even if subtopics exist
     """
-    
     try:
-        topic = request.get("topic", "")
-        context = request.get("context", "")
-        user_level = request.get("user_level", "intermediate")
-        force_regenerate = request.get("force_regenerate", False)
+        topic = subtopic_request.get("topic", "")
+        context = subtopic_request.get("context", "")
+        user_level = subtopic_request.get("user_level", "intermediate")
+        force_regenerate = subtopic_request.get("force_regenerate", False)
         
         if not topic:
             raise HTTPException(
@@ -921,9 +934,7 @@ async def generate_subtopics(
                 return {
                     "success": True,
                     "subtopics": existing_content.content_data.get("subtopics", []),
-                    "cached": True,
-                    "generated_at": existing_content.created_at.isoformat(),
-                    "access_count": existing_content.access_count
+                    "cached": True
                 }
         
         # Generate new subtopics using AI
@@ -951,26 +962,27 @@ async def generate_subtopics(
         return {
             "success": True,
             "subtopics": subtopics_data.get("subtopics", []),
-            "cached": False,
-            "generated_at": learning_content.created_at.isoformat(),
-            "access_count": learning_content.access_count
+            "cached": False
         }
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error generating subtopics: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate subtopics: {str(e)}"
-        )
+        return {
+            "success": False,
+            "subtopics": [],
+            "cached": False
+        }
 
 @router.get(
     "/learning-content/{content_type}",
     summary="Get user's learning content",
     description="Retrieve stored learning content (subtopics, explanations, etc.) for the user"
 )
+@limiter.limit(RateLimits.API_READ)
 async def get_user_learning_content(
+    request: Request,
     content_type: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)

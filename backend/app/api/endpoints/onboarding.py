@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 
@@ -27,11 +28,14 @@ from app.crud.onboarding import (
     has_completed_onboarding
 )
 from app.core.security import get_current_user
+from app.core.rate_limit import limiter, RateLimits
 
 router = APIRouter()
 
 @router.post("/", response_model=OnboardingData, status_code=status.HTTP_201_CREATED)
+@limiter.limit(RateLimits.API_WRITE)
 async def create_user_onboarding(
+    request: Request,
     onboarding_data: OnboardingCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -51,7 +55,9 @@ async def create_user_onboarding(
     return created_data
 
 @router.get("/status", response_model=OnboardingStatus)
+@limiter.limit(RateLimits.API_READ)
 async def get_onboarding_status(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
@@ -66,7 +72,9 @@ async def get_onboarding_status(
     }
 
 @router.get("/", response_model=OnboardingData)
+@limiter.limit(RateLimits.API_READ)
 async def get_user_onboarding(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
@@ -82,7 +90,9 @@ async def get_user_onboarding(
     return onboarding_data
 
 @router.put("/", response_model=OnboardingData)
+@limiter.limit(RateLimits.API_WRITE)
 async def update_user_onboarding(
+    request: Request,
     onboarding_update: OnboardingUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -99,7 +109,9 @@ async def update_user_onboarding(
     return updated_data
 
 @router.delete("/", response_model=GenericResponse)
+@limiter.limit(RateLimits.API_WRITE)
 async def delete_user_onboarding(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
@@ -115,7 +127,8 @@ async def delete_user_onboarding(
     return {"success": True, "message": "Onboarding data deleted successfully"}
 
 @router.get("/options")
-async def get_onboarding_options() -> Any:
+@limiter.limit(RateLimits.API_READ)
+async def get_onboarding_options(request: Request) -> Any:
     """Get all available options for onboarding form."""
     
     return {

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta
@@ -12,6 +13,7 @@ from app.crud.user import create_user, authenticate_user, authenticate_google_us
 from app.crud.onboarding import has_completed_onboarding
 from app.core.security import create_access_token, create_refresh_token, verify_refresh_token, get_current_user
 from app.core.config import settings
+from app.core.rate_limit import limiter, RateLimits
 from app.utils.google_auth import verify_google_token
 
 router = APIRouter()
@@ -30,7 +32,8 @@ async def add_onboarding_status(user: User, db: AsyncSession) -> User:
     return user
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
+@limiter.limit(RateLimits.AUTH_REGISTER)
+async def register(request: Request, user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
     user = await create_user(db, user_data)
     user = await add_onboarding_status(user, db)
     
@@ -47,7 +50,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)) ->
     }
 
 @router.post("/login", response_model=AuthResponse)
-async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def login(request: Request, user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
     user = await authenticate_user(db, user_data.email, user_data.password)
     
     if not user:
@@ -72,7 +76,8 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any
     }
 
 @router.post("/google", response_model=AuthResponse)
-async def google_login(auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
+@limiter.limit(RateLimits.AUTH_GOOGLE)
+async def google_login(request: Request, auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
     print(f"DEBUG: Google login attempt with token length: {len(auth_data.token) if auth_data.token else 0}")
     
     # Check if Google OAuth is configured
@@ -135,7 +140,8 @@ async def google_login(auth_data: GoogleAuthRequest, db: AsyncSession = Depends(
         )
 
 @router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(token_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)) -> Any:
+@limiter.limit(RateLimits.AUTH_REFRESH)
+async def refresh_token(request: Request, token_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)) -> Any:
     """
     Refresh access token using refresh token.
     """
@@ -175,21 +181,24 @@ async def refresh_token(token_data: RefreshTokenRequest, db: AsyncSession = Depe
     }
 
 @router.post("/logout", response_model=GenericResponse)
-async def logout(response: Response) -> Any:
+@limiter.limit(RateLimits.AUTH_GENERAL)
+async def logout(request: Request, response: Response) -> Any:
     """
     Logout user (client-side only).
     """
     return {"success": True, "message": "Successfully logged out"}
 
 @router.get("/me", response_model=User)
-async def get_current_user_info(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> Any:
+@limiter.limit(RateLimits.API_READ)
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> Any:
     """
     Get current user info.
     """
     return await add_onboarding_status(current_user, db)
 
 @router.get("/google/debug")
-async def debug_google_config() -> Any:
+@limiter.limit(RateLimits.DEBUG_ENDPOINTS)
+async def debug_google_config(request: Request) -> Any:
     """
     Debug endpoint to check Google OAuth configuration.
     """

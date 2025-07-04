@@ -21,7 +21,7 @@ RUN npm ci
 COPY . .
 
 # Copy build script
-COPY build-with-env.sh ./
+# COPY build-with-env.sh ./
 
 # Build the application with debug output
 RUN chmod +x build-with-env.sh && ./build-with-env.sh

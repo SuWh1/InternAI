@@ -1,10 +1,30 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
+import critical from 'rollup-plugin-critical'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      ...critical({
+        criticalUrl: 'http://localhost:4173',
+        criticalBase: 'dist',
+        criticalPages: [
+          { uri: '/', template: 'index' }
+        ],
+        criticalConfig: {
+          inline: true,
+          extract: false,
+          width: 1300,
+          height: 900,
+        },
+      }),
+      apply: 'build',
+    },
+  ],
   server: {
     host: '0.0.0.0',
     port: 5173,

@@ -7,7 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import LoadingSpinner, { PageLoadingSpinner } from './components/common/LoadingSpinner';
+import { PageLoadingSpinner } from './components/common/LoadingSpinner';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));

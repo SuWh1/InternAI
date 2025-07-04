@@ -17,7 +17,9 @@ COPY . .
 
 # Copy and set permissions for entrypoint
 COPY entrypoint.sh .
-RUN chmod +x ./entrypoint.sh
+# Fix CRLF line endings from Windows and make the script executable
+RUN sed -i 's/\\r$//' ./entrypoint.sh && \
+    chmod +x ./entrypoint.sh
 
 # Expose port
 EXPOSE 8000

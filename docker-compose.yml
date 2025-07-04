@@ -59,7 +59,6 @@ services:
     volumes:
       - ./ssl-certs:/etc/letsencrypt:ro
       - ./certbot-challenges:/var/www/certbot:ro
-      - ./frontend/nginx-domain.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
     restart: unless-stopped

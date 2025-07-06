@@ -1,8 +1,7 @@
 import api from '../lib/axios';
+import { authApi } from '../lib/axios';
 import { useAuthStore } from '../stores/authStore';
 import type { AuthResponse, User } from '../types/api';
-
-
 
 class AuthService {
   private initializationPromise: Promise<void> | null = null;
@@ -189,7 +188,7 @@ class AuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await api.post<AuthResponse>('/auth/refresh', {
+    const response = await authApi.post<AuthResponse>('/auth/refresh', {
       refresh_token: refreshToken,
     });
 

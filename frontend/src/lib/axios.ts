@@ -12,7 +12,16 @@ interface AxiosRequestConfigWithRetry extends InternalAxiosRequestConfig {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Create axios instance
-const api: AxiosInstance = axios.create({
+export const api: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: TIMEOUTS.API_REQUEST,
+});
+
+// Create a separate, clean axios instance for auth requests to avoid interceptor loops
+export const authApi: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -63,21 +72,19 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (refreshError) {
           // Refresh failed, clear tokens and redirect to login
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
-          
-          // Clear user state
           const { useAuthStore } = await import('../stores/authStore');
           useAuthStore.getState().logout();
+          
+          // To prevent further actions on this error, we return a resolved promise
+          return new Promise(() => {});
         }
       } else {
         // No refresh token, clear access token
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        
-        // Clear user state
         const { useAuthStore } = await import('../stores/authStore');
         useAuthStore.getState().logout();
+
+        // To prevent further actions on this error, we return a resolved promise
+        return new Promise(() => {});
       }
     }
 

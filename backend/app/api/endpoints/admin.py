@@ -10,7 +10,8 @@ from uuid import UUID
 router = APIRouter()
 
 def require_admin(user=Depends(get_current_user)):
-    if user.email != settings.ADMIN_EMAIL:
+    print(f"Checking admin: user.email={user.email}, user.is_admin={user.is_admin}")
+    if not user.is_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
     return user
 
@@ -18,7 +19,7 @@ def require_admin(user=Depends(get_current_user)):
 async def get_all_users(db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):
     result = await db.execute(select(User))
     users = result.scalars().all()
-    return [{"id": u.id, "email": u.email} for u in users]
+    return [{"id": u.id, "email": u.email, "is_admin": u.is_admin} for u in users]
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_db), _: User = Depends(require_admin)):

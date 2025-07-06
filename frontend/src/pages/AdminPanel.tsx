@@ -3,8 +3,9 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 type User = {
-  id: number;
+  id: string;          // Use string for UUID
   email: string;
+  is_admin: boolean;   // Added is_admin
 };
 
 export default function AdminPanel() {
@@ -14,7 +15,7 @@ export default function AdminPanel() {
   const [error, setError] = useState("");
   const [redirecting, setRedirecting] = useState(false);
 
-  const token = localStorage.getItem("auth_token"); // or however you store it
+  const token = localStorage.getItem("auth_token");
 
   const fetchUsers = async () => {
     try {
@@ -24,8 +25,8 @@ export default function AdminPanel() {
       setUsers(res.data);
     } catch (err: any) {
       if (err.response?.status === 403) {
-        setRedirecting(true); // 👈 block render
-        navigate("/"); // 👈 Redirect to home
+        setRedirecting(true);
+        navigate("/");
         return;
       } else {
         setError("Failed to fetch users");
@@ -35,7 +36,7 @@ export default function AdminPanel() {
     }
   };
 
-  const deleteUser = async (id: number) => {
+  const deleteUser = async (id: string) => {
     try {
       await axios.delete(`/api/admin/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -62,30 +63,39 @@ export default function AdminPanel() {
         <p>No users found.</p>
       ) : (
         <>
-            <p className="text-gray-600 mb-2">Number of users: {users.length}</p>
-            <ul className="space-y-2">
+          <p className="text-gray-600 mb-2">Number of users: {users.length}</p>
+          <ul className="space-y-2">
             {users.map((user) => (
-                <li
+              <li
                 key={user.id}
                 className="flex justify-between items-center border-b py-2"
-                >
+              >
                 <div>
-                    <p className="font-medium">{user.email}</p>
-                    <p className="text-sm text-gray-500">ID: {user.id}</p>
+                  <p className="font-medium">{user.email}</p>
+                  <p className="text-sm text-gray-500">ID: {user.id}</p>
+                  <p
+                    className={
+                      user.is_admin
+                        ? "text-green-600 font-semibold"
+                        : "text-gray-500"
+                    }
+                  >
+                    {user.is_admin ? "Admin" : "User"}
+                  </p>
                 </div>
                 <button
-                    onClick={() => {
-                        if (confirm("Are you sure you want to delete this user?")) {
-                            deleteUser(user.id);
-                        }
-                    }}
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this user?")) {
+                      deleteUser(user.id);
+                    }
+                  }}
+                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                 >
-                    Delete
+                  Delete
                 </button>
-                </li>
+              </li>
             ))}
-            </ul>
+          </ul>
         </>
       )}
     </div>

@@ -39,5 +39,4 @@ def downgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='email_verification_tokens_user_id_fkey'),
     sa.PrimaryKeyConstraint('id', name='email_verification_tokens_pkey')
     )
-    op.create_index('ix_email_verification_tokens_token', 'email_verification_tokens', ['token'], unique=False)
     # ### end Alembic commands ###

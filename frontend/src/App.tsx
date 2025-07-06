@@ -20,6 +20,7 @@ const MyInternshipsPage = lazy(() => import('./pages/MyInternshipsPage'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const WeekDetailPage = lazy(() => import('./pages/WeekDetailPage'));
 const LessonPage = lazy(() => import('./pages/LessonPage'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 
 // Component to handle routes
 function AppRoutes() {
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/lesson/:topic/:context/:weekNumber" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
           <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
           <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
         </Routes>
       </Suspense>
     </ErrorBoundary>

@@ -5,6 +5,7 @@ import critical from 'rollup-plugin-critical'
 
 // https://vite.dev/config/
 export default defineConfig({
+  appType: 'spa', 
   plugins: [
     react(),
     tailwindcss(),
@@ -28,6 +29,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://host.docker.internal:8000',
+        changeOrigin: true,
+      },
+    },
+    fs: {
+      strict: false,
+    },
   },
   build: {
     rollupOptions: {

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, onboarding, agents
+from app.api.endpoints import auth, onboarding, agents, admin
 
 api_router = APIRouter()
 
@@ -7,6 +7,7 @@ api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])
 api_router.include_router(agents.router, prefix="/agents", tags=["agents"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 # Uncomment to enable rate limiting test endpoints
 # from app.api.endpoints import test_rate_limit

@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/callback")
+
+    ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL")
     
     class Config:
         case_sensitive = True

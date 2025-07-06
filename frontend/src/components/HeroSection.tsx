@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Target } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';

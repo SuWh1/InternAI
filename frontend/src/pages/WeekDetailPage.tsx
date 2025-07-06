@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Clock, Target, BookOpen, CheckCircle, Circle, ExternalLink, Brain, Lightbulb, RotateCcw, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Clock, CheckCircle, Circle, Brain, Lightbulb, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
 import agentService from '../services/agentService';
 
 import ErrorMessage from '../components/common/ErrorMessage';
 import TruncatedText from '../components/common/TruncatedText';
 import { useRoadmap } from '../hooks/useRoadmap';
 import { useTheme } from '../contexts/ThemeContext';
-import { isWeekUnlocked, isWeekCompleted, validateWeekNavigation } from '../utils/weekProgress';
+import { isWeekUnlocked, validateWeekNavigation } from '../utils/weekProgress';
 import type { WeekData } from '../types/roadmap';
 
 const WeekDetailPage: React.FC = () => {

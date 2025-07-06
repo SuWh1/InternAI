@@ -23,7 +23,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: internai_backend
-    command: bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: bash -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
       - DOCKER_CONTAINER=true
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}

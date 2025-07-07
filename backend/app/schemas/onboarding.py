@@ -11,8 +11,9 @@ class OnboardingBase(BaseModel):
     
     # Technical Background
     programming_languages: List[str] = Field(default_factory=list, description="Programming languages known")
-    frameworks_tools: List[str] = Field(default_factory=list, description="Frameworks and tools known")
-    preferred_tech_stack: List[str] = Field(default_factory=list, description="Preferred technology stack for internships")
+    frameworks: List[str] = Field(default_factory=list, description="Frameworks known")
+    tools: List[str] = Field(default_factory=list, description="Tools known")
+    preferred_tech_stack: str = Field(..., description="Preferred technology stack for internships")
     experience_level: str = Field(..., description="Overall experience level")
     skill_confidence: str = Field(..., description="Confidence level in technical skills")
     
@@ -26,14 +27,12 @@ class OnboardingBase(BaseModel):
     preferred_company_types: List[str] = Field(default_factory=list, description="Preferred company types")
     preferred_locations: List[str] = Field(default_factory=list, description="Preferred work locations")
     
-    # Target Internships
-    target_internships: List[str] = Field(default_factory=list, description="Selected target internships")
-    
     # Timeline
     application_timeline: str = Field(..., description="When planning to apply")
     
     # Additional Info
     additional_info: Optional[str] = Field(None, description="Additional information")
+    source_of_discovery: Optional[str] = Field(None, description="How the user found the platform")
 
 # Schema for creating onboarding data
 class OnboardingCreate(OnboardingBase):
@@ -44,8 +43,9 @@ class OnboardingUpdate(BaseModel):
     current_year: Optional[str] = None
     major: Optional[str] = None
     programming_languages: Optional[List[str]] = None
-    frameworks_tools: Optional[List[str]] = None
-    preferred_tech_stack: Optional[List[str]] = None
+    frameworks: Optional[List[str]] = None
+    tools: Optional[List[str]] = None
+    preferred_tech_stack: Optional[str] = None
     experience_level: Optional[str] = None
     skill_confidence: Optional[str] = None
     has_internship_experience: Optional[bool] = None
@@ -54,9 +54,9 @@ class OnboardingUpdate(BaseModel):
     target_roles: Optional[List[str]] = None
     preferred_company_types: Optional[List[str]] = None
     preferred_locations: Optional[List[str]] = None
-    target_internships: Optional[List[str]] = None
     application_timeline: Optional[str] = None
     additional_info: Optional[str] = None
+    source_of_discovery: Optional[str] = None
 
 # Schema for onboarding data in database
 class OnboardingInDB(OnboardingBase):
@@ -86,6 +86,7 @@ CURRENT_YEAR_OPTIONS = [
     "4th year",
     "5th year",
     "Recent Graduate"
+    "Other"
 ]
 
 EXPERIENCE_LEVEL_OPTIONS = [
@@ -118,16 +119,11 @@ PREFERRED_TECH_STACK_OPTIONS = [
 ]
 
 COMPANY_TYPE_OPTIONS = [
-    "Big Tech (Google, Microsoft, Meta, etc.)",
-    "Startup",
-    "Fortune 500",
-    "Government",
-    "Non-profit",
-    "Consulting",
-    "Finance/Banking",
-    "Healthcare",
-    "Gaming",
-    "Other"
+    "Meta",
+    "Apple",
+    "Nvidia",
+    "Google",
+    "OpenAI",
 ]
 
 TARGET_ROLE_OPTIONS = [
@@ -139,32 +135,13 @@ TARGET_ROLE_OPTIONS = [
     "DevOps/SRE Intern",
     "Security Engineer Intern",
     "Research Intern",
-    "Other"
 ]
 
 TIMELINE_OPTIONS = [
-    "This Summer (2024)",
-    "Next Summer (2025)", 
-    "Fall 2024",
-    "Spring 2025",
+    "This Summer (2025)",
+    "Fall (2025)",
+    "Spring (2026)",
+    "Next Summer (2026)", 
+    
     "Not Sure Yet"
 ]
-
-DEFAULT_INTERNSHIPS = [
-    "Google STEP",
-    "Microsoft Explore",
-    "Meta University",
-    "Amazon Future Engineer",
-    "Apple Internship Program",
-    "Netflix Internship",
-    "Spotify Internship",
-    "Tesla Internship",
-    "Uber Internship",
-    "Airbnb Internship",
-    "Palantir Internship",
-    "Salesforce Internship",
-    "Adobe Internship",
-    "IBM Internship",
-    "Intel Internship",
-    "Other"
-] 

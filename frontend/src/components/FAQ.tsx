@@ -5,20 +5,24 @@ import { staggerContainer, staggerItem } from "../utils/animations";
 
 const faqs = [
   {
+    question: "What is MANGO?",
+    answer: "MANGO is a new acronym gaining traction to represent the leading tech companies, including Meta, Apple, Nvidia, Google, and OpenAI, reflecting a shift in industry influence beyond the traditional FAANG group with the rise of AI-focused firms."
+  },
+  {
     question: "How does the AI create my personalized roadmap?",
     answer: "Our AI analyzes your current skills, target internship, available study time, and learning preferences to create a custom roadmap. It considers factors like your academic year, prior experience, and specific company requirements to generate weekly goals and project recommendations."
   },
   {
     question: "Is InternAI really free?",
-    answer: "Yes! Creating your personalized roadmap is completely free. We also offer optional premium features like resume reviews and 1-on-1 mentoring sessions for students who want extra support."
+    answer: "Yes! Creating your personalized roadmap is completely free to use."
   },
   {
     question: "How long does it take to complete a roadmap?",
-    answer: "Roadmaps typically range from 3-6 months depending on your starting point and target internship. The AI creates realistic timelines based on your available study hours per week and current skill level."
+    answer: "Roadmaps typically around 3 months depending on your starting point and target internship. The AI creates realistic timelines based on your available study hours per week and current skill level."
   },
   {
     question: "What companies does InternAI prepare me for?",
-    answer: "We support roadmaps for major tech companies including Google (STEP), Microsoft (Explore), Amazon, Facebook, Apple, Netflix, and many more. The AI tailors the preparation based on each company's specific requirements and interview processes."
+    answer: "Out major focus is on MANGO companies, prep for technical background, interview process, projects and more."
   },
   {
     question: "Can I update my roadmap if my goals change?",

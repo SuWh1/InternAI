@@ -21,7 +21,7 @@ const WeekDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completedSubtopics, setCompletedSubtopics] = useState<Set<number>>(new Set());
-  const [subtopics, setSubtopics] = useState<Array<{ title: string; description: string } | string>>([]);
+  const [subtopics, setSubtopics] = useState<Array<{ title: string; description: string; type?: string } | string>>([]);
   const [isGeneratingSubtopics, setIsGeneratingSubtopics] = useState(false);
   const [userInteracting, setUserInteracting] = useState(false);
   const [forceGeneration, setForceGeneration] = useState(false);
@@ -185,7 +185,8 @@ const WeekDetailPage: React.FC = () => {
           { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
           { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
           { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
-          { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` }
+          { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` },
+          { title: `Review and Assess`, description: `Review the week's topics and assess your understanding through a small quiz or project.` }
         ]);
       }
     } catch (error) {
@@ -200,7 +201,8 @@ const WeekDetailPage: React.FC = () => {
         { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
         { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
         { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
-        { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` }
+        { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` },
+        { title: `Review and Assess`, description: `Review the week's topics and assess your understanding through a small quiz or project.` }
       ]);
     } finally {
       // Always clear the generating state when done
@@ -229,7 +231,7 @@ const WeekDetailPage: React.FC = () => {
       const weekNum = parseInt(weekNumber || '1');
       const subtopicId = `subtopic-${subtopicIndex}`;
       
-      updateProgress(weekNum, subtopicId, isCompleting).catch((error) => {
+      updateProgress(weekNum, subtopicId, isCompleting, subtopics.length).catch((error) => {
         // Revert local state on error and notify user
         setCompletedSubtopics(completedSubtopics);
         console.error('Error updating progress:', error);
@@ -420,11 +422,16 @@ const WeekDetailPage: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.8 }}
               whileHover={{ y: -2 }}
             >
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-3 mb-6">
                 <Brain className="w-6 h-6 text-purple-600" />
                 <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
                   Studying ({completedSubtopics.size}/{subtopics.length})
                 </h2>
+                {subtopics.some(s => typeof s === 'object' && s.type === 'ai_suggestion') && (
+                    <span className="ml-auto text-sm font-medium text-yellow-600 dark:text-yellow-400 bg-yellow-400/10 dark:bg-yellow-500/10 px-2 py-1 rounded-md">
+                      AI Suggestions
+                    </span>
+                )}
               </div>
               
 
@@ -454,6 +461,7 @@ const WeekDetailPage: React.FC = () => {
                       // Handle both string format (old) and object format (new)
                       const subtopicTitle = typeof subtopic === 'string' ? subtopic : subtopic.title;
                       const subtopicDescription = typeof subtopic === 'string' ? subtopic : subtopic.description;
+                      const isAISuggestion = typeof subtopic === 'object' && subtopic.type === 'ai_suggestion';
                       
                       return (
                         <motion.div
@@ -462,7 +470,9 @@ const WeekDetailPage: React.FC = () => {
                           className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-colors duration-200 cursor-pointer ${
                             completedSubtopics.has(index)
                               ? 'bg-green-500/10 border-green-500/30 dark:bg-green-400/10 dark:border-green-400/30'
-                              : 'bg-theme-hover border-theme hover:border-theme-accent'
+                              : isAISuggestion 
+                                ? 'border-yellow-400 bg-yellow-400/10 dark:bg-yellow-500/10 hover:border-yellow-300 shadow-sm shadow-yellow-400/20'
+                                : 'bg-theme-hover border-theme hover:border-theme-accent'
                           }`}
                           variants={{
                             hidden: { opacity: 0, y: 8 },

@@ -5,6 +5,7 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import TextAreaWithCounter from '../components/common/TextAreaWithCounter';
 import type { OnboardingFormData, OnboardingOptions } from '../types/onboarding';
 
 // Comprehensive list of major cities worldwide
@@ -219,9 +220,10 @@ const CustomSelector: React.FC<{
   onChange: () => void;
   name?: string;
   color?: 'blue' | 'green' | 'purple';
-}> = ({ type, id, label, checked, onChange, name, color = 'blue' }) => {
+  dimmed?: boolean;
+}> = ({ type, id, label, checked, onChange, name, color = 'blue', dimmed = false }) => {
   return (
-    <label htmlFor={id} className="flex items-center space-x-3 cursor-pointer p-4 rounded-xl border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 group">
+    <label htmlFor={id} className={`flex items-center space-x-3 cursor-pointer p-4 rounded-xl border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 group ${dimmed ? 'opacity-50' : ''}`}>
       <input
         type={type}
         id={id}
@@ -255,8 +257,9 @@ const OnboardingPage: React.FC = () => {
     
     // Step 2: Technical Background
     programming_languages: [],
-    frameworks_tools: [],
-    preferred_tech_stack: [],
+    frameworks: [],
+    tools: [],
+    preferred_tech_stack: '',
     experience_level: '',
     skill_confidence: '',
     
@@ -270,10 +273,10 @@ const OnboardingPage: React.FC = () => {
     preferred_company_types: [],
     preferred_locations: [],
     
-    // Step 5: Target Internships & Timeline
-    target_internships: [],
+    // Step 5: Final Touches & Timeline
     application_timeline: '',
-    additional_info: ''
+    additional_info: '',
+    source_of_discovery: ''
   });
 
   const totalSteps = 5;
@@ -364,13 +367,13 @@ const OnboardingPage: React.FC = () => {
       case 1:
         return !!(formData.current_year && formData.major);
       case 2:
-        return !!(formData.programming_languages.length > 0 && formData.experience_level && formData.skill_confidence);
+        return !!(formData.programming_languages.length > 0 && formData.preferred_tech_stack && formData.experience_level && formData.skill_confidence);
       case 3:
         return true; // Optional fields
       case 4:
         return !!(formData.target_roles.length > 0);
       case 5:
-        return !!(formData.target_internships.length > 0 && formData.application_timeline);
+        return !!(formData.application_timeline);
       default:
         return true;
     }
@@ -398,7 +401,8 @@ const OnboardingPage: React.FC = () => {
       current_year: formData.current_year,
       major: formData.major,
       programming_languages: formData.programming_languages,
-      frameworks_tools: formData.frameworks_tools,
+      frameworks: formData.frameworks,
+      tools: formData.tools,
       preferred_tech_stack: formData.preferred_tech_stack,
       experience_level: formData.experience_level,
       skill_confidence: formData.skill_confidence,
@@ -408,9 +412,9 @@ const OnboardingPage: React.FC = () => {
       target_roles: formData.target_roles,
       preferred_company_types: formData.preferred_company_types,
       preferred_locations: formData.preferred_locations,
-      target_internships: formData.target_internships,
       application_timeline: formData.application_timeline,
-      additional_info: formData.additional_info.trim() || undefined
+      additional_info: formData.additional_info.trim() || undefined,
+      source_of_discovery: formData.source_of_discovery.trim() || undefined
     };
 
     const success = await createOnboarding(onboardingData);
@@ -536,17 +540,35 @@ const OnboardingPage: React.FC = () => {
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-600">
           <label className="block text-sm font-semibold text-theme-primary mb-4">
-            Frameworks & Tools <span className="text-theme-secondary font-normal">(Select all that apply)</span>
+            Frameworks <span className="text-theme-secondary font-normal">(Select all that apply)</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {['React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask', 'FastAPI', 'Spring', 'Express', 'Docker', 'AWS', 'Git', 'MongoDB', 'PostgreSQL', 'Redis'].map((tool, index) => (
+            {['React', 'Vue', 'Angular', 'Node.js', 'Django', 'Flask', 'FastAPI', 'Spring', 'Express'].map((framework, index) => (
+              <CustomSelector
+                key={framework}
+                type="checkbox"
+                id={`framework-${framework}`}
+                label={framework}
+                checked={formData.frameworks.includes(framework)}
+                onChange={() => toggleArrayItem('frameworks', framework)}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="animate-in slide-in-from-bottom duration-500 delay-700">
+          <label className="block text-sm font-semibold text-theme-primary mb-4">
+            Tools <span className="text-theme-secondary font-normal">(Select all that apply)</span>
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {['Docker', 'AWS', 'Git', 'MongoDB', 'PostgreSQL', 'Redis', 'Kubernetes', 'Jenkins', 'Terraform'].map((tool, index) => (
               <CustomSelector
                 key={tool}
                 type="checkbox"
                 id={`tool-${tool}`}
                 label={tool}
-                checked={formData.frameworks_tools.includes(tool)}
-                onChange={() => toggleArrayItem('frameworks_tools', tool)}
+                checked={formData.tools.includes(tool)}
+                onChange={() => toggleArrayItem('tools', tool)}
               />
             ))}
           </div>
@@ -554,17 +576,19 @@ const OnboardingPage: React.FC = () => {
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-800">
           <label className="block text-sm font-semibold text-theme-primary mb-4">
-            Preferred Tech Stack for Internships <span className="text-theme-secondary font-normal">(Select all that apply)</span>
+            Tech Stack <span className="text-red-500">*</span> <span className="text-theme-secondary font-normal">(Select one)</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {options?.preferred_tech_stack_options.map((stack, index) => (
               <CustomSelector
                 key={stack}
-                type="checkbox"
+                type="radio"
                 id={`stack-${stack}`}
+                name="preferred_tech_stack"
                 label={stack}
-                checked={formData.preferred_tech_stack.includes(stack)}
-                onChange={() => toggleArrayItem('preferred_tech_stack', stack)}
+                checked={formData.preferred_tech_stack === stack}
+                onChange={() => updateFormData('preferred_tech_stack', stack)}
+                dimmed={formData.preferred_tech_stack !== '' && formData.preferred_tech_stack !== stack}
               />
             ))}
           </div>
@@ -645,12 +669,11 @@ const OnboardingPage: React.FC = () => {
             <label className="block text-sm font-semibold text-theme-primary mb-3">
               Previous Internships
             </label>
-            <textarea
+            <TextAreaWithCounter
               value={formData.previous_internships}
               onChange={(e) => updateFormData('previous_internships', e.target.value)}
               placeholder="Tell us about your previous internship experiences..."
-              rows={4}
-              className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary resize-none"
+              maxLength={300}
             />
           </div>
         )}
@@ -659,12 +682,11 @@ const OnboardingPage: React.FC = () => {
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Projects
           </label>
-          <textarea
+          <TextAreaWithCounter
             value={formData.projects}
             onChange={(e) => updateFormData('projects', e.target.value)}
             placeholder="Describe any personal projects, hackathons, or coursework projects..."
-            rows={4}
-            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary resize-none"
+            maxLength={300}
           />
         </div>
       </div>
@@ -681,6 +703,25 @@ const OnboardingPage: React.FC = () => {
         <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Help us understand your career aspirations</p>
       </div>
 
+      
+      <div className="animate-in slide-in-from-bottom duration-500 delay-600">
+        <label className="block text-sm font-semibold text-theme-primary mb-4">
+          Preferred MANGO Company <span className="text-theme-secondary font-normal">(Select all that apply)</span>
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {options?.company_type_options.map((type, index) => (
+            <CustomSelector
+              key={type}
+              type="checkbox"
+              id={`company-${type}`}
+              label={type}
+              checked={formData.preferred_company_types.includes(type)}
+              onChange={() => toggleArrayItem('preferred_company_types', type)}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-8">
         <div className="animate-in slide-in-from-bottom duration-500 delay-400">
           <label className="block text-sm font-semibold text-theme-primary mb-4">
@@ -695,24 +736,6 @@ const OnboardingPage: React.FC = () => {
                 label={role}
                 checked={formData.target_roles.includes(role)}
                 onChange={() => toggleArrayItem('target_roles', role)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="animate-in slide-in-from-bottom duration-500 delay-600">
-          <label className="block text-sm font-semibold text-theme-primary mb-4">
-            Preferred Company Types <span className="text-theme-secondary font-normal">(Select all that apply)</span>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {options?.company_type_options.map((type, index) => (
-              <CustomSelector
-                key={type}
-                type="checkbox"
-                id={`company-${type}`}
-                label={type}
-                checked={formData.preferred_company_types.includes(type)}
-                onChange={() => toggleArrayItem('preferred_company_types', type)}
               />
             ))}
           </div>
@@ -737,27 +760,28 @@ const OnboardingPage: React.FC = () => {
         <div className="relative inline-block">
           <Rocket className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Target Internships</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Which internships are you most interested in?</p>
+        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Final Touches</h2>
+        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Just a couple more things to personalize your experience.</p>
       </div>
 
       <div className="space-y-8">
         <div className="animate-in slide-in-from-bottom duration-500 delay-400">
-          <label className="block text-sm font-semibold text-theme-primary mb-4">
-            Target Internships <span className="text-red-500">*</span> <span className="text-theme-secondary font-normal">(Select all that apply)</span>
+          <label className="block text-sm font-semibold text-theme-primary mb-3">
+            How did you hear about us?
           </label>
-          <div className="grid grid-cols-1 gap-3">
-            {options?.default_internships.map((internship, index) => (
-              <CustomSelector
-                key={internship}
-                type="checkbox"
-                id={`internship-${internship}`}
-                label={internship}
-                checked={formData.target_internships.includes(internship)}
-                onChange={() => toggleArrayItem('target_internships', internship)}
-              />
-            ))}
-          </div>
+          <CustomSelect
+            value={formData.source_of_discovery}
+            onChange={(value) => updateFormData('source_of_discovery', value)}
+            placeholder="Select an option"
+            options={[
+              'Social Media (Twitter, LinkedIn, etc.)',
+              'Friend or Colleague',
+              'University or College',
+              'Online Search (Google, etc.)',
+              'Blog or Publication',
+              'Other'
+            ].map(option => ({ value: option, label: option }))}
+          />
         </div>
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-600">
@@ -776,12 +800,11 @@ const OnboardingPage: React.FC = () => {
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Additional Information
           </label>
-          <textarea
+          <TextAreaWithCounter
             value={formData.additional_info}
             onChange={(e) => updateFormData('additional_info', e.target.value)}
             placeholder="Anything else you'd like us to know for your personalized roadmap?"
-            rows={4}
-            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary resize-none"
+            maxLength={300}
           />
         </div>
       </div>
@@ -799,17 +822,6 @@ const OnboardingPage: React.FC = () => {
     }
   };
 
-  if (!options) {
-    return (
-      <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="mt-4 text-theme-secondary animate-pulse transition-colors duration-300">Loading your personalized onboarding...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-theme-primary py-8 px-4 transition-colors duration-300" ref={topOfPageRef}>
       <div className="max-w-4xl mx-auto">
@@ -821,9 +833,8 @@ const OnboardingPage: React.FC = () => {
               <span>Step {currentStep} of {totalSteps}</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-theme-primary mb-4 transition-colors duration-300">
-              Welcome to InternAI!
+              Let's get you set up!
             </h1>
-            <p className="text-xl text-theme-secondary max-w-2xl mx-auto transition-colors duration-300">Let's get you set up with a personalized internship roadmap</p>
           </div>
 
           {/* Progress Bar */}

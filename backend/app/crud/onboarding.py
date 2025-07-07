@@ -26,6 +26,17 @@ async def create_onboarding_data(db: AsyncSession, user_id: uuid.UUID, onboardin
     if not data_dict.get('additional_info') or data_dict.get('additional_info', '').strip() == '':
         data_dict['additional_info'] = "No additional info"
     
+    # Handle empty frameworks and tools
+    if not data_dict.get('frameworks') or len(data_dict.get('frameworks', [])) == 0:
+        data_dict['frameworks'] = []
+    
+    if not data_dict.get('tools') or len(data_dict.get('tools', [])) == 0:
+        data_dict['tools'] = []
+    
+    # Handle empty preferred_tech_stack (now single string)
+    if not data_dict.get('preferred_tech_stack') or data_dict.get('preferred_tech_stack', '').strip() == '':
+        data_dict['preferred_tech_stack'] = "Full-Stack Web Development"
+    
     db_onboarding = OnboardingData(
         user_id=user_id,
         **data_dict

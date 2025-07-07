@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
@@ -8,12 +8,59 @@ import AuthModal from './auth/AuthModal';
 import AnimatedSection from './common/AnimatedSection';
 import FAANGIcons from './FAANGicons';
 
+const floatingIcons = [
+  {
+    darkSrc: '/icons/appleWhite.svg',
+    lightSrc: '/icons/appleBlack.svg',
+    size: 40,
+    x: '10%',
+    y: '20%',
+  },
+  {
+    darkSrc: '/icons/openaiWhite.svg',
+    lightSrc: '/icons/openaiBlack.svg',
+    size: 40,
+    x: '80%',
+    y: '20%',
+  },
+  {
+    darkSrc: '/icons/metaOriginal.svg',
+    lightSrc: '/icons/metaOriginal.svg',
+    size: 40,
+    x: '14%',
+    y: '70%',
+  },
+  {
+    darkSrc: '/icons/googleOriginal.svg',
+    lightSrc: '/icons/googleOriginal.svg',
+    size: 40,
+    x: '60%',
+    y: '45%',
+  },
+  {
+    darkSrc: '/icons/nvidiaOriginal.svg',
+    lightSrc: '/icons/nvidiaOriginal.svg',
+    size: 40,
+    x: '90%',
+    y: '60%',
+  },
+];
+
 const HeroSection = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+
+  const animationProps = useMemo(() => {
+    return floatingIcons.map(() => ({
+      duration: 15 + Math.random() * 10,
+      x: [0, (Math.random() - 0.5) * 200, 0],
+      y: [0, (Math.random() - 0.5) * 200, 0],
+      rotate: [0, Math.random() * 360, 0],
+    }));
+  }, []);
 
   const handleGetRoadmap = () => {
     if (isAuthenticated) {
@@ -37,6 +84,43 @@ const HeroSection = () => {
   return (
     <>
       <section className="relative min-h-screen flex items-center bg-theme-primary transition-colors duration-300 overflow-hidden">
+        {/* Floating Background Icons */}
+        <div className="absolute inset-0 z-0">
+          {floatingIcons.map((icon, index) => {
+            const props = animationProps[index];
+            return (
+              <motion.div
+                key={index}
+                className="absolute"
+                style={{
+                  top: icon.y,
+                  left: icon.x,
+                  width: icon.size,
+                  height: icon.size,
+                }}
+                animate={{
+                  x: props.x,
+                  y: props.y,
+                  rotate: props.rotate,
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: props.duration,
+                  repeat: Infinity,
+                  repeatType: 'mirror',
+                  ease: 'easeInOut',
+                }}
+              >
+                <img
+                  src={theme === 'dark' ? icon.darkSrc : icon.lightSrc}
+                  alt=""
+                  className="w-full h-full opacity-50"
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+
         {/* Animated background gradient */}
         <motion.div
           className="absolute inset-0 opacity-30"
@@ -71,9 +155,31 @@ const HeroSection = () => {
                 >
                   Ready to Crack Your{' '}
                 </motion.span>
-
-                <FAANGIcons />
-
+                {/* <FAANGIcons /> */}
+                <motion.span 
+                  className="inline-block"
+                  initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  transition={{ 
+                    duration: 0.3, 
+                    delay: 0.1,
+                    type: "spring",
+                    stiffness: 200
+                  }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    rotate: 2,
+                    transition: { type: "spring", stiffness: 300 }
+                  }}
+                >
+                  <span className={`${
+                    theme === 'dark'
+                      ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-pulse'
+                      : 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent animate-pulse'
+                  }`}>
+                    MANGO
+                  </span>
+                </motion.span>
                 <motion.span
                   className={`${
                     theme === 'dark' 
@@ -88,10 +194,9 @@ const HeroSection = () => {
                 </motion.span>
               </h1>
             </AnimatedSection>
-            
-            <AnimatedSection animation="fade-in-up" delay={2}>
-              <p className="text-lg md:text-xl text-theme-secondary mb-8 max-w-3xl mx-auto transition-colors duration-300">
-                Get a personalized roadmap to prepare for internships at Meta, Amazon, Apple, Netflix, and Google — curated for your background, skills & timeline.
+            <AnimatedSection animation="fade-in-up" delay={1.5}>
+              <p className="text-lg md:text-xl text-theme-secondary mb-6 max-w-3xl mx-auto transition-colors duration-300">
+                Get a personalized roadmap to prepare for internships at <span className="inline-flex items-center align-middle translate-y-[-2px]"><FAANGIcons /></span> — curated for your background, skills & timeline.
               </p>
             </AnimatedSection>
 
@@ -118,7 +223,7 @@ const HeroSection = () => {
                     },
                   }}
                 >
-                  <span className="relative z-10">Get My FAANG Roadmap</span>
+                  <span className="relative z-10">Get My MANGO Roadmap</span>
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-all duration-200 relative z-10" />
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600"
@@ -186,7 +291,7 @@ const HeroSection = () => {
                   <p className={`text-sm mt-1 drop-shadow-md ${
                     theme === 'dark' ? 'text-white/90' : 'text-gray-700'
                   }`}>
-                   No guesswork. Just your perfect path to a FAANG internship
+                   No guesswork. Just your perfect path to a MANGO internship.
                   </p>
                 </motion.div>
                 

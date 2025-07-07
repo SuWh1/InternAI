@@ -71,7 +71,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
 
   // Always use 6 as total for subtopic system, original task count for task system
   const hasSubtopics = completed_tasks.some(taskId => taskId.startsWith('subtopic-'));
-  const totalItems = 6; // Always show 6 total items for all weeks
+  const totalItems = 7; // Always show 6 total items for all weeks
   const completedItems = hasSubtopics 
     ? completed_tasks.filter(taskId => taskId.startsWith('subtopic-')).length
     : completed_tasks.filter(taskId => taskId.startsWith('task-')).length;
@@ -297,6 +297,7 @@ const WeekNode: React.FC<WeekNodeProps> = ({ data }) => {
               {is_locked ? 'Complete the previous week to unlock' : focus_area}
             </p>
           </div>
+
         </div>
 
         {/* Progress bar */}

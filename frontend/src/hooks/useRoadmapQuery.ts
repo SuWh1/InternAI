@@ -18,7 +18,7 @@ interface UseRoadmapQueryReturn {
   canRunPipeline: boolean;
   pipelineStatus: any;
   generateRoadmap: (request?: AgentPipelineRequest) => Promise<void>;
-  updateProgress: (weekNumber: number, taskId: string, completed: boolean) => Promise<void>;
+  updateProgress: (weekNumber: number, taskId: string, completed: boolean, totalSubtopics?: number) => Promise<void>;
   refreshStatus: () => Promise<void>;
   refreshRoadmapData: () => Promise<void>;
   clearError: () => void;
@@ -75,7 +75,7 @@ export const useRoadmapQuery = (): UseRoadmapQueryReturn => {
         const initialProgress: RoadmapProgress[] = data.data.roadmap.weeks.map(week => ({
           week_number: week.week_number,
           completed_tasks: [],
-          total_tasks: week.tasks.length,
+          total_tasks: week.tasks.length, // Reverted: Use actual tasks length from roadmap
           completion_percentage: 0,
           last_updated: new Date().toISOString()
         }));
@@ -114,7 +114,7 @@ export const useRoadmapQuery = (): UseRoadmapQueryReturn => {
     await generateRoadmapMutation.mutateAsync(request);
   }, [generateRoadmapMutation, pipelineStatusData?.can_run_pipeline]);
 
-  const updateProgress = useCallback(async (weekNumber: number, taskId: string, completed: boolean) => {
+  const updateProgress = useCallback(async (weekNumber: number, taskId: string, completed: boolean, totalSubtopics?: number) => {
     const currentData = queryClient.getQueryData<{ roadmap: Roadmap; progress: RoadmapProgress[] }>(QUERY_KEYS.ROADMAP);
     if (!currentData) return;
 
@@ -133,7 +133,7 @@ export const useRoadmapQuery = (): UseRoadmapQueryReturn => {
         
         // Determine if we're using subtopics or tasks
         const hasSubtopics = completedTasksArray.some(id => id.startsWith('subtopic-'));
-        const totalItems = hasSubtopics ? 6 : weekProgress.total_tasks;
+        const totalItems = hasSubtopics && totalSubtopics ? totalSubtopics : weekProgress.total_tasks;
         
         // Only count relevant items for completion percentage
         const relevantCompletedItems = hasSubtopics 

@@ -1,22 +1,22 @@
 import { motion } from "framer-motion";
 
 const icons = [
-  { src: "/icons8-meta.svg", alt: "Meta" },
-  { src: "/icons8-amazon.svg", alt: "Amazon" },
-  { src: "/icons8-apple.svg", alt: "Apple" },
-  { src: "/icons8-netflix.svg", alt: "Netflix" },
-  { src: "/icons8-google.svg", alt: "Google" },
+  { src: "/purpleIcons/icons8-meta.svg", alt: "Meta" },
+  { src: "/purpleIcons/icons8-apple.svg", alt: "Amazon" },
+  { src: "/purpleIcons/icons8-nvidia.svg", alt: "Apple" },
+  { src: "/purpleIcons/icons8-google.svg", alt: "Netflix" },
+  { src: "/purpleIcons/icons8-openai.svg", alt: "Google" },
 ];
 
 export default function FAANGIcons() {
   return (
-    <span className="inline-flex items-center -space-x-2 px-2">
+    <span className="inline-flex items-center space-x-1 px-1">
       {icons.map((icon, idx) => (
         <motion.img
           key={icon.alt}
           src={icon.src}
           alt={icon.alt}
-          className="w-11 h-11 md:w-16 md:h-16"
+          className="w-4 h-4 md:w-6 md:h-6 inline-block align-bottom"
           initial={{ opacity: 0, y: 10, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{

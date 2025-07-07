@@ -19,8 +19,9 @@ class OnboardingData(Base):
     
     # Technical Background
     programming_languages = Column(JSON, nullable=False, default=list)  # List of languages
-    frameworks_tools = Column(JSON, nullable=False, default=list)  # List of frameworks/tools
-    preferred_tech_stack = Column(JSON, nullable=False, default=list)  # List of preferred technologies
+    frameworks = Column(JSON, nullable=False, default=list)  # List of frameworks
+    tools = Column(JSON, nullable=False, default=list)  # List of tools
+    preferred_tech_stack = Column(String, nullable=False)  # Single preferred technology stack
     experience_level = Column(String, nullable=False)  # Beginner, Intermediate, Advanced
     skill_confidence = Column(String, nullable=False)  # How confident they feel about their skills
     
@@ -34,14 +35,12 @@ class OnboardingData(Base):
     preferred_company_types = Column(JSON, nullable=False, default=list)  # Startup, Big Tech, etc.
     preferred_locations = Column(JSON, nullable=False, default=list)  # List of preferred locations
     
-    # Target Internships
-    target_internships = Column(JSON, nullable=False, default=list)  # List of selected internships
-    
     # Timeline
     application_timeline = Column(String, nullable=False)  # This Summer, Next Summer, etc.
     
     # Additional Info
     additional_info = Column(Text, nullable=True)  # Any additional information
+    source_of_discovery = Column(String, nullable=True) # How the user found the platform
     
     # Relationship to user
     user = relationship("User", back_populates="onboarding_data") 

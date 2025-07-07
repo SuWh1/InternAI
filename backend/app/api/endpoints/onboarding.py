@@ -17,7 +17,6 @@ from app.schemas.onboarding import (
     COMPANY_TYPE_OPTIONS,
     TARGET_ROLE_OPTIONS,
     TIMELINE_OPTIONS,
-    DEFAULT_INTERNSHIPS
 )
 from app.schemas.common import GenericResponse
 from app.crud.onboarding import (
@@ -139,5 +138,4 @@ async def get_onboarding_options(request: Request) -> Any:
         "company_type_options": COMPANY_TYPE_OPTIONS,
         "target_role_options": TARGET_ROLE_OPTIONS,
         "timeline_options": TIMELINE_OPTIONS,
-        "default_internships": DEFAULT_INTERNSHIPS
     } 

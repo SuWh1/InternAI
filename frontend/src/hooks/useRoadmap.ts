@@ -16,7 +16,7 @@ interface UseRoadmapReturn {
   canRunPipeline: boolean;
   pipelineStatus: any;
   generateRoadmap: (request?: AgentPipelineRequest) => Promise<void>;
-  updateProgress: (weekNumber: number, taskId: string, completed: boolean) => Promise<void>;
+  updateProgress: (weekNumber: number, taskId: string, completed: boolean, totalSubtopics?: number) => Promise<void>;
   refreshStatus: () => Promise<void>;
   refreshRoadmapData: () => Promise<void>;
   clearError: () => void;
@@ -142,7 +142,7 @@ export const useRoadmap = (): UseRoadmapReturn => {
     }
   }, [canRunPipeline]);
 
-  const updateProgress = useCallback(async (weekNumber: number, taskId: string, completed: boolean) => {
+  const updateProgress = useCallback(async (weekNumber: number, taskId: string, completed: boolean, totalSubtopics?: number) => {
     const newProgress = progress.map(weekProgress => {
         if (weekProgress.week_number === weekNumber) {
           const completedTasks = new Set(weekProgress.completed_tasks);
@@ -157,7 +157,7 @@ export const useRoadmap = (): UseRoadmapReturn => {
           
           // Determine if we're using subtopics or tasks
           const hasSubtopics = completedTasksArray.some(id => id.startsWith('subtopic-'));
-          const totalItems = hasSubtopics ? 6 : weekProgress.total_tasks; // 6 subtopics or original task count
+          const totalItems = hasSubtopics && totalSubtopics ? totalSubtopics : weekProgress.total_tasks;
           
           // Only count relevant items for completion percentage
           const relevantCompletedItems = hasSubtopics 

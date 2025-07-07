@@ -10,8 +10,9 @@ export interface OnboardingData {
   
   // Technical Background
   programming_languages: string[];
-  frameworks_tools: string[];
-  preferred_tech_stack: string[];
+  frameworks: string[];
+  tools: string[];
+  preferred_tech_stack: string;
   experience_level: string;
   skill_confidence: string;
   
@@ -25,14 +26,12 @@ export interface OnboardingData {
   preferred_company_types: string[];
   preferred_locations: string[];
   
-  // Target Internships
-  target_internships: string[];
-  
   // Timeline
   application_timeline: string;
   
   // Additional Info
   additional_info?: string;
+  source_of_discovery?: string;
 }
 
 export interface OnboardingCreate {
@@ -42,8 +41,9 @@ export interface OnboardingCreate {
   
   // Technical Background
   programming_languages: string[];
-  frameworks_tools: string[];
-  preferred_tech_stack: string[];
+  frameworks: string[];
+  tools: string[];
+  preferred_tech_stack: string;
   experience_level: string;
   skill_confidence: string;
   
@@ -57,22 +57,21 @@ export interface OnboardingCreate {
   preferred_company_types: string[];
   preferred_locations: string[];
   
-  // Target Internships
-  target_internships: string[];
-  
   // Timeline
   application_timeline: string;
   
   // Additional Info
   additional_info?: string;
+  source_of_discovery?: string;
 }
 
 export interface OnboardingUpdate {
   current_year?: string;
   major?: string;
   programming_languages?: string[];
-  frameworks_tools?: string[];
-  preferred_tech_stack?: string[];
+  frameworks?: string[];
+  tools?: string[];
+  preferred_tech_stack?: string;
   experience_level?: string;
   skill_confidence?: string;
   has_internship_experience?: boolean;
@@ -81,9 +80,9 @@ export interface OnboardingUpdate {
   target_roles?: string[];
   preferred_company_types?: string[];
   preferred_locations?: string[];
-  target_internships?: string[];
   application_timeline?: string;
   additional_info?: string;
+  source_of_discovery?: string;
 }
 
 export interface OnboardingStatus {
@@ -99,7 +98,6 @@ export interface OnboardingOptions {
   company_type_options: string[];
   target_role_options: string[];
   timeline_options: string[];
-  default_internships: string[];
 }
 
 // Form data interface for step-by-step onboarding
@@ -110,8 +108,9 @@ export interface OnboardingFormData {
   
   // Step 2: Technical Background
   programming_languages: string[];
-  frameworks_tools: string[];
-  preferred_tech_stack: string[];
+  frameworks: string[];
+  tools: string[];
+  preferred_tech_stack: string;
   experience_level: string;
   skill_confidence: string;
   
@@ -126,7 +125,7 @@ export interface OnboardingFormData {
   preferred_locations: string[];
   
   // Step 5: Target Internships & Timeline
-  target_internships: string[];
   application_timeline: string;
   additional_info: string;
+  source_of_discovery: string;
 } 

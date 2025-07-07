@@ -174,13 +174,17 @@ class RoadmapAgent(BaseAgent):
         if prog_langs:
             profile_parts.append(f"Programming Languages: {', '.join(prog_langs)}")
         
-        frameworks = onboarding_data.get('frameworks_tools', [])
+        frameworks = onboarding_data.get('frameworks', [])
         if frameworks:
-            profile_parts.append(f"Frameworks/Tools: {', '.join(frameworks)}")
+            profile_parts.append(f"Frameworks: {', '.join(frameworks)}")
         
-        tech_stack = onboarding_data.get('preferred_tech_stack', [])
+        tools = onboarding_data.get('tools', [])
+        if tools:
+            profile_parts.append(f"Tools: {', '.join(tools)}")
+        
+        tech_stack = onboarding_data.get('preferred_tech_stack', '')
         if tech_stack:
-            profile_parts.append(f"Preferred Tech Stack: {', '.join(tech_stack)}")
+            profile_parts.append(f"Preferred Tech Stack: {tech_stack}")
         
         # Experience
         if onboarding_data.get('has_internship_experience'):
@@ -217,6 +221,10 @@ class RoadmapAgent(BaseAgent):
         # Additional info
         if onboarding_data.get('additional_info'):
             profile_parts.append(f"Additional Info: {onboarding_data['additional_info']}")
+        
+        # Source of discovery
+        if onboarding_data.get('source_of_discovery'):
+            profile_parts.append(f"How they found us: {onboarding_data['source_of_discovery']}")
         
         return "\n".join(profile_parts)
     
@@ -291,46 +299,103 @@ class RoadmapAgent(BaseAgent):
             raise
     
     def _create_roadmap_prompt(self, user_profile: str) -> str:
-        """Create detailed prompt for Gemini roadmap generation using best practices."""
+        """Create detailed prompt for Gemini roadmap generation focused on MANGO companies with structured phases."""
         
-        return f"""You are an expert career coach specializing in tech internship preparation. Create a personalized 12-week internship preparation roadmap.
+        return f"""You are an expert career coach specializing in MANGO (Meta, Apple, Nvidia, Google, OpenAI) internship preparation. Create a personalized 12-week roadmap with a structured 4-phase approach.
 
 STUDENT PROFILE:
 {user_profile}
 
-TASK: Generate a comprehensive 12-week roadmap tailored to this student's background and goals.
+MANDATORY ROADMAP STRUCTURE:
+The roadmap MUST follow this exact 4-phase structure based on the user's preferred tech stack:
 
-BEST PRACTICES:
-- Focus on practical, job-relevant skills over theory
-- Build from foundational to advanced concepts progressively
-- Include real-world projects that can be showcased in interviews
-- Emphasize skills that top tech companies actually look for
-- Make tasks specific and actionable, not generic advice
+**PHASE 1: Tech Stack Mastery (Weeks 1-4)**
+- Deep dive into the user's preferred tech stack fundamentals
+- Build strong foundation in their chosen technology
+- Focus on core concepts, best practices, and practical implementation
+- Each week should progressively build expertise in their tech stack
+
+**PHASE 2: Algorithms & Data Structures (Weeks 5-9)** 
+- LeetCode practice and algorithmic thinking
+- Data structures implementation and optimization
+- Problem-solving patterns relevant to MANGO companies
+- Connect algorithms to real-world applications in their tech stack
+- Progress from easy to hard problems systematically
+
+**PHASE 3: Portfolio Projects (Weeks 10-11)**
+- Build 1-2 substantial projects showcasing their tech stack skills
+- Projects should be MANGO-interview worthy and demonstrate technical depth
+- Focus on scalability, clean code, and industry best practices
+- Projects should align with their target roles and tech stack
+
+**PHASE 4: Interview Preparation (Week 12)**
+- Technical interview practice specific to their tech stack
+- System design concepts relevant to their preferred technology
+- Behavioral interview prep with MANGO company values
+- Mock interviews and final preparation
+
+MANGO COMPANY FOCUS:
+- Meta (Facebook): System design, React/frontend, backend scalability, social media algorithms
+- Apple: iOS/macOS development, Swift, design principles, hardware-software integration
+- Nvidia: GPU computing, CUDA, machine learning, computer graphics, parallel programming
+- Google: Algorithms, data structures, distributed systems, Android development, cloud technologies
+- OpenAI: Machine learning, natural language processing, AI research, Python, deep learning frameworks
 
 REQUIREMENTS:
-- Exactly 12 weeks of content
-- 3-5 specific tasks per week
-- Realistic time estimates (8-25 hours/week based on urgency)
-- Include concrete deliverables students can showcase
-- Provide high-quality learning resources
-- Tailor difficulty to student's experience level
+- Exactly 12 weeks following the phase structure above
+- 3-5 specific tasks per week tailored to the current phase and user's tech stack
+- Realistic time estimates (12-25 hours/week based on phase intensity)
+- Include concrete deliverables that showcase MANGO-relevant skills
+- Provide high-quality learning resources (prefer official docs, top-tier courses)
+- Ensure each phase fully covers its focus area while building on previous phases
+- Tailor all content to the user's preferred tech stack throughout all phases
 
 OUTPUT FORMAT: Return valid JSON only, structured as:
 {{
     "weeks": [
         {{
             "week_number": 1,
-            "theme": "Descriptive week theme",
-            "focus_area": "main_skill_keyword", 
+            "theme": "Tech Stack Foundation - [Specific theme for user's stack]",
+            "focus_area": "tech_stack_fundamentals", 
             "tasks": ["specific actionable task 1", "specific actionable task 2", ...],
             "estimated_hours": 15,
             "deliverables": ["concrete deliverable 1", "concrete deliverable 2"],
             "resources": ["high-quality resource 1", "high-quality resource 2", ...]
+        }},
+        ...
+        {{
+            "week_number": 5,
+            "theme": "Algorithmic Thinking - [Connect to user's tech stack]",
+            "focus_area": "algorithms_data_structures",
+            "tasks": ["LeetCode practice task 1", "DSA implementation task 2", ...],
+            "estimated_hours": 18,
+            "deliverables": ["algorithm implementations", "problem solutions"],
+            "resources": ["LeetCode premium", "algorithm courses", ...]
+        }},
+        ...
+        {{
+            "week_number": 10,
+            "theme": "Portfolio Project Development - [Tech stack specific]",
+            "focus_area": "portfolio_projects",
+            "tasks": ["project planning", "core feature implementation", ...],
+            "estimated_hours": 22,
+            "deliverables": ["project milestone", "code repository"],
+            "resources": ["project tutorials", "deployment guides", ...]
+        }},
+        ...
+        {{
+            "week_number": 12,
+            "theme": "Interview Mastery - [Tech stack + MANGO prep]",
+            "focus_area": "interview_preparation",
+            "tasks": ["mock interviews", "system design practice", ...],
+            "estimated_hours": 20,
+            "deliverables": ["interview readiness", "final portfolio"],
+            "resources": ["interview prep platforms", "system design courses", ...]
         }}
     ]
 }}
 
-Create a roadmap that would genuinely help this student land their target internship."""
+Create a roadmap that systematically builds from tech stack mastery to MANGO interview readiness. Every week should be deeply connected to the user's preferred technology while progressing through the structured phases."""
     
     def _extract_json_from_response(self, content: str) -> Dict[str, Any]:
         """Extract JSON from Gemini response if parsing fails."""
@@ -367,7 +432,7 @@ Create a roadmap that would genuinely help this student land their target intern
         target_roles = onboarding_data.get("target_roles", [])
         target_internships = onboarding_data.get("target_internships", [])
         programming_languages = onboarding_data.get("programming_languages", [])
-        preferred_tech_stack = onboarding_data.get("preferred_tech_stack", [])
+        preferred_tech_stack = onboarding_data.get("preferred_tech_stack", "")
         
         # Determine focus areas (simplified)
         focus_areas = []

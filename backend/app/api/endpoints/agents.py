@@ -77,7 +77,8 @@ async def run_agent_pipeline(
             "current_year": onboarding_data.current_year,
             "major": onboarding_data.major,
             "programming_languages": onboarding_data.programming_languages,
-            "frameworks_tools": onboarding_data.frameworks_tools,
+            "frameworks": onboarding_data.frameworks,
+            "tools": onboarding_data.tools,
             "preferred_tech_stack": onboarding_data.preferred_tech_stack,
             "experience_level": onboarding_data.experience_level,
             "skill_confidence": onboarding_data.skill_confidence,
@@ -87,9 +88,9 @@ async def run_agent_pipeline(
             "target_roles": onboarding_data.target_roles,
             "preferred_company_types": onboarding_data.preferred_company_types,
             "preferred_locations": onboarding_data.preferred_locations,
-            "target_internships": onboarding_data.target_internships,
             "application_timeline": onboarding_data.application_timeline,
-            "additional_info": onboarding_data.additional_info
+            "additional_info": onboarding_data.additional_info,
+            "source_of_discovery": onboarding_data.source_of_discovery
         }
         
         # Prepare pipeline input
@@ -198,7 +199,7 @@ async def get_pipeline_status(
             "user_profile_summary": {
                 "experience_level": onboarding_data.experience_level,
                 "target_roles": onboarding_data.target_roles[:3],  # First 3 roles
-                "preferred_tech_stack": onboarding_data.preferred_tech_stack[:3],  # First 3 tech preferences
+                "preferred_tech_stack": onboarding_data.preferred_tech_stack,  # Now a string, not a list
                 "has_internship_experience": onboarding_data.has_internship_experience,
                 "timeline": onboarding_data.application_timeline
             }
@@ -917,6 +918,9 @@ async def generate_subtopics(
                 detail="Topic is required"
             )
         
+        # Get user's onboarding data for personalized suggestions
+        onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
+        
         # Check if subtopics already exist for this topic (unless force regenerate)
         if not force_regenerate:
             existing_content = await get_learning_content(
@@ -937,8 +941,8 @@ async def generate_subtopics(
                     "cached": True
                 }
         
-        # Generate new subtopics using AI
-        subtopics_data = await generate_subtopics_ai(topic, context, user_level)
+        # Generate new subtopics using AI with user profile
+        subtopics_data = await generate_subtopics_ai(topic, context, user_level, onboarding_data)
         
         # Store in database
         learning_content = await upsert_learning_content(
@@ -952,7 +956,8 @@ async def generate_subtopics(
             generation_metadata={
                 "model": "gemini-2.0-flash",
                 "generated_at": datetime.now().isoformat(),
-                "request_context": context
+                "request_context": context,
+                "personalized": True
             }
         )
         
@@ -1028,8 +1033,8 @@ async def get_user_learning_content(
             detail=f"Failed to retrieve learning content: {str(e)}"
         )
 
-async def generate_subtopics_ai(topic: str, context: str, user_level: str) -> Dict[str, Any]:
-    """Generate subtopics using Google Gemini."""
+async def generate_subtopics_ai(topic: str, context: str, user_level: str, onboarding_data: any = None) -> Dict[str, Any]:
+    """Generate subtopics using Google Gemini with personalized AI suggestions."""
     
     try:
         # Check if Gemini API key is configured
@@ -1038,14 +1043,39 @@ async def generate_subtopics_ai(topic: str, context: str, user_level: str) -> Di
             logger.warning("Gemini API key not configured, using fallback subtopics")
             return {
                 "subtopics": [
-                    {"title": f"Introduction to {topic}", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples"},
-                    {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development"},
-                    {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations"},
-                    {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}"},
-                    {"title": f"Common Challenges", "description": f"Learn to troubleshoot and solve typical problems encountered when working with {topic}"},
-                    {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development"}
+                    {"title": f"AI Suggestion: {topic} Fundamentals", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples", "type": "ai_suggestion"},
+                    {"title": f"AI Suggestion: {topic} for MANGO", "description": f"Understand how {topic} is used at Meta, Apple, Nvidia, Google, and OpenAI", "type": "ai_suggestion"},
+                    {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development", "type": "regular"},
+                    {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations", "type": "regular"},
+                    {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}", "type": "regular"},
+                    {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development", "type": "regular"},
+                    {"title": f"Industry Integration", "description": f"Learn how {topic} integrates with other technologies and fits into larger systems", "type": "regular"}
                 ]
             }
+        
+        # Create user profile summary for personalized suggestions
+        user_profile = ""
+        if onboarding_data:
+            profile_parts = []
+            profile_parts.append(f"Experience Level: {onboarding_data.experience_level}")
+            profile_parts.append(f"Major: {onboarding_data.major}")
+            
+            if onboarding_data.programming_languages:
+                profile_parts.append(f"Programming Languages: {', '.join(onboarding_data.programming_languages)}")
+            
+            if onboarding_data.frameworks:
+                profile_parts.append(f"Frameworks: {', '.join(onboarding_data.frameworks)}")
+            
+            if onboarding_data.tools:
+                profile_parts.append(f"Tools: {', '.join(onboarding_data.tools)}")
+            
+            if onboarding_data.preferred_tech_stack:
+                profile_parts.append(f"Preferred Tech Stack: {onboarding_data.preferred_tech_stack}")
+            
+            if onboarding_data.target_roles:
+                profile_parts.append(f"Target Roles: {', '.join(onboarding_data.target_roles)}")
+            
+            user_profile = "\n".join(profile_parts)
         
         # Import Google Generative AI here to avoid import errors if not installed
         from google import genai
@@ -1053,30 +1083,74 @@ async def generate_subtopics_ai(topic: str, context: str, user_level: str) -> Di
         
         client = genai.Client(api_key=gemini_api_key)
         
-        # Create a focused prompt for subtopic generation using best practices
-        prompt = f"""Generate exactly 6 specific, learnable subtopics for "{topic}" tailored for a {user_level} developer.
-        
-        Context: {context}
+        # Create a focused prompt for subtopic generation with AI suggestions
+        prompt = f"""Generate exactly 7 specific, learnable subtopics for "{topic}" tailored for a {user_level} developer preparing for MANGO company internships (Meta, Apple, Nvidia, Google, OpenAI).
 
-Best Practices:
+Topic: {topic}
+Context: {context}
+User Profile:
+{user_profile}
+
+REQUIREMENTS:
+- Generate exactly 7 subtopics
+- First 2 subtopics should be AI SUGGESTIONS based on user's profile gaps and MANGO company requirements
+- Last 5 subtopics should be regular improvement topics for the current subject
 - Order from foundational to advanced concepts
 - Make each subtopic specific and actionable
-- Focus on practical skills over theory
-- Ensure relevance for internship preparation
+- Focus on practical skills for MANGO internship preparation
+
+AI SUGGESTIONS (First 2):
+- Analyze the user's profile and identify skill gaps relevant to MANGO companies
+- Suggest complementary topics that would strengthen their profile
+- Consider what MANGO companies value most for their target roles
+
+REGULAR TOPICS (Last 5):
+- Focus on deepening knowledge of the current topic
+- Build upon each other logically
 - Include hands-on learning opportunities
 
-Return JSON format with short titles and detailed descriptions:
+Return JSON format with titles, descriptions, and type markers:
 {{
   "subtopics": [
     {{
       "title": "Short UI-friendly title (max 4-5 words)",
-      "description": "Detailed description for AI lesson generation explaining what will be covered, specific techniques, tools, etc."
+      "description": "Detailed description explaining what will be covered and why it's important for MANGO prep",
+      "type": "ai_suggestion"
     }},
-    ...
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)", 
+      "description": "Detailed description explaining what will be covered and why it's important for MANGO prep",
+      "type": "ai_suggestion"
+    }},
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)",
+      "description": "Detailed description for current topic improvement",
+      "type": "regular"
+    }},
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)",
+      "description": "Detailed description for current topic improvement", 
+      "type": "regular"
+    }},
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)",
+      "description": "Detailed description for current topic improvement",
+      "type": "regular"
+    }},
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)",
+      "description": "Detailed description for current topic improvement",
+      "type": "regular"
+    }},
+    {{
+      "title": "Short UI-friendly title (max 4-5 words)",
+      "description": "Detailed description for current topic improvement",
+      "type": "regular"
+    }}
   ]
 }}
 
-Create subtopics that build upon each other logically. Short titles should be clean for UI display, while descriptions should provide rich context for AI lesson generation about {topic}."""
+The AI suggestions should address gaps in the user's profile and recommend complementary skills that MANGO companies value."""
         
         response = client.models.generate_content(
             model='gemini-2.0-flash',
@@ -1091,7 +1165,7 @@ Create subtopics that build upon each other logically. Short titles should be cl
         
         # Parse JSON response
         try:
-            # Clean the response (remove any markdown formatting if present)
+            # Clean the response
             cleaned_content = content.strip()
             if cleaned_content.startswith('```json'):
                 cleaned_content = cleaned_content[7:]
@@ -1099,66 +1173,55 @@ Create subtopics that build upon each other logically. Short titles should be cl
                 cleaned_content = cleaned_content[:-3]
             cleaned_content = cleaned_content.strip()
             
-            result = json.loads(cleaned_content)
+            subtopics_data = json.loads(cleaned_content)
             
-            # Validate that we have subtopics with the new structure
-            if "subtopics" in result and isinstance(result["subtopics"], list):
-                # Check if it's the new structured format
-                if result["subtopics"] and isinstance(result["subtopics"][0], dict):
-                    return result
-                else:
-                    # Convert old format to new format
-                    structured_subtopics = []
-                    for subtopic in result["subtopics"]:
-                        if isinstance(subtopic, str):
-                            structured_subtopics.append({
-                                "title": subtopic,
-                                "description": f"Learn about {subtopic} with practical examples and real-world applications"
-                            })
-                    return {"subtopics": structured_subtopics}
-            else:
-                logger.warning("AI response missing subtopics array, using fallback")
-                return {
-                    "subtopics": [
-                        {"title": f"Introduction to {topic}", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples"},
-                        {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development"},
-                        {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations"},
-                        {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}"},
-                        {"title": f"Common Challenges", "description": f"Learn to troubleshoot and solve typical problems encountered when working with {topic}"},
-                        {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development"}
-                    ]
-                }
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON response: {str(e)}")
+            # Validate structure
+            if "subtopics" not in subtopics_data:
+                raise ValueError("Invalid response structure")
+            
+            # Ensure we have exactly 7 subtopics with proper types
+            subtopics = subtopics_data["subtopics"]
+            if len(subtopics) != 7:
+                logger.warning(f"Expected 7 subtopics, got {len(subtopics)}")
+            
+            # Ensure first 2 are marked as AI suggestions
+            for i in range(min(2, len(subtopics))):
+                if subtopics[i].get("type") != "ai_suggestion":
+                    subtopics[i]["type"] = "ai_suggestion"
+            
+            # Ensure last 5 are marked as regular
+            for i in range(2, len(subtopics)):
+                if subtopics[i].get("type") != "regular":
+                    subtopics[i]["type"] = "regular"
+            
+            return {"subtopics": subtopics}
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Error parsing AI response: {str(e)}")
+            # Return fallback with proper structure
             return {
                 "subtopics": [
-                    {"title": f"Introduction to {topic}", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples"},
-                    {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development"},
-                    {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations"},
-                    {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}"},
-                    {"title": f"Common Challenges", "description": f"Learn to troubleshoot and solve typical problems encountered when working with {topic}"},
-                    {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development"}
+                    {"title": f"AI Suggestion: {topic} Fundamentals", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples", "type": "ai_suggestion"},
+                    {"title": f"AI Suggestion: {topic} for MANGO", "description": f"Understand how {topic} is used at Meta, Apple, Nvidia, Google, and OpenAI", "type": "ai_suggestion"},
+                    {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development", "type": "regular"},
+                    {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations", "type": "regular"},
+                    {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}", "type": "regular"},
+                    {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development", "type": "regular"},
+                    {"title": f"Industry Integration", "description": f"Learn how {topic} integrates with other technologies and fits into larger systems", "type": "regular"}
                 ]
             }
-        except Exception as e:
-            logger.error(f"Error processing AI response: {str(e)}")
-            return {
-                "explanation": f"Error generating lesson for {topic}. Please try again.",
-                "resources": [],
-                "subtasks": []
-            }
-            
+        
     except Exception as e:
-        logger.error(f"Error calling Gemini API for subtopics: {str(e)}")
-        # Return fallback subtopics
+        logger.error(f"Error in AI subtopic generation: {str(e)}")
+        # Return fallback with proper structure
         return {
             "subtopics": [
-                {"title": f"Introduction to {topic}", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples"},
-                {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development"},
-                {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations"},
-                {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}"},
-                {"title": f"Common Challenges", "description": f"Learn to troubleshoot and solve typical problems encountered when working with {topic}"},
-                {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development"}
+                {"title": f"AI Suggestion: {topic} Fundamentals", "description": f"Learn the fundamental concepts and principles of {topic} with hands-on examples", "type": "ai_suggestion"},
+                {"title": f"AI Suggestion: {topic} for MANGO", "description": f"Understand how {topic} is used at Meta, Apple, Nvidia, Google, and OpenAI", "type": "ai_suggestion"},
+                {"title": f"Core Concepts", "description": f"Master the essential concepts and building blocks of {topic} development", "type": "regular"},
+                {"title": f"Practical Applications", "description": f"Apply {topic} skills through real-world projects and practical implementations", "type": "regular"},
+                {"title": f"Best Practices", "description": f"Understand industry standards, coding conventions, and optimization techniques for {topic}", "type": "regular"},
+                {"title": f"Advanced Techniques", "description": f"Explore advanced patterns, performance optimization, and professional-level {topic} development", "type": "regular"},
+                {"title": f"Industry Integration", "description": f"Learn how {topic} integrates with other technologies and fits into larger systems", "type": "regular"}
             ]
         } 

@@ -12,35 +12,35 @@ const floatingIcons = [
   {
     darkSrc: '/icons/appleWhite.svg',
     lightSrc: '/icons/appleBlack.svg',
-    size: 40,
+    className: 'w-8 h-8 sm:w-10 sm:h-10',
     x: '10%',
     y: '20%',
   },
   {
     darkSrc: '/icons/openaiWhite.svg',
     lightSrc: '/icons/openaiBlack.svg',
-    size: 40,
+    className: 'w-8 h-8 sm:w-10 sm:h-10',
     x: '80%',
     y: '20%',
   },
   {
     darkSrc: '/icons/metaOriginal.svg',
     lightSrc: '/icons/metaOriginal.svg',
-    size: 40,
+    className: 'w-8 h-8 sm:w-10 sm:h-10',
     x: '14%',
     y: '70%',
   },
   {
     darkSrc: '/icons/googleOriginal.svg',
     lightSrc: '/icons/googleOriginal.svg',
-    size: 40,
+    className: 'w-8 h-8 sm:w-10 sm:h-10',
     x: '60%',
     y: '45%',
   },
   {
     darkSrc: '/icons/nvidiaOriginal.svg',
     lightSrc: '/icons/nvidiaOriginal.svg',
-    size: 40,
+    className: 'w-8 h-8 sm:w-10 sm:h-10',
     x: '90%',
     y: '60%',
   },
@@ -91,12 +91,10 @@ const HeroSection = () => {
             return (
               <motion.div
                 key={index}
-                className="absolute"
+                className={`absolute ${icon.className}`}
                 style={{
                   top: icon.y,
                   left: icon.x,
-                  width: icon.size,
-                  height: icon.size,
                 }}
                 animate={{
                   x: props.x,
@@ -172,13 +170,7 @@ const HeroSection = () => {
                     transition: { type: "spring", stiffness: 300 }
                   }}
                 >
-                  <span className={`${
-                    theme === 'dark'
-                      ? 'bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-pulse'
-                      : 'bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent animate-pulse'
-                  }`}>
-                    MANGO
-                  </span>
+                  <span className="text-[#C700FF] animate-pulse">MANGO</span>
                 </motion.span>
                 <motion.span
                   className={`${

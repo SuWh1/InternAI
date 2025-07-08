@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -25,9 +25,8 @@ import {
 } from 'lucide-react';
 import agentService from '../services/agentService';
 import { createLessonSlug, parseLessonSlug } from '../utils/slugify';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
 import MarkdownRenderer from '../components/common/MarkdownRenderer';
+import TextAreaWithCounter from '../components/common/TextAreaWithCounter';
 import { useTheme } from '../contexts/ThemeContext';
 import type { GPTTopicResponse } from '../types/roadmap';
 
@@ -401,7 +400,8 @@ const LessonPage: React.FC = () => {
 
   const loadLessonContent = async (isRetry = false) => {
     const startTime = Date.now();
-    const minimumLoadingTime = 2000; // 2 seconds
+    const minimumLoadingTime = 2000; // 2 seconds (only for freshly generated lessons)
+    let isCachedResponse = false;
     
     setError(null);
     setRenderingError(null);
@@ -415,6 +415,13 @@ const LessonPage: React.FC = () => {
       });
       
       setLesson(details);
+      isCachedResponse = details.cached;
+
+      // If the lesson came from cache (already generated), stop loading immediately
+      if (isCachedResponse && !isRetry) {
+        setLoading(false);
+      }
+      
       setRetryCount(0); // Reset retry count on success
       
       // Calculate estimated reading time (assuming 200 words per minute)
@@ -453,13 +460,14 @@ const LessonPage: React.FC = () => {
         setError('Failed to load lesson content. Please check your connection and try again.');
       }
     } finally {
-      // Ensure minimum loading time has passed
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
-      
-      setTimeout(() => {
-      setLoading(false);
-      }, remainingTime);
+      // If loading is already turned off (cached case) do nothing
+      if (!isCachedResponse || isRetry) {
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
+        setTimeout(() => {
+          setLoading(false);
+        }, remainingTime);
+      }
     }
   };
 
@@ -481,16 +489,9 @@ const LessonPage: React.FC = () => {
     setRenderingError(error.message);
   };
 
-  // Check if lesson content contains error messages
-  const isErrorContent = (content: string): boolean => {
-    const errorPatterns = [
-      /Error parsing lesson content/i,
-      /Error generating lesson/i, 
-      /Please try again/i,
-      /Failed to generate/i,
-      /Content generation failed/i
-    ];
-    return errorPatterns.some(pattern => pattern.test(content));
+  // Check if lesson response indicates an error (using response structure, not content text)
+  const hasLessonError = (lesson: GPTTopicResponse | null): boolean => {
+    return !lesson || !lesson.success;
   };
 
   const handleShare = async () => {
@@ -511,8 +512,8 @@ const LessonPage: React.FC = () => {
     }
   };
 
-  // Chat handlers
-  const handleSendMessage = async () => {
+  // Chat handlers - optimized with useCallback
+  const handleSendMessage = useCallback(async () => {
     if (!chatInput.trim() || isSendingMessage) return;
     
     const userMessage = {
@@ -526,36 +527,69 @@ const LessonPage: React.FC = () => {
     setChatInput('');
     setIsSendingMessage(true);
     
-    // TODO: Implement AI response logic here
-    // For now, add a placeholder response
-    const funnyResponses = [
-      "🤖 Beep boop! My AI brain is still downloading updates... Chat feature coming soon! 🚀",
-      "🧠 *AI neurons firing* Almost ready to help you ace this lesson! Stay tuned! ⚡",
-      "🎯 Currently teaching myself how to be even more helpful... Chat magic incoming! ✨",
-      "🔮 The AI oracle sees... a fully functional chat assistant in your near future! 🌟",
-      "🚧 Under construction! Building the perfect study buddy for you... 🛠️",
-      "🎮 Loading AI awesomeness... 99% complete! Chat feature unlocking soon! 🔓"
-    ];
-    
-    setTimeout(() => {
-      const randomResponse = funnyResponses[Math.floor(Math.random() * funnyResponses.length)];
-      const aiResponse = {
+    try {
+      // Extract lesson content summary (first 500 chars of explanation)
+      const lessonSummary = lesson?.explanation 
+        ? (typeof lesson.explanation === 'string' 
+          ? lesson.explanation.substring(0, 500) 
+          : JSON.stringify(lesson.explanation).substring(0, 500))
+        : '';
+      
+      // Call the AI chat API
+      const response = await agentService.lessonChat({
+        message: userMessage.content,
+        topic: topic,
+        context: context,
+        chat_history: chatMessages.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp
+        })),
+        lesson_content: lessonSummary
+      });
+      
+      if (response.success) {
+        const aiResponse = {
+          id: Date.now() + 1,
+          type: 'ai' as const,
+          content: response.response,
+          timestamp: new Date() // Use local time instead of server timestamp for consistency
+        };
+        setChatMessages(prev => [...prev, aiResponse]);
+      } else {
+        // Show error message
+        const errorResponse = {
+          id: Date.now() + 1,
+          type: 'ai' as const,
+          content: "I apologize, but I'm having trouble processing your request. Please try again in a moment.",
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, errorResponse]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      // Show fallback error message
+      const errorResponse = {
         id: Date.now() + 1,
         type: 'ai' as const,
-        content: randomResponse,
+        content: "I'm sorry, I couldn't connect to the AI service. Please check your connection and try again.",
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, aiResponse]);
+      setChatMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsSendingMessage(false);
-    }, 1500);
-  };
+    }
+  }, [chatInput, isSendingMessage, lesson, topic, context, chatMessages]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
+
+  const handleChatInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setChatInput(e.target.value);
+  }, []);
 
   // Auto-scroll chat to bottom when new messages arrive
   useEffect(() => {
@@ -964,13 +998,7 @@ const LessonPage: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
-      {/* Reading Progress Bar */}
-      <div className="fixed top-16 left-0 right-0 z-30 h-1 bg-theme-hover">
-        <div 
-          className="h-full bg-theme-accent transition-all duration-300 ease-out"
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
+      {/* Reading Progress Bar removed */}
 
       {/* Header */}
       <motion.div 
@@ -1083,7 +1111,7 @@ const LessonPage: React.FC = () => {
                   </div>
                 )}
                 
-                {renderingError || (lesson?.explanation && isErrorContent(typeof lesson.explanation === 'string' ? lesson.explanation : JSON.stringify(lesson.explanation))) ? (
+                {renderingError || hasLessonError(lesson) ? (
                   <div className="text-center py-12">
                                           <div className="relative mb-8">
                         <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
@@ -1329,7 +1357,7 @@ const LessonPage: React.FC = () => {
             )}
           </motion.div>
 
-                    {/* Sidebar */}
+          {/* Sidebar - Sticky positioned */}
           <motion.div 
             className="space-y-6 overflow-hidden"
             initial="hidden"
@@ -1472,19 +1500,21 @@ const LessonPage: React.FC = () => {
                     {/* Input Area - Enhanced */}
                     <div className="p-5 border-t border-theme bg-theme-hover/10">
                       <div className="flex gap-3">
-                        <textarea
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={handleKeyPress}
-                          placeholder="Ask me anything about this lesson, concepts, or practice tasks..."
-                          className="flex-1 resize-none rounded-xl border border-theme bg-theme-hover px-4 py-3 text-sm text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 shadow-sm chat-input"
-                          rows={2}
-                          disabled={isSendingMessage}
-                        />
+                        <div className="flex-1">
+                          <TextAreaWithCounter
+                            value={chatInput}
+                            onChange={handleChatInputChange}
+                            onKeyDown={handleKeyPress}
+                            placeholder="Ask me anything about this lesson, concepts, or practice tasks..."
+                            maxLength={300}
+                            rows={2}
+                            disabled={isSendingMessage}
+                          />
+                        </div>
                         <motion.button
                           onClick={handleSendMessage}
                           disabled={!chatInput.trim() || isSendingMessage}
-                          className="px-4 py-3 bg-theme-accent text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center shadow-lg"
+                          className="px-4 py-3 bg-theme-accent text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center shadow-lg self-end"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                         >

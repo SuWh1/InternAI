@@ -11,6 +11,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { isWeekUnlocked, validateWeekNavigation } from '../utils/weekProgress';
 import type { WeekData } from '../types/roadmap';
 
+// Simple in-memory cache: weekNumber -> subtopics array
+const subtopicCache: Map<number, Array<{ title: string; description: string; type?: string } | string>> = new Map();
+
 const WeekDetailPage: React.FC = () => {
   const { weekNumber } = useParams<{ weekNumber: string }>();
   const navigate = useNavigate();
@@ -130,6 +133,14 @@ const WeekDetailPage: React.FC = () => {
     setWeek(weekData);
     
     // Load progress from hook
+
+    // Try to read subtopics from cache first
+    const cached = subtopicCache.get(weekNum);
+    if (cached && cached.length > 0) {
+      setSubtopics(cached);
+    }
+
+    // Load progress from hook
     const weekProgress = progress.find(p => p.week_number === weekNum);
     if (weekProgress) {
       // Convert subtopic IDs to indices for backward compatibility
@@ -141,7 +152,7 @@ const WeekDetailPage: React.FC = () => {
     
     // Generate subtopics if they don't exist OR if force generation is requested (for new week navigation)
     // OR if we're loading a different week than what we currently have data for
-    const needsGeneration = subtopics.length === 0 || forceGeneration || (week && week.week_number !== weekNum);
+    const needsGeneration = (subtopicCache.get(weekNum)?.length ?? 0) === 0 || forceGeneration || (week && week.week_number !== weekNum);
     
     if (needsGeneration) {
       setForceGeneration(false); // Reset the flag
@@ -172,6 +183,8 @@ const WeekDetailPage: React.FC = () => {
       
       if (response.success && response.subtopics && response.subtopics.length > 0) {
         setSubtopics(response.subtopics);
+        // cache them
+        subtopicCache.set(weekNum, response.subtopics);
         
         // If we were showing generating state and got cached content, hide it immediately
         if (response.cached) {
@@ -188,6 +201,15 @@ const WeekDetailPage: React.FC = () => {
           { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` },
           { title: `Review and Assess`, description: `Review the week's topics and assess your understanding through a small quiz or project.` }
         ]);
+        subtopicCache.set(weekNum, [
+          { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
+          { title: `Core Concepts`, description: `Master the essential concepts and building blocks of ${theme} development` },
+          { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
+          { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
+          { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
+          { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` },
+          { title: `Review and Assess`, description: `Review the week's topics and assess your understanding through a small quiz or project.` }
+        ]);
       }
     } catch (error) {
       // Clear the loading timeout in case of error
@@ -196,6 +218,15 @@ const WeekDetailPage: React.FC = () => {
       console.error('Error generating subtopics:', error);
       // Fallback subtopics
       setSubtopics([
+        { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
+        { title: `Core Concepts`, description: `Master the essential concepts and building blocks of ${theme} development` },
+        { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
+        { title: `Best Practices`, description: `Understand industry standards, coding conventions, and optimization techniques for ${theme}` },
+        { title: `Common Challenges`, description: `Learn to troubleshoot and solve typical problems encountered when working with ${theme}` },
+        { title: `Advanced Techniques`, description: `Explore advanced patterns, performance optimization, and professional-level ${theme} development` },
+        { title: `Review and Assess`, description: `Review the week's topics and assess your understanding through a small quiz or project.` }
+      ]);
+      subtopicCache.set(weekNum, [
         { title: `Introduction to ${theme}`, description: `Learn the fundamental concepts and principles of ${theme} with hands-on examples` },
         { title: `Core Concepts`, description: `Master the essential concepts and building blocks of ${theme} development` },
         { title: `Practical Applications`, description: `Apply ${theme} skills through real-world projects and practical implementations` },
@@ -301,18 +332,8 @@ const WeekDetailPage: React.FC = () => {
     );
   }
 
-  // Show loading state if week is not ready yet
-  if (!week) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[200px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-theme-hover border-t-theme-accent transition-colors duration-300" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // If week data not yet loaded, don't flash a full-page spinner; simply render nothing.
+  if (!week) return null;
 
   const completionPercentage = getCompletionPercentage();
 

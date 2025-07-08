@@ -1225,3 +1225,171 @@ The AI suggestions should address gaps in the user's profile and recommend compl
                 {"title": f"Industry Integration", "description": f"Learn how {topic} integrates with other technologies and fits into larger systems", "type": "regular"}
             ]
         } 
+
+@router.post(
+    "/lesson-chat",
+    summary="Chat with AI about lesson content",
+    description="Get AI responses about the current lesson topic with context awareness"
+)
+@limiter.limit(RateLimits.AI_CHAT)
+async def lesson_chat(
+    request: Request,
+    chat_request: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Chat with AI about a specific lesson topic.
+    
+    Request should contain:
+    - message: User's message (max 300 characters)
+    - topic: Current lesson topic
+    - context: Lesson context (e.g., "Week 1: Introduction to React")
+    - chat_history: Array of previous messages for context
+    - lesson_content: Brief summary of the lesson content
+    """
+    
+    try:
+        message = chat_request.get("message", "").strip()
+        topic = chat_request.get("topic", "")
+        context = chat_request.get("context", "")
+        chat_history = chat_request.get("chat_history", [])
+        lesson_content = chat_request.get("lesson_content", "")
+        
+        # Validate inputs
+        if not message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Message is required"
+            )
+        
+        if len(message) > 300:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Message must be 300 characters or less"
+            )
+        
+        if not topic:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Topic is required"
+            )
+        
+        # Generate AI response using Gemini
+        response = await generate_chat_response(
+            message=message,
+            topic=topic,
+            context=context,
+            chat_history=chat_history,
+            lesson_content=lesson_content
+        )
+        
+        return {
+            "success": True,
+            "response": response,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in lesson chat: {str(e)}")
+        return {
+            "success": False,
+            "response": "I apologize, but I'm having trouble processing your request. Please try again.",
+            "timestamp": datetime.now().isoformat()
+        }
+
+async def generate_chat_response(
+    message: str, 
+    topic: str, 
+    context: str, 
+    chat_history: List[Dict[str, str]], 
+    lesson_content: str
+) -> str:
+    """Generate chat response using Google Gemini with lesson context."""
+    
+    try:
+        # Check if Gemini API key is configured
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            logger.warning("Gemini API key not configured")
+            return "I'm currently unavailable. Please ensure the AI service is properly configured."
+        
+        # Import Google AI Python SDK (using the same pattern as existing code)
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError:
+            logger.error("Google Generative AI package not installed")
+            return "AI service is not properly configured. Please contact support."
+        
+        # Configure Gemini client (same pattern as existing code)
+        client = genai.Client(api_key=gemini_api_key)
+        
+        # Build conversation history
+        conversation_context = ""
+        if chat_history:
+            # Limit to last 5 exchanges to manage token usage
+            recent_history = chat_history[-10:]  # Last 5 user + 5 AI messages
+            for msg in recent_history:
+                role = "User" if msg.get("type") == "user" else "Assistant"
+                conversation_context += f"{role}: {msg.get('content', '')}\n"
+        
+        # Create the prompt
+        prompt = f"""You are an AI tutor helping a student understand the lesson on "{topic}".
+
+            Current lesson context: {context}
+
+            Lesson summary: {lesson_content[:500] if lesson_content else 'No summary available'}
+
+            Previous conversation:
+            {conversation_context}
+
+            Student's current question: {message}
+
+            Instructions:
+            1. Provide a helpful, concise response (2-3 sentences max)
+            2. Stay focused ONLY on the lesson topic: {topic}
+            3. If the question is unrelated to {topic}, politely redirect to the lesson
+            4. Use simple, clear language appropriate for learning
+            5. Include a brief code example if relevant and helpful
+            6. Be encouraging and supportive
+
+            Response:"""
+
+        # Generate response using Gemini (same pattern as existing code)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                top_p=0.9,
+                max_output_tokens=300,  # Keep responses concise
+            )
+        )
+        
+        # Extract and clean the response
+        if response and response.text:
+            ai_response = response.text.strip()
+            
+            # Ensure response stays on topic
+            off_topic_phrases = [
+                "that's not related", 
+                "let's focus on", 
+                "getting back to",
+                "outside the scope"
+            ]
+            
+            # If response seems off-topic, provide a redirect
+            if any(phrase in ai_response.lower() for phrase in off_topic_phrases):
+                return f"That's an interesting question! However, let's stay focused on our current lesson about {topic}. Is there anything specific about {topic} you'd like me to explain?"
+            
+            return ai_response
+        else:
+            logger.error("Empty response from Gemini")
+            return f"I'd be happy to help you understand {topic} better. Could you please rephrase your question?"
+            
+    except Exception as e:
+        logger.error(f"Error calling Gemini API for chat: {str(e)}")
+        return "I'm having trouble connecting to the AI service. Please try again in a moment." 

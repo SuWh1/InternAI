@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
@@ -13,6 +13,56 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
   const { theme } = useTheme();
+
+  // Inject theme-adaptive scrollbar styles for code blocks
+  const styleRef = useRef<HTMLStyleElement | null>(null);
+
+  useEffect(() => {
+    // Remove previous style element if exists
+    if (styleRef.current && styleRef.current.parentNode) {
+      styleRef.current.parentNode.removeChild(styleRef.current);
+    }
+
+    const styleEl = document.createElement('style');
+    styleEl.id = 'markdown-code-scrollbar-styles';
+
+    const trackColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+    const thumbColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)';
+    const thumbHover = theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)';
+
+    styleEl.textContent = `
+      /* WebKit */
+      .markdown-content pre::-webkit-scrollbar {
+        height: 8px;
+      }
+      .markdown-content pre::-webkit-scrollbar-track {
+        background: ${trackColor};
+        border-radius: 4px;
+      }
+      .markdown-content pre::-webkit-scrollbar-thumb {
+        background: ${thumbColor};
+        border-radius: 4px;
+      }
+      .markdown-content pre::-webkit-scrollbar-thumb:hover {
+        background: ${thumbHover};
+      }
+
+      /* Firefox */
+      .markdown-content pre {
+        scrollbar-width: thin;
+        scrollbar-color: ${thumbColor} ${trackColor};
+      }
+    `;
+
+    document.head.appendChild(styleEl);
+    styleRef.current = styleEl;
+
+    return () => {
+      if (styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
+    };
+  }, [theme]);
 
   const components: Components = {
     // Code blocks with syntax highlighting

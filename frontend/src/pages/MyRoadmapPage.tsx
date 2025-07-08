@@ -162,7 +162,6 @@ const MyRoadmapPage = () => {
             animate={{ scale: 1, rotate: 0 }}
             transition={{ duration: 0.6, delay: 0.3, type: "spring", stiffness: 200 }}
           >
-          <MapPin className="h-16 w-16 text-theme-accent mx-auto mb-6" />
           </motion.div>
           <motion.h1 
             className="text-4xl font-bold text-theme-primary mb-4 transition-colors duration-300"

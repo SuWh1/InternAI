@@ -1,22 +1,22 @@
 /**
- * Converts a string to a URL-friendly slug
+ * Converts a text to a URL-safe slug while preserving parentheses, slashes and original casing.
+ * Strategy:
+ *  1. Replace all whitespace sequences with a hyphen
+ *  2. Use encodeURIComponent to escape any remaining characters that are unsafe in a path segment
+ * This keeps characters like "(" ")" and "/" (encoded as %2F) so they can be restored later.
  */
 export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  const dashed = text.trim().replace(/\s+/g, '-');
+  return encodeURIComponent(dashed);
 }
 
 /**
- * Converts a slug back to a readable title (best effort)
+ * Reverses `slugify`: decode the URI component and turn dashes back into spaces.
+ * Unlike the previous implementation, it preserves the original casing so that
+ * camelCase identifiers such as "useState" remain intact.
  */
 export function unslugify(slug: string): string {
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize first letter of each word
+  return decodeURIComponent(slug).replace(/-/g, ' ');
 }
 
 /**

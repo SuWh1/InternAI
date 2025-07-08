@@ -154,6 +154,39 @@ class AgentService {
     }
   }
 
+  async lessonChat(params: {
+    message: string;
+    topic: string;
+    context: string;
+    chat_history: Array<{
+      id: number;
+      type: 'ai' | 'user';
+      content: string;
+      timestamp: Date;
+    }>;
+    lesson_content?: string;
+  }): Promise<{
+    success: boolean;
+    response: string;
+    timestamp: string;
+  }> {
+    try {
+      const response = await apiService.post<{
+        success: boolean;
+        response: string;
+        timestamp: string;
+      }>('/agents/lesson-chat', params);
+      return response;
+    } catch (error) {
+      console.error('Error in lesson chat:', error);
+      return {
+        success: false,
+        response: 'Failed to get lesson chat response. Please try again.',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
   /**
    * Clear the GPT cache (useful for memory management)
    */

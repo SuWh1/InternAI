@@ -625,12 +625,16 @@ const LessonPage: React.FC = () => {
         const isYoutube = resource.link.includes('youtube.com') || resource.link.includes('youtu.be');
         const isGithub = resource.link.includes('github.com');
         const isDocs = resource.type === 'documentation' || resource.link.includes('developer.mozilla.org') || resource.link.includes('/docs');
+        const isLeetCode = resource.type === 'leetcode' || resource.link.includes('leetcode.com');
         
         // Get appropriate icon and theme-adaptive colors
         let IconComponent = ExternalLink;
         let iconColor = 'text-theme-accent';
         
-        if (isYoutube) {
+        if (isLeetCode) {
+          IconComponent = Brain; // Using Brain icon for LeetCode problems
+          iconColor = colors.success.text;
+        } else if (isYoutube) {
           IconComponent = Youtube;
           iconColor = colors.youtube.text;
         } else if (isGithub) {
@@ -674,13 +678,27 @@ const LessonPage: React.FC = () => {
                   <>
                     <span className="text-theme-secondary opacity-50">•</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      resource.type === 'leetcode' ? `${colors.success.bg} ${colors.success.text} ${colors.success.border}` :
                       resource.type === 'documentation' ? `${colors.info.bg} ${colors.info.text} ${colors.info.border}` :
                       resource.type === 'tutorial' ? `${colors.success.bg} ${colors.success.text} ${colors.success.border}` :
                       resource.type === 'video' ? `${colors.youtube.bg} ${colors.youtube.text} ${colors.youtube.border}` :
                       'bg-theme-accent/10 text-theme-accent border-theme-accent/20'
                     }`}>
-                      {resource.type}
+                      {resource.type === 'leetcode' ? 'LeetCode' : resource.type}
                     </span>
+                    {resource.type === 'leetcode' && resource.difficulty && (
+                      <>
+                        <span className="text-theme-secondary opacity-50">•</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                          resource.difficulty === 'Easy' ? `${colors.success.bg} ${colors.success.text} ${colors.success.border}` :
+                          resource.difficulty === 'Medium' ? `${colors.warning.bg} ${colors.warning.text} ${colors.warning.border}` :
+                          resource.difficulty === 'Hard' ? `${colors.error.bg} ${colors.error.text} ${colors.error.border}` :
+                          'bg-theme-accent/10 text-theme-accent border-theme-accent/20'
+                        }`}>
+                          {resource.difficulty}
+                        </span>
+                      </>
+                    )}
                   </>
                 )}
               </div>

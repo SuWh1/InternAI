@@ -547,8 +547,45 @@ Learning {topic} will enhance your development skills and make you more competit
         
         client = genai.Client(api_key=gemini_api_key)
         
+        # Check if this is for weeks 5-9 (intermediate weeks that should include LeetCode problems)
+        import re
+        week_match = re.search(r'Week\s+(\d+)', context)
+        is_week_5_to_9 = week_match and 5 <= int(week_match.group(1)) <= 9
+        
         # Create a concise, effective prompt using best practices
-        prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
+        if is_week_5_to_9:
+            prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
+
+User Context: {context}
+
+CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
+
+{{
+  "explanation": "Your complete lesson content with proper markdown formatting",
+  "resources": [
+    "Resource 1 with clear description and URL",
+    "Resource 2 with clear description and URL", 
+    "Resource 3 with clear description and URL"
+  ],
+  "subtasks": [
+    "Specific hands-on task 1",
+    "Specific hands-on task 2", 
+    "Specific hands-on task 3"
+  ],
+  "leetcode_problems": [
+    {{"title": "Problem Name 1", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}},
+    {{"title": "Problem Name 2", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}}
+  ]
+}}
+
+ADDITIONAL REQUIREMENT FOR WEEKS 5-9:
+- Include exactly 2 LeetCode problems that are directly related to "{topic}"
+- Problems should be appropriate for {user_level} level
+- Provide actual LeetCode problem names and correct URLs
+- Choose problems that reinforce the lesson concepts
+- Mix difficulty levels (e.g., one Easy/Medium, one Medium/Hard)"""
+        else:
+            prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
 
 User Context: {context}
 
@@ -674,9 +711,29 @@ Make this genuinely helpful for landing internships with clean, readable formatt
                     if not subtasks:
                         subtasks = [f"Learn {topic} basics", f"Practice {topic} examples"]
                     
+                    # Extract LeetCode problems (for weeks 5-9)
+                    leetcode_problems = []
+                    leetcode_match = re.search(r'"leetcode_problems":\s*\[(.*?)\]', json_str, re.DOTALL)
+                    if leetcode_match:
+                        leetcode_content = leetcode_match.group(1)
+                        # Extract individual problem objects
+                        problem_pattern = r'\{[^}]*"title":\s*"([^"]*)"[^}]*"link":\s*"([^"]*)"[^}]*"difficulty":\s*"([^"]*)"[^}]*\}'
+                        problem_matches = re.findall(problem_pattern, leetcode_content)
+                        for title, link, difficulty in problem_matches[:2]:  # Limit to 2 problems
+                            leetcode_problems.append({
+                                "title": title.replace('\\"', '"').replace('\\\\', '\\'),
+                                "link": link.replace('\\"', '"').replace('\\\\', '\\'),
+                                "type": "leetcode",
+                                "difficulty": difficulty.replace('\\"', '"').replace('\\\\', '\\')
+                            })
+                    
                     # Reconstruct clean JSON
                     # Properly escape the explanation content
                     escaped_explanation = explanation_content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+                    
+                    # Add LeetCode problems to resources if present
+                    if leetcode_problems:
+                        resources.extend(leetcode_problems)
                     
                     clean_json = {
                         "explanation": explanation_content,  # Use raw content, not escaped
@@ -698,12 +755,30 @@ Make this genuinely helpful for landing internships with clean, readable formatt
             # First attempt: parse as-is
             try:
                 result = json.loads(cleaned_content)
+                # Post-process result to add LeetCode problems to resources if present
+                if 'leetcode_problems' in result and result['leetcode_problems']:
+                    if 'resources' not in result:
+                        result['resources'] = []
+                    # Add LeetCode problems to resources array
+                    for problem in result['leetcode_problems']:
+                        result['resources'].append(problem)
+                    # Remove the separate leetcode_problems field
+                    del result['leetcode_problems']
                 return result
             except json.JSONDecodeError:
                 # Second attempt: try to fix common syntax errors
                 fixed_content = fix_json_syntax(cleaned_content)
                 try:
                     result = json.loads(fixed_content)
+                    # Post-process result to add LeetCode problems to resources if present
+                    if 'leetcode_problems' in result and result['leetcode_problems']:
+                        if 'resources' not in result:
+                            result['resources'] = []
+                        # Add LeetCode problems to resources array
+                        for problem in result['leetcode_problems']:
+                            result['resources'].append(problem)
+                        # Remove the separate leetcode_problems field
+                        del result['leetcode_problems']
                     logger.info("Successfully parsed JSON after syntax fixes")
                     return result
                 except json.JSONDecodeError as e:

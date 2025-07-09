@@ -96,9 +96,9 @@ class RateLimits:
     AUTH_GENERAL = "30 per minute"
     
     # AI/Pipeline endpoints - moderate limits due to computational cost
-    AI_PIPELINE_RUN = "5 per hour"
-    AI_TOPIC_DETAILS = "20 per hour"
-    AI_SUBTOPICS = "15 per hour"  # lowered for testing
+    AI_PIPELINE_RUN = "5 per minute"
+    AI_TOPIC_DETAILS = "20 per minute"
+    AI_SUBTOPICS = "15 per minute"  # lowered for testing
     AI_CHAT = "30 per minute"  # More generous for interactive chat
     
     # General API endpoints - generous limits for normal usage

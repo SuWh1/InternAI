@@ -18,6 +18,7 @@ export const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: TIMEOUTS.API_REQUEST,
+  withCredentials: true, // Send cookies with requests
 });
 
 // Create a separate, clean axios instance for auth requests to avoid interceptor loops
@@ -27,15 +28,13 @@ export const authApi: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: TIMEOUTS.API_REQUEST,
+  withCredentials: true, // Send cookies with requests
 });
 
-// Request interceptor to add auth token
+// Request interceptor (removed auth token handling - using cookies now)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // No need to add Authorization header - cookies are sent automatically
     return config;
   },
   (error) => {
@@ -51,38 +50,22 @@ api.interceptors.response.use(
   async (error: AxiosError<{ error?: string; message?: string }>) => {
     const originalRequest = error.config as AxiosRequestConfigWithRetry;
     
-    // Handle 401 errors with token refresh (but not for refresh endpoint itself)
+    // Handle 401 errors with cookie-based token refresh (but not for refresh endpoint itself)
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       originalRequest._retry = true;
       
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      if (refreshToken) {
-        try {
-          // Try to refresh the token
-          const { authService } = await import('../services/authService');
-          await authService.refreshTokens();
-          
-          // Retry the original request with the new token
-          const newToken = localStorage.getItem('auth_token');
-          if (newToken && originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          }
-          
-          return api(originalRequest);
-        } catch (refreshError) {
-          // Refresh failed, clear tokens and redirect to login
-          const { useAuthStore } = await import('../stores/authStore');
-          useAuthStore.getState().logout();
-          
-          // To prevent further actions on this error, we return a resolved promise
-          return new Promise(() => {});
-        }
-      } else {
-        // No refresh token, clear access token
+      try {
+        // Try to refresh the token (cookies are sent automatically)
+        const { authService } = await import('../services/authService');
+        await authService.refreshTokens();
+        
+        // Retry the original request (cookies will be automatically included)
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, logout user
         const { useAuthStore } = await import('../stores/authStore');
         useAuthStore.getState().logout();
-
+        
         // To prevent further actions on this error, we return a resolved promise
         return new Promise(() => {});
       }

@@ -1,7 +1,7 @@
 import api from '../lib/axios';
 import { authApi } from '../lib/axios';
 import { useAuthStore } from '../stores/authStore';
-import type { AuthResponse, User } from '../types/api';
+import type { User } from '../types/api';
 
 class AuthService {
   private initializationPromise: Promise<void> | null = null;
@@ -17,18 +17,14 @@ class AuthService {
       setLoading(true);
       setError(null);
       
-      const response = await api.post<AuthResponse>('/auth/login', {
+      const response = await api.post<User>('/auth/login', {
         email,
         password,
       });
       
-      const { user, token, refresh_token } = response.data;
+      const user = response.data;
       
-      // Store tokens
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('refresh_token', refresh_token);
-      
-      // Update store
+      // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
     } catch (error: any) {
       // Parse error and provide specific message
@@ -64,19 +60,15 @@ class AuthService {
       setLoading(true);
       setError(null);
       
-      const response = await api.post<AuthResponse>('/auth/register', {
+      const response = await api.post<User>('/auth/register', {
         email,
         password,
         name,
       });
       
-      const { user, token, refresh_token } = response.data;
+      const user = response.data;
       
-      // Store tokens
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('refresh_token', refresh_token);
-      
-      // Update store
+      // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
       
       // Note: Onboarding redirect will be handled by OnboardingWrapper
@@ -122,17 +114,13 @@ class AuthService {
       setError(null);
 
       // Send the ID token to your backend
-      const response = await api.post<AuthResponse>('/auth/google', {
+      const response = await api.post<User>('/auth/google', {
         token: token,
       });
 
-      const { user, token: accessToken, refresh_token } = response.data;
+      const user = response.data;
       
-      // Store tokens
-      localStorage.setItem('auth_token', accessToken);
-      localStorage.setItem('refresh_token', refresh_token);
-      
-      // Update store
+      // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
     } catch (error: any) {
       console.error('Google login API error:', error);
@@ -182,23 +170,12 @@ class AuthService {
   }
 
   async refreshTokens(): Promise<void> {
-    const refreshToken = localStorage.getItem('refresh_token');
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
+    // Refresh token is sent automatically via cookies
+    const response = await authApi.post<User>('/auth/refresh');
 
-    const response = await authApi.post<AuthResponse>('/auth/refresh', {
-      refresh_token: refreshToken,
-    });
-
-    const { user, token, refresh_token: newRefreshToken } = response.data;
+    const user = response.data;
     
-    // Store new tokens
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('refresh_token', newRefreshToken);
-    
-    // Update store
+    // Update store (new tokens are set in httpOnly cookies by the backend)
     const { setUser } = this.getStore();
     setUser(user);
   }
@@ -229,23 +206,15 @@ class AuthService {
       setLoading(false);
       return;
     }
-    
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
 
     this.initializationPromise = (async () => {
       try {
         setLoading(true);
-        // Always fetch fresh user data on app initialization
+        // Try to fetch user data from /me endpoint (will fail if no valid cookie)
         const user = await this.getCurrentUser();
         setUser(user);
       } catch (error) {
-        // Tokens are invalid, clear them
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
+        // No valid authentication cookie, user is not logged in
         setUser(null);
       } finally {
         setLoading(false);

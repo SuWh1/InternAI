@@ -8,6 +8,7 @@ import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PageLoadingSpinner } from './components/common/LoadingSpinner';
+import CookieBanner from './components/common/CookieBanner';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -76,6 +77,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <CookieBanner />
       <Router>
         <div className="min-h-screen bg-theme-primary overflow-x-hidden w-full transition-colors duration-200" style={{ position: 'relative' }}>
           <OnboardingWrapper>

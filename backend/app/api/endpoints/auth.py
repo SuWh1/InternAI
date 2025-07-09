@@ -7,11 +7,19 @@ from typing import Any
 
 from app.db.session import get_db
 from app.schemas.user import User, UserCreate, UserLogin, GoogleAuthRequest
-from app.schemas.auth import AuthResponse, RefreshTokenRequest
+from app.schemas.auth import AuthResponse
 from app.schemas.common import GenericResponse
 from app.crud.user import create_user, authenticate_user, authenticate_google_user
 from app.crud.onboarding import has_completed_onboarding
-from app.core.security import create_access_token, create_refresh_token, verify_refresh_token, get_current_user
+from app.core.security import (
+    create_access_token, 
+    create_refresh_token, 
+    verify_refresh_token, 
+    get_current_user,
+    get_current_user_from_cookie,
+    set_auth_cookies,
+    clear_auth_cookies
+)
 from app.core.config import settings
 from app.core.rate_limit import limiter, RateLimits
 from app.utils.google_auth import verify_google_token
@@ -31,9 +39,9 @@ async def add_onboarding_status(user: User, db: AsyncSession) -> User:
     
     return user
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 @limiter.limit(RateLimits.AUTH_REGISTER)
-async def register(request: Request, user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
+async def register(request: Request, response: Response, user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
     user = await create_user(db, user_data)
     user = await add_onboarding_status(user, db)
     
@@ -43,15 +51,15 @@ async def register(request: Request, user_data: UserCreate, db: AsyncSession = D
     )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
-    return {
-        "user": user,
-        "token": access_token,
-        "refresh_token": refresh_token
-    }
+    # Set cookies
+    set_auth_cookies(response, access_token, refresh_token)
+    
+    # Return only user data
+    return user
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login", response_model=User)
 @limiter.limit(RateLimits.AUTH_LOGIN)
-async def login(request: Request, user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
+async def login(request: Request, response: Response, user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
     user = await authenticate_user(db, user_data.email, user_data.password)
     
     if not user:
@@ -69,15 +77,15 @@ async def login(request: Request, user_data: UserLogin, db: AsyncSession = Depen
     )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
-    return {
-        "user": user,
-        "token": access_token,
-        "refresh_token": refresh_token
-    }
+    # Set cookies
+    set_auth_cookies(response, access_token, refresh_token)
+    
+    # Return only user data
+    return user
 
-@router.post("/google", response_model=AuthResponse)
+@router.post("/google", response_model=User)
 @limiter.limit(RateLimits.AUTH_GOOGLE)
-async def google_login(request: Request, auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
+async def google_login(request: Request, response: Response, auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
     print(f"DEBUG: Google login attempt with token length: {len(auth_data.token) if auth_data.token else 0}")
     
     # Check if Google OAuth is configured
@@ -123,11 +131,11 @@ async def google_login(request: Request, auth_data: GoogleAuthRequest, db: Async
         
         print(f"DEBUG: Access token created successfully for user: {user.email}")
         
-        return {
-            "user": user,
-            "token": access_token,
-            "refresh_token": refresh_token
-        }
+        # Set cookies
+        set_auth_cookies(response, access_token, refresh_token)
+        
+        # Return only user data
+        return user
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -139,13 +147,22 @@ async def google_login(request: Request, auth_data: GoogleAuthRequest, db: Async
             detail=f"Internal server error during Google authentication: {str(e)}",
         )
 
-@router.post("/refresh", response_model=AuthResponse)
+@router.post("/refresh", response_model=User)
 @limiter.limit(RateLimits.AUTH_REFRESH)
-async def refresh_token(request: Request, token_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)) -> Any:
+async def refresh_token(request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> Any:
     """
-    Refresh access token using refresh token.
+    Refresh access token using refresh token from cookie.
     """
-    user_id = verify_refresh_token(token_data.refresh_token)
+    # Get refresh token from cookie
+    refresh_token_value = request.cookies.get("refresh_token")
+    if not refresh_token_value:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = verify_refresh_token(refresh_token_value)
     
     if not user_id:
         raise HTTPException(
@@ -172,27 +189,28 @@ async def refresh_token(request: Request, token_data: RefreshTokenRequest, db: A
     access_token = create_access_token(
         data={"sub": str(user.id), "is_admin": user.is_admin}, expires_delta=access_token_expires
     )
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
-    return {
-        "user": user,
-        "token": access_token,
-        "refresh_token": refresh_token
-    }
+    # Set new cookies
+    set_auth_cookies(response, access_token, new_refresh_token)
+    
+    # Return only user data
+    return user
 
 @router.post("/logout", response_model=GenericResponse)
 @limiter.limit(RateLimits.AUTH_GENERAL)
 async def logout(request: Request, response: Response) -> Any:
     """
-    Logout user (client-side only).
+    Logout user - clear authentication cookies.
     """
+    clear_auth_cookies(response)
     return {"success": True, "message": "Successfully logged out"}
 
 @router.get("/me", response_model=User)
 @limiter.limit(RateLimits.API_READ)
-async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> Any:
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)) -> Any:
     """
-    Get current user info.
+    Get current user info from cookie authentication.
     """
     return await add_onboarding_status(current_user, db)
 

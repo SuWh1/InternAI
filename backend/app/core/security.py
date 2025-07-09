@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import os
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -64,10 +65,10 @@ def verify_refresh_token(token: str) -> Optional[str]:
     except JWTError:
         return None
 
-async def get_current_user(
+async def get_current_user_from_header(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ) -> User:
-    """Get the current user from the token"""
+    """Get the current user from the Authorization header (deprecated - use cookie auth)"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -93,4 +94,76 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise credentials_exception
     
-    return user 
+    return user
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """Set authentication cookies with proper security settings"""
+    # Determine if we're in production (HTTPS)
+    is_production = os.getenv("ENVIRONMENT", "development").lower() == "production"
+    
+    # Access token cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
+        httponly=True,
+        secure=is_production,  # Only use secure in production (HTTPS)
+        samesite="lax",  # CSRF protection while allowing navigation
+        path="/"
+    )
+    
+    # Refresh token cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Convert to seconds
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        path="/"
+    )
+
+def clear_auth_cookies(response: Response) -> None:
+    """Clear authentication cookies"""
+    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="refresh_token", path="/")
+
+async def get_current_user_from_cookie(
+    request: Request, db: AsyncSession = Depends(get_db)
+) -> User:
+    """Get the current user from the cookie"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    # Get token from cookie
+    token = request.cookies.get("access_token")
+    if not token:
+        raise credentials_exception
+    
+    try:
+        # Decode the token
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        
+        if user_id is None:
+            raise credentials_exception
+        
+        token_data = TokenData(user_id=user_id)
+    except JWTError:
+        raise credentials_exception
+    
+    # Get the user from the database with async query
+    result = await db.execute(select(User).where(User.id == token_data.user_id))
+    user = result.scalar_one_or_none()
+    
+    if user is None or not user.is_active:
+        raise credentials_exception
+    
+    return user
+
+# Make get_current_user an alias to get_current_user_from_cookie for backward compatibility
+# This allows gradual migration of endpoints
+get_current_user = get_current_user_from_cookie 

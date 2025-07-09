@@ -62,8 +62,7 @@ export const useAuthStore = create<AuthState>()(
           ),
 
         logout: () => {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
+          // Tokens are cleared on the backend via logout endpoint
           set(
             { 
               user: null, 
@@ -84,11 +83,11 @@ export const useAuthStore = create<AuthState>()(
       {
         name: 'auth-storage',
         partialize: (state) => ({ 
-          user: state.user,
-          isAuthenticated: state.isAuthenticated 
+          // Don't persist any sensitive user data
+          // Only persist non-sensitive preferences if needed
         }),
         onRehydrateStorage: () => (state) => {
-          // Initialize auth after rehydration
+          // Always initialize auth from /me endpoint on app load
           if (state) {
             state.initialize();
           }

@@ -144,3 +144,9 @@ async def delete_learning_content(
         return True
     
     return False 
+
+async def delete_all_by_user(db: AsyncSession, user_id: UUID) -> None:
+    """Delete all learning content rows for a user."""
+    from sqlalchemy import delete
+    await db.execute(delete(LearningContent).where(LearningContent.user_id == user_id))
+    await db.commit() 

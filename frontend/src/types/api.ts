@@ -6,7 +6,26 @@ export interface User {
   createdAt: string;
   profile_picture?: string;
   google_id?: string;
+  phone?: string;
+  hashed_password?: string;
   has_completed_onboarding?: boolean;
+}
+
+export interface UserUpdate {
+  email?: string;
+  name?: string;
+  phone?: string;
+  profile_picture?: string;
+}
+
+export interface PasswordChange {
+  current_password: string;
+  new_password: string;
+}
+
+export interface AccountDeletion {
+  password: string;
+  confirmation: string; // Must be "DELETE"
 }
 
 export interface AuthResponse {

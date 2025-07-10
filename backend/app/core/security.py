@@ -94,7 +94,7 @@ async def get_current_user_from_header(
     if user is None or not user.is_active:
         raise credentials_exception
     
-    return user
+    return user 
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
     """Set authentication cookies with proper security settings"""

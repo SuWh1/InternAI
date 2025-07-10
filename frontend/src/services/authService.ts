@@ -1,4 +1,5 @@
 import api from '../lib/axios';
+import { queryClient } from '../lib/queryClient';
 import { authApi } from '../lib/axios';
 import { useAuthStore } from '../stores/authStore';
 import type { User } from '../types/api';
@@ -24,6 +25,8 @@ class AuthService {
       
       const user = response.data;
       
+      // Clear any previous user's data
+      queryClient.clear();
       // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
     } catch (error: any) {
@@ -68,6 +71,8 @@ class AuthService {
       
       const user = response.data;
       
+      // Clear any previous user's data
+      queryClient.clear();
       // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
       
@@ -120,6 +125,8 @@ class AuthService {
 
       const user = response.data;
       
+      // Clear any previous user's data
+      queryClient.clear();
       // Update store (tokens are now stored in httpOnly cookies)
       setUser(user);
     } catch (error: any) {
@@ -160,6 +167,7 @@ class AuthService {
       // Even if logout fails on server, clear local state
       console.error('Logout error:', error);
     } finally {
+      queryClient.clear();
       storeLogout();
     }
   }
@@ -170,14 +178,24 @@ class AuthService {
   }
 
   async refreshTokens(): Promise<void> {
-    // Refresh token is sent automatically via cookies
-    const response = await authApi.post<User>('/auth/refresh');
+    try {
+      // Refresh token is sent automatically via cookies
+      const response = await authApi.post<User>('/auth/refresh');
 
-    const user = response.data;
+      const user = response.data;
     
-    // Update store (new tokens are set in httpOnly cookies by the backend)
+      // Update store (new tokens are set in httpOnly cookies by the backend)
     const { setUser } = this.getStore();
     setUser(user);
+    } catch (error: any) {
+      // If refresh fails with 401, it means the refresh token is invalid/expired
+      if (error.statusCode === 401 || error.response?.status === 401) {
+        // Don't log this as an error, it's expected when not logged in
+        throw error;
+      }
+      console.error('Token refresh error:', error);
+      throw error;
+    }
   }
 
   async refreshUserData(): Promise<void> {

@@ -109,6 +109,12 @@ async def run_agent_pipeline(
         
         # Save roadmap to database if generation was successful
         if unified_response['success'] and unified_response['data'].get('roadmap'):
+            # Clear any existing learning content cache for this user so subtopics regenerate
+            try:
+                from app.crud.learning_content import delete_all_by_user
+                await delete_all_by_user(db, current_user.id)
+            except Exception as e:
+                logger.error(f"Error clearing learning content for user {current_user.id}: {str(e)}")
             try:
                 # Initialize progress tracking for all weeks
                 roadmap_data = unified_response['data']['roadmap']
@@ -486,43 +492,43 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
             return {
                 "explanation": f"""# {topic}
 
-## Overview
-This is a comprehensive lesson on {topic}, designed for {user_level} level learners.
+                ## Overview
+                This is a comprehensive lesson on {topic}, designed for {user_level} level learners.
 
-**Context:** {context}
+                **Context:** {context}
 
-## What is {topic}?
-{topic} is an important concept in software development that plays a crucial role in building modern applications. Understanding this topic will help you become a more effective developer and prepare you for technical interviews.
+                ## What is {topic}?
+                {topic} is an important concept in software development that plays a crucial role in building modern applications. Understanding this topic will help you become a more effective developer and prepare you for technical interviews.
 
-## Key Concepts
-- **Fundamental principles:** Understanding the core concepts that make {topic} work
-- **Implementation patterns:** Common ways to implement and use {topic}
-- **Best practices:** Industry-standard approaches and recommendations
-- **Common pitfalls:** Mistakes to avoid when working with {topic}
+                ## Key Concepts
+                - **Fundamental principles:** Understanding the core concepts that make {topic} work
+                - **Implementation patterns:** Common ways to implement and use {topic}
+                - **Best practices:** Industry-standard approaches and recommendations
+                - **Common pitfalls:** Mistakes to avoid when working with {topic}
 
-## Why is {topic} Important?
-Learning {topic} will enhance your development skills and make you more competitive in the job market. Many companies use {topic} in their technology stack, making it a valuable skill for internship applications.
+                ## Why is {topic} Important?
+                Learning {topic} will enhance your development skills and make you more competitive in the job market. Many companies use {topic} in their technology stack, making it a valuable skill for internship applications.
 
-## Real-World Applications
-{topic} is commonly used in:
-- Web development projects
-- Mobile applications
-- Enterprise software systems
-- Data processing pipelines
+                ## Real-World Applications
+                {topic} is commonly used in:
+                - Web development projects
+                - Mobile applications
+                - Enterprise software systems
+                - Data processing pipelines
 
-## Getting Started
-1. Start by understanding the fundamental concepts
-2. Practice with simple examples
-3. Build small projects to apply your knowledge
-4. Explore advanced use cases and patterns
+                ## Getting Started
+                1. Start by understanding the fundamental concepts
+                2. Practice with simple examples
+                3. Build small projects to apply your knowledge
+                4. Explore advanced use cases and patterns
 
-## Best Practices
-- Always follow established conventions
-- Write clean, readable code
-- Test your implementations
-- Stay updated with latest developments
+                ## Best Practices
+                - Always follow established conventions
+                - Write clean, readable code
+                - Test your implementations
+                - Stay updated with latest developments
 
-**Note:** To enable AI-powered detailed explanations, configure your Gemini API key in the environment variables.""",
+                **Note:** To enable AI-powered detailed explanations, configure your Gemini API key in the environment variables.""",
                 "resources": [
                     f"Official {topic} documentation",
                     f"MDN Web Docs - {topic} guide",
@@ -556,73 +562,75 @@ Learning {topic} will enhance your development skills and make you more competit
         if is_week_5_to_9:
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
 
-User Context: {context}
+                User Context: {context}
 
-CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
+                CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
 
-{{
-  "explanation": "Your complete lesson content with proper markdown formatting",
-  "resources": [
-    "Resource 1 with clear description and URL",
-    "Resource 2 with clear description and URL", 
-    "Resource 3 with clear description and URL"
-  ],
-  "subtasks": [
-    "Specific hands-on task 1",
-    "Specific hands-on task 2", 
-    "Specific hands-on task 3"
-  ],
-  "leetcode_problems": [
-    {{"title": "Problem Name 1", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}},
-    {{"title": "Problem Name 2", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}}
-  ]
-}}
+                {{
+                "explanation": "Your complete lesson content with proper markdown formatting",
+                "resources": [
+                    "Resource 1 with clear description and URL",
+                    "Resource 2 with clear description and URL", 
+                    "Resource 3 with clear description and URL"
+                ],
+                "subtasks": [
+                    "Specific hands-on task 1",
+                    "Specific hands-on task 2", 
+                    "Specific hands-on task 3"
+                ],
+                "leetcode_problems": [
+                    {{"title": "Problem Name 1", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}},
+                    {{"title": "Problem Name 2", "link": "https://leetcode.com/problems/...", "difficulty": "Easy/Medium/Hard"}}
+                ]
+                }}
 
-ADDITIONAL REQUIREMENT FOR WEEKS 5-9:
-- Include exactly 2 LeetCode problems that are directly related to "{topic}"
-- Problems should be appropriate for {user_level} level
-- Provide actual LeetCode problem names and correct URLs
-- Choose problems that reinforce the lesson concepts
-- Mix difficulty levels (e.g., one Easy/Medium, one Medium/Hard)"""
+                ADDITIONAL REQUIREMENT FOR WEEKS 5-9:
+                - Include exactly 2 LeetCode problems that are directly related to "{topic}"
+                - Problems should be appropriate for {user_level} level
+                - Provide actual LeetCode problem names and correct URLs
+                - Choose problems that reinforce the lesson concepts
+                - Mix difficulty levels (e.g., one Easy/Medium, one Medium/Hard)
+            """
         else:
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
 
-User Context: {context}
+                        User Context: {context}
 
-CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
+                        CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
 
-{{
-  "explanation": "Your complete lesson content with proper markdown formatting",
-  "resources": [
-    "Resource 1 with clear description and URL",
-    "Resource 2 with clear description and URL", 
-    "Resource 3 with clear description and URL"
-  ],
-  "subtasks": [
-    "Specific hands-on task 1",
-    "Specific hands-on task 2", 
-    "Specific hands-on task 3"
-  ]
-}}
+                        {{
+                        "explanation": "Your complete lesson content with proper markdown formatting",
+                        "resources": [
+                            "Resource 1 with clear description and URL",
+                            "Resource 2 with clear description and URL", 
+                            "Resource 3 with clear description and URL"
+                        ],
+                        "subtasks": [
+                            "Specific hands-on task 1",
+                            "Specific hands-on task 2", 
+                            "Specific hands-on task 3"
+                        ]
+                        }}
 
-FORMATTING REQUIREMENTS:
-- Use actual newlines, not \\n literals
-- Code blocks: ```javascript (with proper newlines)
-- Headers: ## Header Name (with newlines before/after)
-- Bold text: **text** (not **text**)
-- Lists: Use - or * with spaces
-- No malformed markdown
-- No escaped quotes in markdown text
-- Proper paragraph spacing
+                        FORMATTING REQUIREMENTS:
+                        - Use actual newlines, not \\n literals
+                        - Code blocks: ```javascript (with proper newlines)
+                        - Headers: ## Header Name (with newlines before/after)
+                        - Bold text: **text** (not **text**)
+                        - Lists: Use - or * with spaces
+                        - No malformed markdown
+                        - No escaped quotes in markdown text
+                        - Proper paragraph spacing
 
-CONTENT STRUCTURE:
-1. Start with topic overview
-2. Core concepts with examples  
-3. Practical code demonstrations
-4. Real-world applications
-5. Best practices and tips
+                        CONTENT STRUCTURE:
+                        1. Start with topic overview
+                        2. Core concepts with examples  
+                        3. Practical code demonstrations
+                        4. Real-world applications
+                        5. Best practices and tips
 
-Make this genuinely helpful for landing internships with clean, readable formatting."""
+                        Make this genuinely helpful for landing internships with clean, readable formatting.
+                    """
         
         response = client.models.generate_content(
             model='gemini-2.0-flash',

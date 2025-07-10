@@ -696,7 +696,7 @@ const LessonPage: React.FC = () => {
                           'bg-theme-accent/10 text-theme-accent border-theme-accent/20'
                         }`}>
                           {resource.difficulty}
-                        </span>
+                    </span>
                       </>
                     )}
                   </>
@@ -900,7 +900,7 @@ const LessonPage: React.FC = () => {
             <div className="text-center">
               {/* Animated Shiny Brain */}
               <div className="mb-8">
-                <Brain className="h-16 w-16 mx-auto text-theme-accent animate-brain-pulse" />
+                <Brain className="h-16 w-16 mx-auto text-theme-accent animate-brain-pulse brain-glow" />
               </div>
               
               <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">

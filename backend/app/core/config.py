@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/callback")
 
+    # AWS S3 configuration
+    AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_REGION: str = os.getenv("AWS_REGION", "eu-north-1")
+    AWS_S3_AVATAR_BUCKET: str = os.getenv("AWS_S3_AVATAR_BUCKET", "")
+
     ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL")
     
     class Config:

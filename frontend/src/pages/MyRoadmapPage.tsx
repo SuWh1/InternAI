@@ -177,7 +177,7 @@ const MyRoadmapPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            Your personalized journey to landing your dream internship
+            Your personalized journey to landing your dream MANGO internship
           </motion.p>
         </motion.div>
 

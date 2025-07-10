@@ -86,7 +86,8 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
         if user.name != name:
             user.name = name
             updated = True
-        if profile_picture and user.profile_picture != profile_picture:
+        # Only update profile picture if it's not already set (to preserve custom avatars)
+        if profile_picture and not user.profile_picture:
             user.profile_picture = profile_picture
             updated = True
         # Safety check: ensure is_active is never None
@@ -108,7 +109,8 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
     if user:
         print(f"DEBUG: Found existing user by email: {user.id}, linking Google ID")
         user.google_id = google_id
-        if profile_picture:
+        # Only update profile picture if it's not already set
+        if profile_picture and not user.profile_picture:
             user.profile_picture = profile_picture
         if not user.name or user.name != name:  # Update name if it's empty or different
             user.name = name
@@ -170,3 +172,15 @@ async def deactivate_user(db: AsyncSession, user_id: str) -> User:
     await db.refresh(db_user)
     
     return db_user 
+
+async def delete_user(db: AsyncSession, user_id: str) -> bool:
+    """Permanently delete user and all related data."""
+    db_user = await get_user_by_id(db, user_id=user_id)
+    if not db_user:
+        return False
+    
+    # Delete user (cascading deletes will handle related data)
+    await db.delete(db_user)
+    await db.commit()
+    
+    return True 

@@ -315,24 +315,24 @@ The roadmap MUST follow this exact 4-phase structure based on the user's preferr
 - Focus on core concepts, best practices, and practical implementation
 - Each week should progressively build expertise in their tech stack
 
-**PHASE 2: Algorithms & Data Structures (Weeks 5-9)** 
-- LeetCode practice and algorithmic thinking
-- Data structures implementation and optimization
-- Problem-solving patterns relevant to MANGO companies
-- Connect algorithms to real-world applications in their tech stack
+**PHASE 2: Technical Interview Preparation (Weeks 5-9)** 
+- LeetCode practice focusing on MANGO company interview patterns
+- Implement and optimize core data structures used in tech interviews
+- Master problem-solving techniques required by MANGO interviewers
 - Progress from easy to hard problems systematically
 
 **PHASE 3: Portfolio Projects (Weeks 10-11)**
-- Build 1-2 substantial projects showcasing their tech stack skills
-- Projects should be MANGO-interview worthy and demonstrate technical depth
+- Build 2 complete, production-quality projects each week that will stand out on your CV for MANGO companies
+- Each project should demonstrate mastery of your tech stack and solve real-world problems
+- Implement advanced features like authentication, CI/CD, testing, and performance optimization
 - Focus on scalability, clean code, and industry best practices
-- Projects should align with their target roles and tech stack
+- Ensure projects showcase skills specifically valued at your target MANGO companies
 
-**PHASE 4: Interview Preparation (Week 12)**
-- Technical interview practice specific to their tech stack
-- System design concepts relevant to their preferred technology
-- Behavioral interview prep with MANGO company values
-- Mock interviews and final preparation
+**PHASE 4: Interview Mastery (Weeks 11-12)**
+- Technical interview practice (mock coding sessions and system design)
+- Behavioral interview preparation aligned with MANGO values
+- Final portfolio polish and readiness review
+- Mock interviews and last-minute revision
 
 MANGO COMPANY FOCUS:
 - Meta (Facebook): System design, React/frontend, backend scalability, social media algorithms
@@ -365,12 +365,12 @@ OUTPUT FORMAT: Return valid JSON only, structured as:
         ...
         {{
             "week_number": 5,
-            "theme": "Algorithmic Thinking - [Connect to user's tech stack]",
+            "theme": "Algorithmic Thinking - [Interview topic for MANGO companies]",
             "focus_area": "algorithms_data_structures",
             "tasks": ["LeetCode practice task 1", "DSA implementation task 2", ...],
             "estimated_hours": 18,
             "deliverables": ["algorithm implementations", "problem solutions"],
-            "resources": ["LeetCode premium", "algorithm courses", ...]
+            "resources": ["LeetCode free problems", "algorithm courses", ...]
         }},
         ...
         {{

@@ -50,22 +50,25 @@ api.interceptors.response.use(
   async (error: AxiosError<{ error?: string; message?: string }>) => {
     const originalRequest = error.config as AxiosRequestConfigWithRetry;
     
-    // Handle 401 errors with cookie-based token refresh (but not for refresh endpoint itself)
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+    // Handle 401 errors with cookie-based token refresh (but not for auth endpoints)
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
+    const { useAuthStore } = await import('../stores/authStore');
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
+    
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint && isAuthenticated) {
       originalRequest._retry = true;
       
-      try {
+        try {
         // Try to refresh the token (cookies are sent automatically)
-        const { authService } = await import('../services/authService');
-        await authService.refreshTokens();
-        
+          const { authService } = await import('../services/authService');
+          await authService.refreshTokens();
+          
         // Retry the original request (cookies will be automatically included)
-        return api(originalRequest);
-      } catch (refreshError) {
+          return api(originalRequest);
+        } catch (refreshError) {
         // Refresh failed, logout user
-        const { useAuthStore } = await import('../stores/authStore');
         useAuthStore.getState().logout();
-        
+
         // To prevent further actions on this error, we return a resolved promise
         return new Promise(() => {});
       }

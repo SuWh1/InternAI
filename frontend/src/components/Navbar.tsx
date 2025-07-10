@@ -4,12 +4,14 @@ import { GitBranch, Menu, X, LogOut, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import AuthModal from './auth/AuthModal';
+import UserDropdown from './auth/UserDropdown';
 import ThemeToggle from './ThemeToggle';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
@@ -172,7 +174,7 @@ const Navbar = () => {
                             to="/my-roadmap" 
                             className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
                           >
-                            My Roadmap
+                            Career Roadmap
                           </Link>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -188,7 +190,7 @@ const Navbar = () => {
                             to="/my-internships" 
                             className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
                           >
-                            My Internships
+                            Internships
                           </Link>
                         </motion.div>
                       </>
@@ -232,23 +234,8 @@ const Navbar = () => {
                     <div className="flex items-center space-x-4">
                       <ThemeToggle />
                       {!isOnboardingMode && (
-                        <motion.div 
-                          className="flex items-center space-x-2 text-theme-secondary"
-                          whileHover={{ scale: 1.05 }}
-                        >
-                          <User className="h-4 w-4 text-purple-500" />
-                          <span className="text-sm font-medium">{user?.name}</span>
-                        </motion.div>
+                        <UserDropdown />
                       )}
-                      <motion.button
-                        onClick={handleLogout}
-                        className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span className="text-sm">Logout</span>
-                      </motion.button>
                     </div>
                   ) : (
                     !isOnboardingMode && (
@@ -391,23 +378,10 @@ const Navbar = () => {
                     {/* Authentication Section */}
                     {isAuthenticated ? (
                       <motion.div 
-                        className="pt-2 border-t border-theme"
+                        className="pt-2 border-t border-theme flex justify-center"
                         variants={mobileItemVariants}
                       >
-                        <div className="flex items-center space-x-2 text-theme-secondary mb-3">
-                          <User className="h-4 w-4" />
-                          <span className="text-sm font-medium">{user?.name}</span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            handleLogout();
-                            setIsOpen(false);
-                          }}
-                          className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <span className="text-sm">Logout</span>
-                        </button>
+                        <UserDropdown />
                       </motion.div>
                     ) : (
                       <motion.div 
@@ -452,6 +426,8 @@ const Navbar = () => {
           defaultMode={authMode}
         />
       )}
+
+
     </>
   );
 };

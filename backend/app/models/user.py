@@ -14,6 +14,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     google_id = Column(String, unique=True, nullable=True, index=True)
     profile_picture = Column(String, nullable=True)
+    phone = Column(String, nullable=True)  # User phone number
     
     # Relationship to onboarding data
     onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False)

@@ -16,6 +16,12 @@ class User(Base):
     profile_picture = Column(String, nullable=True)
     phone = Column(String, nullable=True)  # User phone number
     
+    # Computed property to expose whether user has a traditional password set
+    @property
+    def has_password(self) -> bool:
+        """Return True if a hashed password exists (non-social login)."""
+        return bool(self.hashed_password)
+    
     # Relationship to onboarding data
     onboarding_data = relationship("OnboardingData", back_populates="user", uselist=False)
     

@@ -9,6 +9,7 @@ export interface User {
   phone?: string;
   hashed_password?: string;
   has_completed_onboarding?: boolean;
+  has_password?: boolean;
 }
 
 export interface UserUpdate {

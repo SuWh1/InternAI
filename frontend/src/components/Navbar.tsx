@@ -121,7 +121,22 @@ const Navbar = () => {
                   className="flex items-center"
                   variants={linkVariants}
                 >
-                  <Link to="/" className="flex items-center space-x-2 group">
+                  {/* Hamburger for mobile */}
+                  {!isOnboardingMode && (
+                    <motion.button
+                      onClick={() => setIsOpen(!isOpen)}
+                      className="md:hidden text-theme-secondary hover:text-theme-accent transition-all duration-200 mr-2"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      animate={{ rotate: isOpen ? 90 : 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    >
+                      {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                    </motion.button>
+                  )}
+
+                  {/* Brand (hidden on mobile) */}
+                  <Link to="/" className="hidden md:flex items-center space-x-2 group">
                     <motion.div 
                       className="h-12 w-12 rounded-lg flex items-center justify-center shadow-lg relative overflow-hidden" 
                       style={{ backgroundColor: '#C700FF' }}
@@ -265,18 +280,9 @@ const Navbar = () => {
                 {/* Mobile menu button - Hidden during onboarding */}
                 {!isOnboardingMode && (
                   <div className="md:hidden flex items-center space-x-3">
-                    <motion.button
-                      onClick={() => setIsOpen(!isOpen)}
-                      className="text-theme-secondary hover:text-theme-accent transition-all duration-200"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      animate={{ rotate: isOpen ? 90 : 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    >
-                      {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </motion.button>
-                    {/* Theme Toggle for mobile */}
+                    {/* Theme Toggle and User Avatar for mobile */}
                     <ThemeToggle />
+                    {isAuthenticated && <UserDropdown />}
                   </div>
                 )}
 
@@ -310,6 +316,18 @@ const Navbar = () => {
                   variants={mobileMenuVariants}
                 >
                   <div className="flex flex-col space-y-4">
+                    {/* Mobile Brand */}
+                    <Link
+                      to="/"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center space-x-2 py-2"
+                    >
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center shadow-lg relative overflow-hidden" style={{ backgroundColor: '#C700FF' }}>
+                        <GitBranch className="h-6 w-6 text-white relative z-10" />
+                      </div>
+                      <span className="text-xl font-bold text-theme-primary">InternAI</span>
+                    </Link>
+
                     {/* Navigation Links */}
                     <div className="flex flex-col space-y-3">
                       {isAuthenticated ? (
@@ -376,14 +394,7 @@ const Navbar = () => {
                     </div>
                     
                     {/* Authentication Section */}
-                    {isAuthenticated ? (
-                      <motion.div 
-                        className="pt-2 border-t border-theme flex justify-center"
-                        variants={mobileItemVariants}
-                      >
-                        <UserDropdown />
-                      </motion.div>
-                    ) : (
+                    {!isAuthenticated && (
                       <motion.div 
                         className="pt-2 border-t border-theme"
                         variants={mobileItemVariants}

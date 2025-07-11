@@ -40,6 +40,8 @@ class UserInDB(UserBase):
 
 # Schema for user response
 class User(UserInDB):
+    google_id: Optional[str] = None
+    has_password: bool = False
     has_completed_onboarding: Optional[bool] = None
 
 # Schema for password change

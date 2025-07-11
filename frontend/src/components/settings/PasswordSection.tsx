@@ -83,7 +83,7 @@ const PasswordSection: React.FC = () => {
   };
 
   // Don't show password section for social login users
-  if (user?.google_id && !user?.hashed_password) {
+  if (!user?.has_password) {
     return (
       <div className="p-6">
         <div className="mb-6">
@@ -91,12 +91,12 @@ const PasswordSection: React.FC = () => {
           <p className="text-theme-secondary">Change your account password.</p>
         </div>
 
-        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6 text-center">
+        <div className="bg-theme-secondary border border-purple-200 dark:border-purple-800 rounded-lg p-6 text-center">
           <Lock className="w-12 h-12 text-purple-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-purple-900 dark:text-purple-100 mb-2">
+          <h3 className="text-lg font-medium text-theme-primary mb-2">
             Social Login Account
           </h3>
-          <p className="text-purple-700 dark:text-purple-300">
+          <p className="text-theme-secondary">
             You signed in with Google. Password changes are managed through your Google account.
           </p>
         </div>

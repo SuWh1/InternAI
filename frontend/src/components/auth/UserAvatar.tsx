@@ -38,7 +38,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     justify-center 
     transition-all 
     duration-200 
-    ${onClick ? 'cursor-pointer hover:scale-105 hover:shadow-lg' : ''}
+    ${onClick ? 'cursor-pointer' : ''}
     ${className}
   `;
 
@@ -48,7 +48,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         src={user.profile_picture}
         alt={`${user.name}'s avatar`}
         onClick={onClick}
-        className={`${baseClasses} object-cover border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500`}
+        className={`${baseClasses} object-cover border border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:border-1`}
       />
     );
   }
@@ -56,7 +56,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`${baseClasses} bg-purple-500 text-white font-semibold border-2 border-purple-300 dark:border-purple-600 hover:border-purple-400`}
+      className={`${baseClasses} bg-purple-500 text-white font-semibold border border-purple-300 dark:border-purple-600 hover:border-purple-400`}
     >
       {user.name ? getInitials(user.name) : <UserIcon className="w-4 h-4" />}
     </div>

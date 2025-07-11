@@ -135,7 +135,7 @@ const ProfileSection: React.FC = () => {
                 <img
                   src={user.profile_picture}
                   alt={`${user.name}'s avatar`}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-purple-200 dark:border-purple-700 shadow-lg"
+                  className="w-20 h-20 rounded-full object-cover border-2 border-purple-200 dark:border-purple-700 shadow-lg"
                 />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-purple-500 text-white font-semibold border-4 border-purple-200 dark:border-purple-700 shadow-lg flex items-center justify-center text-lg">
@@ -216,7 +216,7 @@ const ProfileSection: React.FC = () => {
             type="email"
             value={user?.email || ''}
             readOnly
-            className="w-full px-4 py-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 text-theme-secondary rounded-lg cursor-not-allowed"
+            className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 cursor-not-allowed"
             placeholder="Email address"
           />
           <p className="text-xs text-theme-secondary mt-1">

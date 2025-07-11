@@ -1015,7 +1015,7 @@ const LessonPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300">
+    <div className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300 w-screen overflow-x-hidden">
       {/* Reading Progress Bar removed */}
 
       {/* Header */}

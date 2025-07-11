@@ -92,9 +92,9 @@ const OnboardingSection: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       setError(null);
       
       const [currentData, optionsData] = await Promise.all([
@@ -105,8 +105,9 @@ const OnboardingSection: React.FC = () => {
       setOnboardingData(currentData);
       setOptions(optionsData);
 
-      // Ensure skill confidence value matches options list (case-insensitive)
-      const sanitizedSkillConfidence = optionsData.skill_confidence_options.find(opt => opt.toLowerCase() === currentData.skill_confidence.toLowerCase()) || currentData.skill_confidence;
+      // Ensure skill confidence value matches options list (case-insensitive and trimmed)
+      const foundOption = optionsData.skill_confidence_options.find(opt => opt.trim().toLowerCase() === currentData.skill_confidence.trim().toLowerCase());
+      const sanitizedSkillConfidence = foundOption || '';
       
       // Initialize form data with current values
       setFormData({
@@ -144,12 +145,13 @@ const OnboardingSection: React.FC = () => {
       Object.keys(formData).forEach((key) => {
         const formKey = key as keyof OnboardingUpdate;
         if (JSON.stringify(formData[formKey]) !== JSON.stringify(onboardingData?.[formKey as keyof OnboardingData])) {
-          updateData[formKey] = formData[formKey];
+          (updateData as any)[formKey] = formData[formKey];
         }
       });
 
       if (Object.keys(updateData).length === 0) {
         setError('No changes to save');
+        setTimeout(() => setError(null), 3000);
         return;
       }
 
@@ -159,7 +161,7 @@ const OnboardingSection: React.FC = () => {
       setTimeout(() => setSuccess(false), 3000);
       
       // Reload data to ensure consistency
-      await loadData();
+      await loadData(false);
     } catch (err) {
       setError('Failed to update preferences');
     } finally {
@@ -168,6 +170,7 @@ const OnboardingSection: React.FC = () => {
   };
 
   const updateFormData = (field: keyof OnboardingUpdate, value: any) => {
+    if (error) setError(null);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -188,22 +191,6 @@ const OnboardingSection: React.FC = () => {
         <h2 className="text-xl font-semibold text-theme-primary mb-2">Learning Preferences</h2>
         <p className="text-theme-secondary">Update your learning preferences and career goals. Changes here will affect your roadmap generation.</p>
       </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-        >
-          <p className="text-green-600 dark:text-green-400 text-sm">Preferences updated successfully!</p>
-        </motion.div>
-      )}
 
       <div className="space-y-8">
         {/* Academic Information */}
@@ -368,7 +355,7 @@ const OnboardingSection: React.FC = () => {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex flex-col items-end pt-4">
           <button
             onClick={handleSave}
             disabled={saving}
@@ -381,6 +368,20 @@ const OnboardingSection: React.FC = () => {
             )}
             <span>{saving ? 'Saving...' : 'Save Preferences'}</span>
           </button>
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          )}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+            >
+              <p className="text-green-600 dark:text-green-400 text-sm font-medium">Preferences updated successfully!</p>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

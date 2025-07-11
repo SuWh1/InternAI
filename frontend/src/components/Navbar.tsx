@@ -189,7 +189,7 @@ const Navbar = () => {
                             to="/my-roadmap" 
                             className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
                           >
-                            Career Roadmap
+                            Career
                           </Link>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

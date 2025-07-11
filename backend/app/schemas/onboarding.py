@@ -85,7 +85,7 @@ CURRENT_YEAR_OPTIONS = [
     "3rd year",
     "4th year",
     "5th year",
-    "Recent Graduate"
+    "Recent Graduate",
     "Other"
 ]
 
@@ -96,11 +96,11 @@ EXPERIENCE_LEVEL_OPTIONS = [
 ]
 
 SKILL_CONFIDENCE_OPTIONS = [
-    "Very confident - I can build complex projects independently",
-    "Confident - I can work on most tasks with minimal guidance", 
-    "Moderately confident - I can handle basic tasks but need guidance for complex ones",
+    "Beginner - I'm just starting my coding journey",
     "Learning - I'm still building foundational skills",
-    "Beginner - I'm just starting my coding journey"
+    "Moderately confident - I can handle basic tasks but need guidance for complex ones",
+    "Confident - I can work on most tasks with minimal guidance",
+    "Very confident - I can build complex projects independently"
 ]
 
 PREFERRED_TECH_STACK_OPTIONS = [

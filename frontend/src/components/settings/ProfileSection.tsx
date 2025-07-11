@@ -19,6 +19,7 @@ const ProfileSection: React.FC = () => {
   });
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
+    if (error) setError(null);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -74,6 +75,7 @@ const ProfileSection: React.FC = () => {
 
       if (Object.keys(updateData).length === 0) {
         setError('No changes to save');
+        setTimeout(() => setError(null), 3000);
         return;
       }
 
@@ -106,22 +108,6 @@ const ProfileSection: React.FC = () => {
         <h2 className="text-xl font-semibold text-theme-primary mb-2">Profile</h2>
         <p className="text-theme-secondary">Manage your personal information and profile picture.</p>
       </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-        >
-          <p className="text-green-600 dark:text-green-400 text-sm">Profile updated successfully!</p>
-        </motion.div>
-      )}
 
       <div className="space-y-6">
         {/* Avatar Section */}
@@ -225,7 +211,7 @@ const ProfileSection: React.FC = () => {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex flex-col items-end pt-4">
           <button
             onClick={handleSave}
             disabled={loading}
@@ -238,6 +224,20 @@ const ProfileSection: React.FC = () => {
             )}
             <span>{loading ? 'Saving...' : 'Save Changes'}</span>
           </button>
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          )}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+            >
+              <p className="text-green-600 dark:text-green-400 text-sm font-medium">Profile updated successfully!</p>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

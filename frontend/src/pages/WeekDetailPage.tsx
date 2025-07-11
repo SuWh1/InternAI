@@ -339,7 +339,7 @@ const WeekDetailPage: React.FC = () => {
 
   return (
     <motion.div 
-      className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300"
+      className="min-h-[calc(100vh-4rem)] bg-theme-primary transition-colors duration-300 w-screen overflow-x-hidden"
       style={{ position: 'relative' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -458,8 +458,8 @@ const WeekDetailPage: React.FC = () => {
 
                 {isGeneratingSubtopics && subtopics.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
-                      <div className="spin-animation">
-                        <LoaderCircle className="w-6 h-6 text-theme-accent" />
+                      <div>
+                        <LoaderCircle className="w-6 h-6 text-theme-accent animate-spin" />
                     </div>
                   </div>
                 ) : (

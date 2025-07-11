@@ -603,7 +603,7 @@ const OnboardingPage: React.FC = () => {
               value={formData.experience_level}
               onChange={(value) => updateFormData('experience_level', value)}
               placeholder="Select your experience level"
-              options={['Beginner', 'Intermediate', 'Advanced'].map(option => ({ value: option, label: option }))}
+              options={options?.experience_level_options.map(option => ({ value: option, label: option })) || []}
             />
           </div>
 
@@ -615,13 +615,7 @@ const OnboardingPage: React.FC = () => {
               value={formData.skill_confidence}
               onChange={(value) => updateFormData('skill_confidence', value)}
               placeholder="How confident do you feel about your technical skills?"
-              options={[
-                'Not confident at all',
-                'Somewhat confident',
-                'Moderately confident',
-                'Very confident',
-                'Extremely confident'
-              ].map(option => ({ value: option, label: option }))}
+              options={options?.skill_confidence_options.map(option => ({ value: option, label: option })) || []}
             />
           </div>
         </div>
@@ -743,7 +737,7 @@ const OnboardingPage: React.FC = () => {
 
         <div className="animate-in slide-in-from-bottom duration-500 delay-800">
           <label className="block text-sm font-semibold text-theme-primary mb-4">
-            Preferred Locations <span className="text-theme-secondary font-normal">(Select multiple cities)</span>
+            Preferred Locations <span className="text-theme-secondary font-normal">(Optional)</span>
           </label>
           <LocationAutocomplete
             selectedLocations={formData.preferred_locations}

@@ -21,6 +21,7 @@ const PasswordSection: React.FC = () => {
   });
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
+    if (error) setError(null);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -111,22 +112,6 @@ const PasswordSection: React.FC = () => {
         <p className="text-theme-secondary">Change your account password.</p>
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-        >
-          <p className="text-green-600 dark:text-green-400 text-sm">Password changed successfully!</p>
-        </motion.div>
-      )}
-
       <div className="space-y-6 max-w-md">
         {/* Current Password */}
         <div>
@@ -214,6 +199,20 @@ const PasswordSection: React.FC = () => {
             )}
             <span>{loading ? 'Changing Password...' : 'Change Password'}</span>
           </button>
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          )}
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+            >
+              <p className="text-green-600 dark:text-green-400 text-sm font-medium">Password changed successfully!</p>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

@@ -458,7 +458,7 @@ const WeekDetailPage: React.FC = () => {
 
                 {isGeneratingSubtopics && subtopics.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
-                      <div>
+                      <div className="spin-animation">
                         <LoaderCircle className="w-6 h-6 text-theme-accent animate-spin" />
                     </div>
                   </div>

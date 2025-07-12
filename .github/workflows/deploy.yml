@@ -23,17 +23,13 @@ jobs:
     - name: 🚀 Deploy to Azure VM with rebuild
       run: |
         ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ~/InternAI
-          git pull origin main
+            cd ~/InternAI
+            git pull origin main
 
-          docker compose down --remove-orphans
+            docker compose down
+            docker compose up --build -d
 
-          docker compose up -d --build backend db nginx
+            cd ~/InternAI/frontend
+            npm run build
 
-          cd ~/InternAI/frontend
-          npm ci
-          npm run build
-
-          docker compose up -d --build frontend
-          
         EOF

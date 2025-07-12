@@ -26,10 +26,8 @@ jobs:
             cd ~/InternAI
             git pull origin main
 
-            docker compose down
-            docker compose up --build -d
+            docker compose down --remove-orphans
 
-            cd ~/InternAI/frontend
-            npm run build
+            docker compose up --build -d
 
         EOF

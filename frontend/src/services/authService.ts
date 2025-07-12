@@ -172,9 +172,17 @@ class AuthService {
     }
   }
 
-  async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>('/auth/me');
-    return response.data;
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const response = await api.get<User>('/auth/me');
+      return response.data;
+    } catch (error: any) {
+      if (error.statusCode === 401) {
+        // Silently return null if not logged in
+        return null;
+      }
+      throw error;
+    }
   }
 
   async refreshTokens(): Promise<void> {

@@ -9,7 +9,7 @@ class Roadmap(Base):
     
     # The id, created_at, and updated_at columns are inherited from Base
     
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     roadmap_data = Column(JSON, nullable=False)  # Store the complete roadmap JSON
     progress_data = Column(JSON, nullable=True)  # Store progress tracking JSON
     roadmap_type = Column(String, default="3_month_internship_prep")

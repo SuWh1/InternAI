@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, GitBranch, Eye, EyeOff } from 'lucide-react';
+import { X, GitBranch, Eye, EyeOff, Mail, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,7 +11,7 @@ import { GoogleLoginButton } from './GoogleLoginButton';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultMode?: 'login' | 'register' | 'forgot';
+  defaultMode?: 'login' | 'register' | 'forgot' | 'verify';
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ 
@@ -19,7 +19,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   onClose, 
   defaultMode = 'register' 
 }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(defaultMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'verify'>(defaultMode);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,7 +31,14 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
 
-  const { login, register, loading, error, clearError } = useAuth();
+  // Email verification states
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
+  const { login, register, verifyPin, resendPin, loading, error, clearError } = useAuth();
   const dragControls = useDragControls();
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,6 +111,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
       setFormError(null);
       setResetSent(false);
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      setVerificationCode(['', '', '', '', '', '']);
+      setVerifyLoading(false);
+      setResendLoading(false);
+      setResendCooldown(0);
       clearError(); // Clear auth store errors when modal opens
     } else {
       // Clear errors when modal closes
@@ -145,6 +156,109 @@ const AuthModal: React.FC<AuthModalProps> = ({
     // For register, OnboardingWrapper will handle the redirection
   };
 
+  const handleVerifyPin = async () => {
+    const pin = verificationCode.join('');
+    if (pin.length !== 6) {
+      setFormError('Please enter all 6 digits');
+      return;
+    }
+    await handleVerifyPinWithCode(pin);
+  };
+
+  const handleVerifyPinWithCode = async (pin: string) => {
+    if (pin.length !== 6) {
+      setFormError('Please enter all 6 digits');
+      return;
+    }
+
+    setVerifyLoading(true);
+    setFormError(null);
+
+    try {
+      await verifyPin(verificationEmail, pin);
+      
+      // Verification successful - complete registration
+      onClose();
+      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      setVerificationCode(['', '', '', '', '', '']);
+      setVerificationEmail('');
+      
+      // Handle post-authentication routing for completed registration
+      handlePostAuthSuccess('register');
+    } catch (error) {
+      // Error is handled by the auth context
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendPin = async () => {
+    if (resendCooldown > 0) return;
+
+    setResendLoading(true);
+    setFormError(null);
+
+    try {
+      await resendPin(verificationEmail);
+      
+      // Start cooldown timer
+      setResendCooldown(60);
+      const timer = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+    } catch (error) {
+      // Error is handled by the auth context
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleVerificationCodeChange = (index: number, value: string) => {
+    if (value.length > 1) return; // Only allow single digit
+    if (value && !/^\d$/.test(value)) return; // Only allow digits
+
+    // Clear any existing errors when user starts typing
+    if (formError || error) {
+      setFormError(null);
+      clearError?.();
+    }
+
+    const newCode = [...verificationCode];
+    newCode[index] = value;
+    setVerificationCode(newCode);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`pin-${index + 1}`);
+      nextInput?.focus();
+    }
+
+    // Auto-submit when all digits are entered
+    if (value && index === 5 && newCode.every(digit => digit !== '')) {
+      setTimeout(() => {
+        // Use the newCode directly instead of state
+        const pin = newCode.join('');
+        if (pin.length === 6) {
+          handleVerifyPinWithCode(pin);
+        }
+      }, 100);
+    }
+  };
+
+  const handleVerificationCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      const prevInput = document.getElementById(`pin-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -162,6 +276,11 @@ const AuthModal: React.FC<AuthModalProps> = ({
         setResetSent(true);
       }, 1000);
       
+      return;
+    }
+
+    if (mode === 'verify') {
+      await handleVerifyPin();
       return;
     }
 
@@ -188,15 +307,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
     try {
       if (mode === 'register') {
         await register(formData.email, formData.password, formData.name);
+        // Instead of closing modal, switch to verification mode
+        console.log('Registration successful, switching to verify mode');
+        setVerificationEmail(formData.email);
+        setMode('verify');
+        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
       } else {
         await login(formData.email, formData.password);
+        onClose();
+        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+        // Handle post-authentication routing
+        handlePostAuthSuccess(mode as 'login');
       }
-      
-      onClose();
-      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-      
-      // Handle post-authentication routing
-      handlePostAuthSuccess(mode);
     } catch (error) {
       // Error is handled by the auth context
     }
@@ -231,11 +353,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
     });
   };
 
-  const switchMode = (newMode: 'login' | 'register' | 'forgot') => {
+  const switchMode = (newMode: 'login' | 'register' | 'forgot' | 'verify') => {
+    console.log('Switching to mode:', newMode);
     setMode(newMode);
     setFormError(null);
     setResetSent(false);
     setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+    setVerificationCode(['', '', '', '', '', '']);
+    setVerifyLoading(false);
+    setResendLoading(false);
+    setResendCooldown(0);
     clearError(); // Clear auth store errors when switching modes
   };
 
@@ -256,7 +383,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           {/* Modal */}
           <div className="flex min-h-full items-center justify-center p-6">
             <motion.div 
-              className="relative w-[420px] transform overflow-hidden rounded-xl bg-theme-secondary shadow-xl border border-theme transition-all duration-300"
+              className="relative w-full max-w-[420px] mx-4 transform overflow-hidden rounded-xl bg-theme-secondary shadow-xl border border-theme transition-all duration-300"
               style={{ position: 'relative' }}
               onClick={(e) => e.stopPropagation()}
               variants={modalVariants}
@@ -293,29 +420,31 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </motion.button>
 
               {/* Header - Drag Handle */}
-              <motion.div 
-                className="px-6 pt-8 pb-4 text-center cursor-grab active:cursor-grabbing select-none"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                onPointerDown={(e) => dragControls.start(e)}
-                whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.02)" }}
-                style={{ borderRadius: "12px 12px 0 0" }}
-              >
+              {mode !== 'verify' && (
                 <motion.div 
-                  className="flex items-center justify-center mb-4"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="px-6 pt-8 pb-4 text-center cursor-grab active:cursor-grabbing select-none"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  onPointerDown={(e) => dragControls.start(e)}
+                  whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.02)" }}
+                  style={{ borderRadius: "12px 12px 0 0" }}
                 >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  <motion.div 
+                    className="flex items-center justify-center mb-4"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   >
-                    <GitBranch className="h-10 w-10 text-theme-accent mr-2" />
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    >
+                      <GitBranch className="h-10 w-10 text-theme-accent mr-2" />
+                    </motion.div>
+                    <h1 className="text-2xl font-bold text-theme-primary transition-colors duration-300">InternAI</h1>
                   </motion.div>
-                  <h1 className="text-2xl font-bold text-theme-primary transition-colors duration-300">InternAI</h1>
                 </motion.div>
-              </motion.div>
+              )}
 
               {/* Form */}
               <motion.form 
@@ -325,9 +454,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 initial="hidden"
                 animate="visible"
               >
-                {/* Error Messages */}
+                {/* Error Messages (Not for verification mode) */}
                 <AnimatePresence>
-                  {(error || formError) && (
+                  {(error || formError) && mode !== 'verify' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -367,6 +496,233 @@ const AuthModal: React.FC<AuthModalProps> = ({
                       Back to Sign In
                     </button>
                   </motion.div>
+                ) : mode === 'verify' ? (
+                  <motion.div 
+                    className="text-center py-6 px-4 sm:px-6 verification-modal"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                  >
+                    <motion.div 
+                      className="flex items-center justify-center mb-6"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                    >
+                      <motion.div
+                        className="p-3 rounded-full bg-theme-accent/10 mr-3"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      >
+                        <Mail className="h-8 w-8 text-theme-accent" />
+                      </motion.div>
+                      <h2 className="text-lg sm:text-xl font-semibold text-theme-primary">Verify Your Email</h2>
+                    </motion.div>
+                    
+                    <motion.div 
+                      className="mb-8"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                    >
+                      <p className="text-theme-secondary text-sm mb-2">
+                        We've sent a 6-digit verification code to
+                      </p>
+                      <p className="font-semibold text-theme-primary bg-theme-secondary/20 px-2 sm:px-4 py-2 rounded-lg inline-block mb-3 border border-theme-secondary/30 text-xs sm:text-sm break-all">
+                        {verificationEmail}
+                      </p>
+                      <p className="text-theme-secondary text-xs">
+                        Enter the code below to verify your email address
+                      </p>
+                    </motion.div>
+
+                    {/* PIN Input */}
+                    <motion.div 
+                      className="mb-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                    >
+                      <div className="max-w-xs mx-auto">
+                        <div className="flex justify-center gap-2 sm:gap-3 mb-3"
+                          style={{
+                            gap: 'clamp(2px, 1.2vw, 10px)'
+                          }}
+                        >
+                        {verificationCode.map((digit, index) => (
+                          <motion.div
+                            key={index}
+                            className="relative"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2, delay: 0.4 + index * 0.05 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileFocus={{ scale: 1.05 }}
+                          >
+                            <input
+                              id={`pin-${index}`}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={1}
+                              value={digit}
+                              onChange={(e) => handleVerificationCodeChange(index, e.target.value)}
+                              onKeyDown={(e) => handleVerificationCodeKeyDown(index, e)}
+                              className="modal-pin-input transition-all duration-200 hover:border-theme-accent/60 focus:border-theme-accent focus:shadow-lg focus:shadow-theme-accent/20"
+                              placeholder=""
+                              disabled={verifyLoading}
+                            />
+                          </motion.div>
+                        ))}
+                        </div>
+                      
+                        {/* Progress indicator */}
+                        <div className="flex justify-center">
+                          <div className="flex gap-1">
+                            {Array.from({ length: 6 }, (_, index) => (
+                              <motion.div
+                                key={index}
+                                className={`w-6 h-1 rounded-full transition-all duration-300 ${
+                                  index < verificationCode.filter(Boolean).length 
+                                    ? 'bg-theme-accent' 
+                                    : 'bg-gray-300 dark:bg-gray-600'
+                                }`}
+                                initial={{ scaleX: 0.3 }}
+                                animate={{ scaleX: index < verificationCode.filter(Boolean).length ? 1 : 0.3 }}
+                                transition={{ duration: 0.3, ease: "easeOut" }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Verification Status */}
+                      <div className="flex justify-center mt-4 min-h-[24px]">
+                        {verifyLoading ? (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex items-center text-theme-accent"
+                          >
+                            <LoadingSpinner size="small" className="mr-2" />
+                            <span className="text-sm font-medium">Verifying code...</span>
+                          </motion.div>
+                        ) : verificationCode.join('').length === 6 ? (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex items-center text-green-600 dark:text-green-400"
+                          >
+                            <span className="text-sm font-medium">Code complete ✓</span>
+                          </motion.div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+
+                    {/* Resend Option */}
+                    <motion.div 
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.4 }}
+                    >
+                      <motion.div 
+                        className="bg-theme-secondary/20 border border-theme-secondary/30 rounded-lg p-4 mb-4 transition-all duration-200 hover:bg-theme-secondary/30"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      >
+                        <p className="text-theme-secondary text-sm mb-3">
+                          Didn't receive the code?
+                        </p>
+                        <motion.button
+                          type="button"
+                          onClick={handleResendPin}
+                          disabled={resendLoading || resendCooldown > 0}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-theme-accent hover:bg-theme-accent/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
+                          whileHover={!(resendLoading || resendCooldown > 0) ? { scale: 1.05 } : {}}
+                          whileTap={!(resendLoading || resendCooldown > 0) ? { scale: 0.95 } : {}}
+                        >
+                          {resendLoading ? (
+                            <>
+                              <LoadingSpinner size="small" />
+                              <span>Sending...</span>
+                            </>
+                          ) : resendCooldown > 0 ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </motion.div>
+                              <span>Resend in {resendCooldown}s</span>
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-4 w-4" />
+                              <span>Resend Code</span>
+                            </>
+                          )}
+                        </motion.button>
+                      </motion.div>
+                    </motion.div>
+
+                    {/* Back to Register */}
+                    <motion.div 
+                      className="text-center"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.5 }}
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={() => switchMode('register')}
+                        className="inline-flex items-center gap-2 text-white hover:text-white font-medium transition-all duration-200 text-sm px-4 py-2 rounded-lg hover:bg-theme-secondary/20"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <span>←</span>
+                        <span>Back to Sign Up</span>
+                      </motion.button>
+                    </motion.div>
+
+                    {/* Error Message for Verification */}
+                    <AnimatePresence>
+                      {(error || formError) && mode === 'verify' && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-4"
+                        >
+                          <div className="bg-red-400/15 border border-red-400/25 rounded-xl p-4">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0">
+                                <div className="h-5 w-5 text-red-400 mt-0.5">
+                                  <svg viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="ml-3 flex-1">
+                                <h3 className="text-sm font-medium text-red-500 dark:text-red-400 mb-1">
+                                  Verification Failed
+                                </h3>
+                                <p className="text-sm text-red-500 dark:text-red-400 opacity-90">
+                                  {(formError === 'Please enter all 6 digits')
+                                    ? 'Please enter all 6 digits of the verification code.'
+                                    : 'The verification code is incorrect or has expired. Please try again or request a new code.'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 ) : (
                   <>
                     {/* Name Field (Register only) */}
@@ -374,7 +730,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                       {mode === 'register' && (
                         <motion.div 
                           className="mb-4"
-                          variants={formItemVariants}
+                              variants={formItemVariants}
                           initial="hidden"
                           animate="visible"
                           exit="hidden"
@@ -617,4 +973,4 @@ const AuthModal: React.FC<AuthModalProps> = ({
   );
 };
 
-export default AuthModal; 
+export default AuthModal;

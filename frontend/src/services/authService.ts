@@ -57,26 +57,21 @@ class AuthService {
   }
 
   async register(email: string, password: string, name: string): Promise<void> {
-    const { setLoading, setError, setUser } = this.getStore();
+    const { setLoading, setError } = this.getStore();
     
     try {
       setLoading(true);
       setError(null);
       
-      const response = await api.post<User>('/auth/register', {
+      await api.post<{message: string; success: boolean}>('/auth/register', {
         email,
         password,
         name,
       });
       
-      const user = response.data;
+      // Registration successful, but user needs to verify email
+      // No user data is returned, just success message
       
-      // Clear any previous user's data
-      queryClient.clear();
-      // Update store (tokens are now stored in httpOnly cookies)
-      setUser(user);
-      
-      // Note: Onboarding redirect will be handled by OnboardingWrapper
     } catch (error: any) {
       // Parse error and provide specific message
       let errorMessage = 'Registration failed';
@@ -96,6 +91,89 @@ class AuthService {
         errorMessage = 'Invalid email format or password requirements not met';
       } else if (error.statusCode === 429) {
         errorMessage = 'Too many registration attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async verifyPin(email: string, code: string): Promise<void> {
+    const { setLoading, setError, setUser } = this.getStore();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.post<User>('/auth/verify-pin', {
+        email,
+        code,
+      });
+      
+      const user = response.data;
+      
+      // Clear any previous user's data
+      queryClient.clear();
+      // Update store (tokens are now stored in httpOnly cookies)
+      setUser(user);
+      
+      // Note: Onboarding redirect will be handled by OnboardingWrapper
+    } catch (error: any) {
+      // Parse error and provide specific message
+      let errorMessage = 'Verification failed';
+      
+      if (error.statusCode === 400) {
+        errorMessage = 'Invalid or expired verification code';
+      } else if (error.statusCode === 404) {
+        errorMessage = 'User not found';
+      } else if (error.statusCode === 429) {
+        errorMessage = 'Too many verification attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async resendPin(email: string): Promise<void> {
+    const { setLoading, setError } = this.getStore();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await api.post<{message: string; success: boolean}>('/auth/resend-pin', {
+        email,
+      });
+      
+      // Success message will be handled by the UI
+      
+    } catch (error: any) {
+      // Parse error and provide specific message
+      let errorMessage = 'Failed to resend verification code';
+      
+      if (error.statusCode === 400) {
+        errorMessage = 'User is already verified';
+      } else if (error.statusCode === 404) {
+        errorMessage = 'User not found';
+      } else if (error.statusCode === 429) {
+        errorMessage = 'Too many resend attempts. Please try again later';
       } else if (error.statusCode >= 500) {
         errorMessage = 'Server error. Please try again later';
       } else if (error.error && typeof error.error === 'string') {

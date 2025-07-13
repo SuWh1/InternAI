@@ -5,12 +5,13 @@ from sqlalchemy import select
 from datetime import timedelta
 from typing import Any
 import uuid
+import logging
 
 from app.db.session import get_db
 from app.schemas.user import User, UserCreate, UserLogin, GoogleAuthRequest, UserUpdate, PasswordChange, AccountDeletion, AvatarUploadResponse
-from app.schemas.auth import AuthResponse
+from app.schemas.auth import AuthResponse, PinVerificationRequest, PinResendRequest
 from app.schemas.common import GenericResponse
-from app.crud.user import create_user, authenticate_user, authenticate_google_user, get_user_by_id, update_user, delete_user
+from app.crud.user import create_user, authenticate_user, authenticate_google_user, get_user_by_id, update_user, delete_user, get_user_by_email, create_pending_user, get_pending_user_by_email, create_user_from_pending
 from app.crud.onboarding import has_completed_onboarding
 from app.core.security import (
     create_access_token, 
@@ -27,6 +28,9 @@ from app.core.config import settings
 from app.core.rate_limit import limiter, RateLimits
 from app.utils.google_auth import verify_google_token
 from app.utils.s3 import upload_avatar as s3_upload_avatar, delete_avatar as s3_delete_avatar
+from app.utils.email_service import email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -43,12 +47,73 @@ async def add_onboarding_status(user: User, db: AsyncSession) -> User:
     
     return user
 
-@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=GenericResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def register(request: Request, response: Response, user_data: UserCreate, db: AsyncSession = Depends(get_db)) -> Any:
-    user = await create_user(db, user_data)
+    # Debug: log the received data
+    logger.info(f"Registration attempt - Email: {user_data.email}, Name: '{user_data.name}'")
+    
+    # Generate PIN and set expiration
+    pin = email_service.generate_pin_code()
+    pin_expires = email_service.get_pin_expiration()
+    
+    # Create pending user (not verified yet)
+    pending_user = await create_pending_user(db, user_data, pin, pin_expires)
+    
+    # Debug: log the pending user data
+    logger.info(f"Created pending user - Email: {pending_user.email}, Name: '{pending_user.name}'")
+    
+    # Send verification email
+    try:
+        email_sent = await email_service.send_verification_email(pending_user.email, pin, pending_user.name)
+        
+        if not email_sent:
+            # If email sending fails, we should still allow the user to try again
+            # but we don't want to fail the registration completely
+            logger.warning(f"Failed to send verification email to {pending_user.email}")
+            return GenericResponse(
+                message="Registration successful, but there was an issue sending the verification email. Please try to resend the verification code.",
+                success=True
+            )
+            
+    except Exception as e:
+        logger.error(f"Exception sending verification email to {pending_user.email}: {e}")
+        return GenericResponse(
+            message="Registration successful, but there was an issue sending the verification email. Please try to resend the verification code.",
+            success=True
+        )
+
+    return GenericResponse(
+        message="Registration successful. Please check your email for the verification code.",
+        success=True
+    )
+
+@router.post("/verify-pin", response_model=User)
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def verify_pin(request: Request, response: Response, pin_data: PinVerificationRequest, db: AsyncSession = Depends(get_db)) -> Any:
+    """Verify PIN code and complete user registration."""
+    # Get pending user by email
+    pending_user = await get_pending_user_by_email(db, email=pin_data.email)
+    if not pending_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending registration found for this email",
+        )
+    
+    # Check if PIN is valid
+    if not email_service.is_pin_valid(pending_user.pin_code, pending_user.pin_expires, pin_data.code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code",
+        )
+    
+    # Create actual user from pending user
+    user = await create_user_from_pending(db, pending_user)
+    
+    # Add onboarding status
     user = await add_onboarding_status(user, db)
     
+    # Generate tokens and set cookies
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id), "is_admin": user.is_admin}, expires_delta=access_token_expires
@@ -58,8 +123,45 @@ async def register(request: Request, response: Response, user_data: UserCreate, 
     # Set cookies
     set_auth_cookies(response, access_token, refresh_token)
     
-    # Return only user data
     return user
+
+@router.post("/resend-pin", response_model=GenericResponse)
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def resend_pin(request: Request, pin_data: PinResendRequest, db: AsyncSession = Depends(get_db)) -> Any:
+    """Resend PIN code to user's email."""
+    # Get pending user by email
+    pending_user = await get_pending_user_by_email(db, email=pin_data.email)
+    if not pending_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending registration found for this email",
+        )
+    
+    # Debug: log the pending user data for resend
+    logger.info(f"Resending PIN - Email: {pending_user.email}, Name: '{pending_user.name}'")
+    
+    # Generate new PIN and set expiration
+    pin = email_service.generate_pin_code()
+    pin_expires = email_service.get_pin_expiration()
+    
+    # Update pending user with new PIN
+    pending_user.pin_code = pin
+    pending_user.pin_expires = pin_expires
+    await db.commit()
+    
+    # Send verification email
+    email_sent = await email_service.send_verification_email(pending_user.email, pin, pending_user.name)
+    
+    if not email_sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again.",
+        )
+    
+    return GenericResponse(
+        message="Verification code sent successfully. Please check your email.",
+        success=True
+    )
 
 @router.post("/login", response_model=User)
 @limiter.limit(RateLimits.AUTH_LOGIN)
@@ -380,4 +482,4 @@ async def debug_google_config(request: Request) -> Any:
         "google_client_id_preview": settings.GOOGLE_CLIENT_ID[:20] + "..." if settings.GOOGLE_CLIENT_ID else "Not set",
         "google_client_secret_configured": bool(settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_CLIENT_SECRET != "your-google-client-secret-here"),
         "redirect_uri": settings.GOOGLE_REDIRECT_URI
-    } 
+    }

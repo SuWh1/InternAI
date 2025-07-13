@@ -10,3 +10,12 @@ class AuthResponse(BaseModel):
 # Schema for refresh token request
 class RefreshTokenRequest(BaseModel):
     refresh_token: str 
+
+# Schema for PIN verification
+class PinVerificationRequest(BaseModel):
+    email: str
+    code: str
+
+# Schema for PIN resend
+class PinResendRequest(BaseModel):
+    email: str

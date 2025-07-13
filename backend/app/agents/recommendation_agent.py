@@ -83,13 +83,28 @@ class RecommendationAgent(BaseAgent):
         
         return scored_internships[:5]
     
+    def _safe_get_list(self, data: Dict[str, Any], key: str, default: List = None) -> List:
+        """Safely get a list from a dictionary, handling both string and list values."""
+        if default is None:
+            default = []
+        
+        value = data.get(key, default)
+        
+        if isinstance(value, str):
+            return [value] if value.strip() else []
+        elif isinstance(value, list):
+            return value
+        else:
+            self.log_warning(f"Unexpected type for {key}: {type(value)}, returning empty list")
+            return []
+
     def _create_user_profile(self, onboarding_data: Dict[str, Any], resume_summary: Dict[str, Any] = None) -> Dict[str, Any]:
         """Create a user profile for matching against internships."""
         
         profile = {
             "target_roles": onboarding_data.get("target_roles", []),
             "programming_languages": onboarding_data.get("programming_languages", []),
-            "preferred_tech_stack": onboarding_data.get("preferred_tech_stack", []),
+            "preferred_tech_stack": onboarding_data.get("preferred_tech_stack", ""),  # This is a string, not a list
             "preferred_locations": onboarding_data.get("preferred_locations", []),
             "preferred_company_types": onboarding_data.get("preferred_company_types", []),
             "experience_level": onboarding_data.get("experience_level", "Beginner"),
@@ -184,9 +199,23 @@ class RecommendationAgent(BaseAgent):
     def _score_tech_match(self, internship: Dict[str, Any], user_profile: Dict[str, Any]) -> float:
         """Score technical skills match."""
         internship_techs = [tech.lower() for tech in internship.get("required_skills", [])]
-        user_languages = [lang.lower() for lang in user_profile.get("programming_languages", [])]
-        user_tech_stack = [tech.lower() for tech in user_profile.get("preferred_tech_stack", [])]
-        resume_skills = [skill.lower() for skill in user_profile.get("resume_technical_skills", [])]
+        
+        # Safely handle different field types
+        user_languages = user_profile.get("programming_languages", [])
+        if isinstance(user_languages, str):
+            user_languages = [user_languages]
+        user_languages = [lang.lower() for lang in user_languages]
+        
+        preferred_tech_stack = user_profile.get("preferred_tech_stack", "")
+        if isinstance(preferred_tech_stack, str):
+            user_tech_stack = [preferred_tech_stack.lower()] if preferred_tech_stack else []
+        else:
+            user_tech_stack = [tech.lower() for tech in preferred_tech_stack]
+        
+        resume_skills = user_profile.get("resume_technical_skills", [])
+        if isinstance(resume_skills, str):
+            resume_skills = [resume_skills]
+        resume_skills = [skill.lower() for skill in resume_skills]
         
         all_user_skills = set(user_languages + user_tech_stack + resume_skills)
         
@@ -277,9 +306,21 @@ class RecommendationAgent(BaseAgent):
         
         # Tech skills match
         internship_techs = internship.get("required_skills", [])
-        user_skills = (user_profile.get("programming_languages", []) + 
-                      user_profile.get("preferred_tech_stack", []) +
-                      user_profile.get("resume_technical_skills", []))
+        
+        # Safely handle different field types
+        user_languages = user_profile.get("programming_languages", [])
+        if isinstance(user_languages, str):
+            user_languages = [user_languages]
+        
+        preferred_tech_stack = user_profile.get("preferred_tech_stack", "")
+        if isinstance(preferred_tech_stack, str):
+            preferred_tech_stack = [preferred_tech_stack] if preferred_tech_stack else []
+        
+        resume_skills = user_profile.get("resume_technical_skills", [])
+        if isinstance(resume_skills, str):
+            resume_skills = [resume_skills]
+        
+        user_skills = user_languages + preferred_tech_stack + resume_skills
         
         matching_techs = []
         for tech in internship_techs:
@@ -480,4 +521,4 @@ class RecommendationAgent(BaseAgent):
                 "stipend_range": "$8000-10000/month",
                 "website": "https://www.palantir.com/careers/students/"
             }
-        ] 
+        ]

@@ -10,7 +10,7 @@ class OnboardingData(Base):
     # The id, created_at, and updated_at columns are inherited from Base
     
     # Foreign key to user
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     
     # Personal Information
     current_year = Column(String, nullable=False)  # Freshman, Sophomore, Junior, Senior, Graduate

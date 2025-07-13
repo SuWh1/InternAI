@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     AWS_REGION: str = os.getenv("AWS_REGION", "eu-north-1")
     AWS_S3_AVATAR_BUCKET: str = os.getenv("AWS_S3_AVATAR_BUCKET", "")
 
+    # Brevo (Email) configuration
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "InternAI")
+    BREVO_FROM_EMAIL: str = os.getenv("BREVO_FROM_EMAIL", "")
+    BREVO_TEMPLATE_ID: int = int(os.getenv("BREVO_TEMPLATE_ID", "1"))
+
     ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL")
     
     class Config:

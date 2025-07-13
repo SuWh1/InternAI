@@ -9,7 +9,7 @@ class LearningContent(Base):
     
     # The id, created_at, and updated_at columns are inherited from Base
     
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Content identification
     content_type = Column(String, nullable=False)  # 'subtopics', 'explanation', 'resources'

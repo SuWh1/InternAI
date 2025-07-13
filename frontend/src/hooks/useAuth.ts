@@ -23,6 +23,16 @@ export const useAuth = () => {
     await authService.register(email, password, name);
   };
 
+  const verifyPin = async (email: string, code: string) => {
+    clearError();
+    await authService.verifyPin(email, code);
+  };
+
+  const resendPin = async (email: string) => {
+    clearError();
+    await authService.resendPin(email);
+  };
+
   const googleLoginWithToken = async (token: string) => {
     clearError();
     await authService.googleLoginWithToken(token);
@@ -46,6 +56,8 @@ export const useAuth = () => {
     clearError,
     login,
     register,
+    verifyPin,
+    resendPin,
     googleLoginWithToken,
     logout,
     refreshUserData,

@@ -56,14 +56,14 @@ const UserDropdown: React.FC = () => {
             className="absolute right-0 mt-2 w-64 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 rounded-xl shadow-lg z-50 overflow-hidden"
           >
             {/* User Info Header */}
-            <div className="px-4 py-3 border-b border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20">
+            <div className="px-4 py-3 border-b border-purple-200 dark:border-purple-700 bg-theme-secondary">
               <div className="flex items-center space-x-3">
                 <UserAvatar user={user} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-theme-primary truncate">
                     {user.name}
                   </p>
-                  <p className="text-xs text-theme-secondary truncate">
+                  <p className="text-xs text-theme-secondary truncate py-1">
                     {user.email}
                   </p>
                 </div>

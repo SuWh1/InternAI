@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from typing import Optional
 from fastapi import HTTPException, status
 
-from app.models.user import User
+from app.models.user import User, PendingUser
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
 
@@ -175,12 +175,80 @@ async def deactivate_user(db: AsyncSession, user_id: str) -> User:
 
 async def delete_user(db: AsyncSession, user_id: str) -> bool:
     """Permanently delete user and all related data."""
-    db_user = await get_user_by_id(db, user_id=user_id)
-    if not db_user:
+    try:
+        # Check if user exists
+        db_user = await get_user_by_id(db, user_id=user_id)
+        if not db_user:
+            return False
+        
+        # Use SQLAlchemy's delete statement instead of session.delete
+        # This will properly trigger the CASCADE DELETE at the database level
+        await db.execute(delete(User).where(User.id == user_id))
+        await db.commit()
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error deleting user {user_id}: {e}")
+        await db.rollback()
         return False
+
+async def get_pending_user_by_email(db: AsyncSession, email: str) -> Optional[PendingUser]:
+    result = await db.execute(select(PendingUser).where(PendingUser.email == email))
+    return result.scalar_one_or_none()
+
+async def create_pending_user(db: AsyncSession, user_data: UserCreate, pin_code: str, pin_expires) -> PendingUser:
+    """Create a pending user registration (not verified yet)."""
+    # Check if user already exists
+    existing_user = await get_user_by_email(db, email=user_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
     
-    # Delete user (cascading deletes will handle related data)
-    await db.delete(db_user)
+    # Check if there's already a pending registration and remove it
+    existing_pending = await get_pending_user_by_email(db, email=user_data.email)
+    if existing_pending:
+        await db.delete(existing_pending)
+        await db.commit()  # Ensure deletion is committed
+    
+    # Create pending user
+    user_dict = user_data.model_dump(exclude_unset=True)
+    user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
+    user_dict["pin_code"] = pin_code
+    user_dict["pin_expires"] = pin_expires
+    
+    pending_user = PendingUser(**user_dict)
+    
+    # Add to DB
+    db.add(pending_user)
     await db.commit()
+    await db.refresh(pending_user)
     
-    return True 
+    return pending_user
+
+async def create_user_from_pending(db: AsyncSession, pending_user: PendingUser) -> User:
+    """Create a verified user from a pending user registration."""
+    # Create the actual user
+    user_dict = {
+        "email": pending_user.email,
+        "name": pending_user.name,
+        "hashed_password": pending_user.hashed_password,
+        "is_verified": True,
+        "is_active": True,
+        "is_admin": False
+    }
+    
+    db_user = User(**user_dict)
+    
+    # Add user to DB
+    db.add(db_user)
+    
+    # Delete pending user
+    await db.delete(pending_user)
+    
+    await db.commit()
+    await db.refresh(db_user)
+    
+    return db_user

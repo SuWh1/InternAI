@@ -84,6 +84,10 @@ class EmailService:
                 sender=sib_api_v3_sdk.SendSmtpEmailSender(
                     name=settings.BREVO_FROM_NAME,
                     email=settings.BREVO_FROM_EMAIL
+                ),
+                reply_to=sib_api_v3_sdk.SendSmtpEmailReplyTo(
+                    email=settings.BREVO_FROM_EMAIL,
+                    name=settings.BREVO_FROM_NAME
                 )
             )
             

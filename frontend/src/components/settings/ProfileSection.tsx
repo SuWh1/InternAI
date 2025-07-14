@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, Save, Loader2, User as UserIcon } from 'lucide-react';
+import { Camera, Save, Loader2, User as UserIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { userService } from '../../services/userService';
@@ -151,7 +151,7 @@ const ProfileSection: React.FC = () => {
               </button>
               
               <p className="text-xs text-theme-secondary mt-1">
-                PNG, JPEG or GIF under 10MB
+                PNG, JPEG, JPG or GIF under 10MB
               </p>
             </div>
           </div>
@@ -159,7 +159,7 @@ const ProfileSection: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
             onChange={handleFileChange}
             className="hidden"
           />

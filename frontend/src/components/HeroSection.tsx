@@ -138,8 +138,28 @@ const HeroSection = () => {
 
         <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            {/* Main heading with stagger animation */}
+            {/* Peerlist Launch Badge */}
             <AnimatedSection animation="fade-in-up" delay={0}>
+              <motion.div 
+                className="mb-8 flex justify-center"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                whileHover={{ 
+                  scale: 1.05,
+                  transition: { type: "spring", stiffness: 300 }
+                }}
+              >
+                <img
+                  src={theme === 'dark' ? '/peerlist/Launch_SVG_Dark.svg' : '/peerlist/Launch_SVG_Light.svg'}
+                  alt="Live on Peerlist"
+                  className="h-12 sm:h-14 md:h-16 w-auto opacity-90 hover:opacity-100 transition-opacity duration-200"
+                />
+              </motion.div>
+            </AnimatedSection>
+
+            {/* Main heading with stagger animation */}
+            <AnimatedSection animation="fade-in-up" delay={0.3}>
               <h1 className="text-4xl md:text-6xl font-bold mb-6 transition-colors duration-300">
                 <motion.span
                   className={`${

@@ -211,6 +211,63 @@ body.light {
   animation: pulse 2s infinite;
 }
 
+/* Brain breathing animation with purple opacity fog */
+@keyframes brain-breathe {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(199, 0, 255, 0));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 20px rgba(199, 0, 255, 0.6));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(199, 0, 255, 0));
+  }
+}
+
+@keyframes brain-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+.animate-brain-breathe {
+  animation: brain-breathe 3s ease-in-out infinite;
+}
+
+.animate-brain-pulse {
+  animation: brain-pulse 2s ease-in-out infinite;
+}
+
+.brain-glow {
+  position: relative;
+}
+
+.brain-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(199, 0, 255, 0.3) 0%, rgba(199, 0, 255, 0.1) 50%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  animation: brain-breathe 3s ease-in-out infinite;
+}
+
 /* Spin animation for loading icons */
 @keyframes spin {
   0% {
@@ -978,10 +1035,126 @@ input[id^="pin-"]:not(:placeholder-shown) {
   border: 1px solid rgba(75, 85, 99, 0.3) !important;
 }
 
-.verification-modal .bg-theme-secondary\/20:hover {
-  background-color: rgba(148, 163, 184, 0.3) !important;
+/* ReactFlow Controls Theme Adaptive Styling */
+.react-flow__controls {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 8px !important;
 }
 
-.dark .verification-modal .bg-theme-secondary\/20:hover {
-  background-color: rgba(75, 85, 99, 0.3) !important;
+.react-flow__controls-button {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+  transition: all 200ms ease !important;
+  border-radius: 6px !important;
+  margin: 0 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--hover) !important;
+  border-color: #C700FF !important;
+  border-width: 2px !important;
+  color: #C700FF !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 0 20px rgba(199, 0, 255, 0.4) !important;
+  z-index: 10 !important;
+}
+
+.react-flow__controls-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(199, 0, 255, 0.3), transparent);
+  transition: left 400ms ease;
+  z-index: -1;
+}
+
+.react-flow__controls-button:hover::before {
+  left: 100%;
+}
+
+.react-flow__controls-button:active {
+  transform: scale(0.95) !important;
+}
+
+/* Specific styling for control icons */
+.react-flow__controls-button svg {
+  color: var(--text-primary) !important;
+  transition: all 200ms ease !important;
+  width: 16px !important;
+  height: 16px !important;
+  fill: var(--text-primary) !important;
+  stroke: var(--text-primary) !important;
+}
+
+.react-flow__controls-button:hover svg {
+  color: #C700FF !important;
+  fill: #C700FF !important;
+  stroke: #C700FF !important;
+  filter: drop-shadow(0 0 4px rgba(199, 0, 255, 0.6)) !important;
+}
+
+/* Light theme specific */
+.light .react-flow__controls-button {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: #E0E0E0 !important;
+  color: #121212 !important;
+}
+
+.light .react-flow__controls-button svg {
+  color: #121212 !important;
+  fill: #121212 !important;
+  stroke: #121212 !important;
+}
+
+.light .react-flow__controls-button:hover {
+  background: rgba(245, 245, 245, 0.98) !important;
+  color: #C700FF !important;
+}
+
+.light .react-flow__controls-button:hover svg {
+  color: #C700FF !important;
+  fill: #C700FF !important;
+  stroke: #C700FF !important;
+}
+
+/* Dark theme adjustments */
+.dark .react-flow__controls-button {
+  background: rgba(21, 21, 21, 0.95) !important;
+  border-color: #2A2A2A !important;
+  color: #F0F0F0 !important;
+}
+
+.dark .react-flow__controls-button svg {
+  color: #F0F0F0 !important;
+  fill: #F0F0F0 !important;
+  stroke: #F0F0F0 !important;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: rgba(31, 31, 31, 0.98) !important;
+  color: #C700FF !important;
+}
+
+.dark .react-flow__controls-button:hover svg {
+  color: #C700FF !important;
+  fill: #C700FF !important;
+  stroke: #C700FF !important;
 }

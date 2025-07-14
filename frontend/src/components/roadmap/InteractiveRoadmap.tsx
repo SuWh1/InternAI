@@ -512,7 +512,6 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
         deleteKeyCode={null}
       >
         <Controls 
-          className="bg-theme-secondary/90 backdrop-blur-sm shadow-lg border border-theme rounded-xl transition-colors duration-300"
           showInteractive={false}
         />
         <Background 

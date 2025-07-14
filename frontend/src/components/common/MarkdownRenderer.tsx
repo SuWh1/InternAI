@@ -131,6 +131,35 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       );
     },
     
+    // --- Simple Table Handler ---
+    table: ({ children }) => (
+      <table className="min-w-full border border-theme-accent my-4 bg-theme-secondary text-theme-primary rounded overflow-hidden">
+        {children}
+      </table>
+    ),
+    thead: ({ children }) => (
+      <thead className="bg-theme-accent/10">
+        {children}
+      </thead>
+    ),
+    tbody: ({ children }) => <tbody>{children}</tbody>,
+    tr: ({ children }) => (
+      <tr className="border-b border-theme-accent/20 last:border-0">
+        {children}
+      </tr>
+    ),
+    th: ({ children }) => (
+      <th className="px-4 py-2 text-left font-semibold bg-theme-accent/10 border-b border-theme-accent/30">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="px-4 py-2 border-b border-theme-accent/20 text-theme-secondary">
+        {children}
+      </td>
+    ),
+    // --- End Table Handler ---
+    
     // Headers
     h1: ({ children }) => (
       <h1 className="text-2xl font-bold text-theme-primary mb-4 mt-6 first:mt-0">

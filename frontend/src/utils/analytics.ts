@@ -6,18 +6,30 @@ export function loadGoogleAnalytics(measurementId: string) {
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+  script.onload = () => {
+    // Initialise dataLayer after script tag loaded
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    function gtag(...args: any[]) {
+      (window as any).dataLayer.push(args);
+    }
+    (window as any).gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', measurementId);
+    (window as any).gaLoaded = true;
+    // Fire initial pageview
+    firePageView(window.location.pathname);
+    // Debug
+    console.log('[GA] Initialized and pageview sent:', window.location.pathname);
+  };
   document.head.appendChild(script);
+}
 
-  // Initialise dataLayer after script tag appended
-  (window as any).dataLayer = (window as any).dataLayer || [];
-  function gtag(...args: any[]) {
-    (window as any).dataLayer.push(args);
+export function firePageView(path: string) {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'page_view', { page_path: path });
+    // Debug
+    console.log('[GA] Pageview event sent:', path);
   }
-  (window as any).gtag = gtag;
-  gtag('js', new Date());
-  gtag('config', measurementId);
-
-  (window as any).gaLoaded = true;
 }
 
 export function hasCookieConsent(): boolean {

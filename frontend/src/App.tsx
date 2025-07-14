@@ -9,6 +9,7 @@ import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PageLoadingSpinner } from './components/common/LoadingSpinner';
 import CookieBanner from './components/common/CookieBanner';
+import { firePageView } from './utils/analytics';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -31,6 +32,11 @@ function AppRoutes() {
   // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  // Fire GA pageview on route change
+  useEffect(() => {
+    firePageView(location.pathname);
   }, [location.pathname]);
 
   return (

@@ -58,7 +58,7 @@ body.light {
   /* Light Theme (Default) */
   --bg-primary: #FAFAFA;
   --bg-secondary: #EFEFEF;
-  --text-primary: #121212;
+  --text-primary: #121212; /* Ensure dark text for light theme */
   --text-secondary: #2B2B2B;
   --accent: #C700FF;
   --border: #E0E0E0;
@@ -92,7 +92,7 @@ body.light {
   /* Dark Theme */
   --bg-primary: #080808;
   --bg-secondary: #151515;
-  --text-primary: #F0F0F0;
+  --text-primary: #F0F0F0; /* Ensure light text for dark theme */
   --text-secondary: #B0B0B0;
   --accent: #C700FF;
   --border: #2A2A2A;

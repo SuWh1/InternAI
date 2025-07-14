@@ -1,6 +1,6 @@
 // Application Constants
 export const TIMEOUTS = {
-  API_REQUEST: 60_000, // 60 seconds for AI content generation
+  API_REQUEST: 120_000, // 120 seconds for AI content generation
   CACHE_STALE: 5 * 60 * 1000, // 5 minutes
   ANIMATION_DELAY: 100,
   FOCUS_DELAY: 600,

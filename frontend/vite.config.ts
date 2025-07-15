@@ -42,6 +42,9 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: {
+        main: 'index.html' // Explicitly define index.html as the entry point
+      },
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {

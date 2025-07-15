@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { hasCookieConsent, setCookieConsent, loadGoogleAnalytics } from '../../utils/analytics';
 
-const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_ID || 'G-XSDQGCRFEW'; // fallback to current id
+const GA_MEASUREMENT_ID = 'G-XSDQGCRFEW';
 
 const CookieBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);

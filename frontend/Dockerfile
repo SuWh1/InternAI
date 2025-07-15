@@ -16,6 +16,8 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
+COPY index.html ./index.html
+
 # Copy the rest of the source code
 COPY . .
 

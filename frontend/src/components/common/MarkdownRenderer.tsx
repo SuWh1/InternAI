@@ -117,7 +117,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
                 }
               }}
             >
-              {String(children).replace(/\n$/, '')}
+              {String(children).replace(/\n$/, '').replace(/\t/g, '  ')}
             </SyntaxHighlighter>
           </div>
         );
@@ -172,14 +172,23 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-lg font-medium text-theme-primary mb-2 mt-4">
+      <h3 className="text-xl font-bold text-theme-primary mb-2 mt-4"
+        style={{ fontStyle: 'italic' }}
+      >
         {children}
       </h3>
+    ),
+    h4: ({ children }) => (
+      <h4 className="text-lg font-bold text-theme-primary mb-2 mt-3"
+        style={{ textDecoration: 'underline' }}
+      >
+        {children}
+      </h4>
     ),
     
     // Paragraphs
     p: ({ children }) => (
-      <p className="text-theme-secondary leading-relaxed mb-4">
+      <p className="leading-relaxed text-theme-secondary mb-4">
         {children}
       </p>
     ),
@@ -191,9 +200,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       </ul>
     ),
     li: ({ children }) => (
-      <li className="flex items-start gap-3">
+      <li className="flex items-start gap-3 text-theme-secondary">
         <div className="w-2 h-2 bg-theme-accent rounded-full mt-2 flex-shrink-0"></div>
-        <span className="text-theme-secondary leading-relaxed">
+        <span className="leading-relaxed">
           {children}
         </span>
       </li>
@@ -201,7 +210,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     
     // Ordered lists
     ol: ({ children }) => (
-      <ol className="space-y-2 mb-4">
+      <ol className="space-y-2 mb-4 text-theme-secondary">
         {children}
       </ol>
     ),

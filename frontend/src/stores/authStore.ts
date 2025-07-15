@@ -76,8 +76,23 @@ export const useAuthStore = create<AuthState>()(
         },
 
         initialize: async () => {
-          const { authService } = await import('../services/authService');
-          await authService.initializeAuth();
+          set({ loading: true, error: null }, false, 'auth/initialize');
+          
+          try {
+            const { authService } = await import('../services/authService');
+            const user = await authService.initializeAuth();
+            
+            if (user) {
+              get().setUser(user);
+            } else {
+              get().setUser(null);
+            }
+          } catch (error) {
+            console.error('Auth initialization failed:', error);
+            get().setError('Failed to initialize authentication.');
+          } finally {
+            set({ loading: false }, false, 'auth/initialize-complete');
+          }
         },
       }),
       {

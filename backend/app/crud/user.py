@@ -75,13 +75,10 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> Opti
     return user
 
 async def authenticate_google_user(db: AsyncSession, google_id: str, email: str, name: str, profile_picture: Optional[str] = None) -> User:
-    print(f"DEBUG: Authenticating Google user - google_id: {google_id}, email: {email}, name: {name}")
-    
     # First check if user exists by Google ID
     user = await get_user_by_google_id(db, google_id=google_id)
     
     if user:
-        print(f"DEBUG: Found existing user by Google ID: {user.id}")
         updated = False
         if user.name != name:
             user.name = name
@@ -99,7 +96,6 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
         if updated:
             await db.commit()
             await db.refresh(user)
-            print("DEBUG: Updated existing user info")
         
         return user
 
@@ -107,7 +103,6 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
     user = await get_user_by_email(db, email=email)
     
     if user:
-        print(f"DEBUG: Found existing user by email: {user.id}, linking Google ID")
         user.google_id = google_id
         # Only update profile picture if it's not already set
         if profile_picture and not user.profile_picture:
@@ -123,7 +118,6 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
         return user
     
     # Create new user - bypass create_user to avoid email duplicate check
-    print("DEBUG: Creating new Google user")
     try:
         db_user = User(
             email=email,
@@ -138,7 +132,6 @@ async def authenticate_google_user(db: AsyncSession, google_id: str, email: str,
         await db.commit()
         await db.refresh(db_user)
         
-        print(f"DEBUG: Successfully created new user: {db_user.id}")
         return db_user
         
     except Exception as e:

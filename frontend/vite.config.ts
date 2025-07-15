@@ -31,8 +31,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://host.docker.internal:8000',
+        target: 'http://internai_backend:8000',
         changeOrigin: true,
+        secure: false,
       },
     },
     fs: {

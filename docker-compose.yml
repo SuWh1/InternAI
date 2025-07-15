@@ -58,15 +58,10 @@ services:
       args:
         - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
         - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-    container_name: internai_frontend
-    environment:
-      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-    ports:
-      - "80:80"
+    container_name: internai_frontend_build
     volumes:
-      - ./ssl-certs:/etc/letsencrypt:ro
-      - ./certbot-challenges:/var/www/certbot:ro
+      - ./frontend/dist:/app/dist
+    command: ["sh", "-c", "npm run build && echo 'Build complete' && tail -f /dev/null"]
     depends_on:
       - backend
     restart: unless-stopped
@@ -78,6 +73,7 @@ services:
       - frontend
       - backend
     ports:
+      - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro

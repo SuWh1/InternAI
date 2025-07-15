@@ -42,7 +42,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling and token refresh
+// Response interceptor for error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
@@ -50,28 +50,15 @@ api.interceptors.response.use(
   async (error: AxiosError<{ error?: string; message?: string }>) => {
     const originalRequest = error.config as AxiosRequestConfigWithRetry;
     
-    // Handle 401 errors with cookie-based token refresh (but not for auth endpoints)
+    // Handle 401 errors - logout user if authentication failed
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
     const { useAuthStore } = await import('../stores/authStore');
     const isAuthenticated = useAuthStore.getState().isAuthenticated;
     
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint && isAuthenticated) {
-      originalRequest._retry = true;
-      
-        try {
-        // Try to refresh the token (cookies are sent automatically)
-          const { authService } = await import('../services/authService');
-          await authService.refreshTokens();
-          
-        // Retry the original request (cookies will be automatically included)
-          return api(originalRequest);
-        } catch (refreshError) {
-        // Refresh failed, logout user
-        useAuthStore.getState().logout();
-
-        // To prevent further actions on this error, we return a resolved promise
-        return new Promise(() => {});
-      }
+    if (error.response?.status === 401 && !isAuthEndpoint && isAuthenticated) {
+      // If we get a 401 on a non-auth endpoint and we think we're authenticated,
+      // it means the backend couldn't refresh the token, so we need to logout
+      useAuthStore.getState().logout();
     }
 
     // Transform error to match our ApiError interface

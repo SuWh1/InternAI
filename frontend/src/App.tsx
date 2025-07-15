@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect, Suspense, lazy } from 'react';
+import React, { Suspense, useState, useEffect, lazy } from 'react';
 import Navbar from './components/Navbar';
 import OnboardingWrapper from './components/auth/OnboardingWrapper';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -7,7 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { useAuth } from './hooks/useAuth';
 import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { PageLoadingSpinner } from './components/common/LoadingSpinner';
+import { PageLoadingSpinner, RoadmapPageLoadingSpinner } from './components/common/LoadingSpinner';
 import CookieBanner from './components/common/CookieBanner';
 
 // Lazy load pages for better performance
@@ -49,23 +49,21 @@ function AppRoutes() {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageLoadingSpinner />}>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-          <Route path="/roadmap" element={<RoadmapInfoPage />} />
-          <Route path="/resume-review" element={<ResumeReviewInfoPage />} />
-          <Route path="/internships" element={<InternshipsInfoPage />} />
-          <Route path="/my-roadmap" element={<ProtectedRoute><MyRoadmapPage /></ProtectedRoute>} />
-          <Route path="/roadmap/week/:weekNumber" element={<ProtectedRoute><WeekDetailPage /></ProtectedRoute>} />
-          <Route path="/lesson/:slug" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
-          <Route path="/lesson/:topic/:context/:weekNumber" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
-          <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
-          <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+        <Route path="/roadmap" element={<RoadmapInfoPage />} />
+        <Route path="/resume-review" element={<ResumeReviewInfoPage />} />
+        <Route path="/internships" element={<InternshipsInfoPage />} />
+        <Route path="/my-roadmap" element={<ProtectedRoute><MyRoadmapPage /></ProtectedRoute>} />
+        <Route path="/roadmap/week/:weekNumber" element={<ProtectedRoute><WeekDetailPage /></ProtectedRoute>} />
+        <Route path="/lesson/:slug" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
+        <Route path="/lesson/:topic/:context/:weekNumber" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
+        <Route path="/my-resume" element={<ProtectedRoute><MyResumePage /></ProtectedRoute>} />
+        <Route path="/my-internships" element={<ProtectedRoute><MyInternshipsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+      </Routes>
     </ErrorBoundary>
   );
 }
@@ -74,6 +72,16 @@ function App() {
   // Initialize auth globally once when app starts
   const { loading: authLoading } = useAuth();
   const { initialize } = useAuthStore();
+
+  const [showSpinner, setShowSpinner] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSpinner(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Trigger auth initialization on app start
   useEffect(() => {
@@ -102,12 +110,15 @@ function App() {
         <div className="min-h-screen bg-theme-primary overflow-x-hidden w-full transition-colors duration-200" style={{ position: 'relative' }}>
           <OnboardingWrapper>
             <Navbar />
-            <main className="pt-16">
-              <AppRoutes />
+            <main className="pt-16" style={{ position: 'relative' }}>
+              <Suspense fallback={showSpinner ? <RoadmapPageLoadingSpinner /> : null}>
+                <AppRoutes />
+              </Suspense>
             </main>
           </OnboardingWrapper>
         </div>
       </Router>
+      {/* Remove the Suspense from here as it's now inside the Router */}
     </ThemeProvider>
   );
 }

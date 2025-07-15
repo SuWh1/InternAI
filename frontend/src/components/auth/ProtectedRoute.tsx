@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -12,9 +12,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    // Mark initial load as complete after auth has had time to initialize
+    if (initialLoad && !loading) {
+      const timer = setTimeout(() => {
+        setInitialLoad(false);
+      }, 1500); // Give 1.5 seconds for auth to complete
+      return () => clearTimeout(timer);
+    }
+  });
+
+  useEffect(() => {
+    // Only redirect if we're not in initial load phase, not loading, not authenticated, and haven't redirected yet
+    if (!initialLoad && !loading && !isAuthenticated && !hasRedirected) {
       // Store the attempted URL for potential redirect after login
       const currentPath = location.pathname;
       
@@ -27,11 +40,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           showLoginModal: true 
         }
       });
+      setHasRedirected(true);
     }
-  }, [loading, isAuthenticated, navigate, location.pathname]);
+  }, [initialLoad, loading, isAuthenticated, navigate, location.pathname, hasRedirected]);
 
-  // If still loading auth state, show skeleton instead of null to prevent flash
-  if (loading) {
+  // If still loading auth state or in initial load phase, show skeleton
+  if (loading || initialLoad) {
     return (
       <div className="min-h-screen bg-theme-primary">
         <div className="animate-pulse">

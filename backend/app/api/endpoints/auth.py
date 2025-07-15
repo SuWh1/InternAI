@@ -8,7 +8,8 @@ import uuid
 import logging
 
 from app.db.session import get_db
-from app.schemas.user import User, UserCreate, UserLogin, GoogleAuthRequest, UserUpdate, PasswordChange, AccountDeletion, AvatarUploadResponse
+from app.schemas.user import User as UserSchema, UserCreate, UserLogin, GoogleAuthRequest, UserUpdate, PasswordChange, AccountDeletion, AvatarUploadResponse
+from app.models.user import User as UserModel # Import the SQLAlchemy ORM User model as UserModel
 from app.schemas.auth import AuthResponse, PinVerificationRequest, PinResendRequest
 from app.schemas.common import GenericResponse
 from app.crud.user import create_user, authenticate_user, authenticate_google_user, get_user_by_id, update_user, delete_user, get_user_by_email, create_pending_user, get_pending_user_by_email, create_user_from_pending
@@ -19,6 +20,7 @@ from app.core.security import (
     verify_refresh_token, 
     get_current_user,
     get_current_user_from_cookie,
+    get_current_user_with_refresh,
     set_auth_cookies,
     clear_auth_cookies,
     verify_password,
@@ -34,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-async def add_onboarding_status(user: User, db: AsyncSession) -> User:
+async def add_onboarding_status(user: UserModel, db: AsyncSession) -> UserModel:
     """Add onboarding status to user object."""
     user.has_completed_onboarding = await has_completed_onboarding(db, user.id)
     
@@ -88,7 +90,7 @@ async def register(request: Request, response: Response, user_data: UserCreate, 
         success=True
     )
 
-@router.post("/verify-pin", response_model=User)
+@router.post("/verify-pin", response_model=UserSchema)
 @limiter.limit(RateLimits.AUTH_LOGIN)
 async def verify_pin(request: Request, response: Response, pin_data: PinVerificationRequest, db: AsyncSession = Depends(get_db)) -> Any:
     """Verify PIN code and complete user registration."""
@@ -163,7 +165,7 @@ async def resend_pin(request: Request, pin_data: PinResendRequest, db: AsyncSess
         success=True
     )
 
-@router.post("/login", response_model=User)
+@router.post("/login", response_model=UserSchema)
 @limiter.limit(RateLimits.AUTH_LOGIN)
 async def login(request: Request, response: Response, user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
     user = await authenticate_user(db, user_data.email, user_data.password)
@@ -189,31 +191,27 @@ async def login(request: Request, response: Response, user_data: UserLogin, db: 
     # Return only user data
     return user
 
-@router.post("/google", response_model=User)
+@router.post("/google", response_model=UserSchema)
 @limiter.limit(RateLimits.AUTH_GOOGLE)
 async def google_login(request: Request, response: Response, auth_data: GoogleAuthRequest, db: AsyncSession = Depends(get_db)) -> Any:
-    print(f"DEBUG: Google login attempt with token length: {len(auth_data.token) if auth_data.token else 0}")
-    
     # Check if Google OAuth is configured
     if not settings.GOOGLE_CLIENT_ID or settings.GOOGLE_CLIENT_ID == "your-google-client-id-here":
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google OAuth not configured on server. Please contact administrator.",
         )
-    
+
     try:
         # Step 1: Verify Google token
         user_info = await verify_google_token(auth_data.token)
-        
+
         if not user_info:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Google token. Please check your Google OAuth configuration.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
-        print(f"DEBUG: Token verified successfully for email: {user_info['email']}")
-        
+
         # Step 2: Authenticate or create user with Google credentials
         user = await authenticate_google_user(
             db,
@@ -222,24 +220,20 @@ async def google_login(request: Request, response: Response, auth_data: GoogleAu
             name=user_info["name"],
             profile_picture=user_info.get("profile_picture")
         )
-        
-        print(f"DEBUG: User authentication successful for user ID: {user.id}")
-        
+
         # Step 3: Add onboarding status
         user = await add_onboarding_status(user, db)
-        
+
         # Step 4: Create access token and refresh token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": str(user.id), "is_admin": user.is_admin}, expires_delta=access_token_expires
         )
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
-        
-        print(f"DEBUG: Access token created successfully for user: {user.email}")
-        
+
         # Set cookies
         set_auth_cookies(response, access_token, refresh_token)
-        
+
         # Return only user data
         return user
         
@@ -253,15 +247,17 @@ async def google_login(request: Request, response: Response, auth_data: GoogleAu
             detail=f"Internal server error during Google authentication: {str(e)}",
         )
 
-@router.post("/refresh", response_model=User)
+@router.post("/refresh", response_model=UserSchema)
 @limiter.limit(RateLimits.AUTH_REFRESH)
 async def refresh_token(request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> Any:
     """
     Refresh access token using refresh token from cookie.
     """
+    logger.info("Attempting to refresh token.")
     # Get refresh token from cookie
     refresh_token_value = request.cookies.get("refresh_token")
     if not refresh_token_value:
+        logger.warning("Refresh token not provided in cookies.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No refresh token provided",
@@ -269,8 +265,10 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
         )
     
     user_id = verify_refresh_token(refresh_token_value)
+    logger.info(f"Refresh token verified, user_id: {user_id}")
     
     if not user_id:
+        logger.warning("Invalid refresh token received.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -278,10 +276,12 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
         )
     
     # Get user from database
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
     user = result.scalar_one_or_none()
+    logger.info(f"User lookup for refresh token: {user.id if user else 'None'}")
     
     if not user or not user.is_active:
+        logger.warning(f"User {user_id} not found or inactive during refresh.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
@@ -296,9 +296,11 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
         data={"sub": str(user.id), "is_admin": user.is_admin}, expires_delta=access_token_expires
     )
     new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    logger.info(f"New access and refresh tokens created for user {user.id}.")
     
     # Set new cookies
     set_auth_cookies(response, access_token, new_refresh_token)
+    logger.info(f"Auth cookies set for user {user.id}.")
     
     # Return only user data
     return user
@@ -312,20 +314,21 @@ async def logout(request: Request, response: Response) -> Any:
     clear_auth_cookies(response)
     return {"success": True, "message": "Successfully logged out"}
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserSchema)
 @limiter.limit(RateLimits.API_READ)
-async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user_from_cookie), db: AsyncSession = Depends(get_db)) -> Any:
+async def get_current_user_info(request: Request, response: Response, current_user: UserModel = Depends(get_current_user_with_refresh), db: AsyncSession = Depends(get_db)) -> Any:
     """
-    Get current user info from cookie authentication.
+    Get current user info from cookie authentication with automatic token refresh.
     """
     return await add_onboarding_status(current_user, db)
 
-@router.put("/profile", response_model=User)
+@router.put("/profile", response_model=UserSchema)
 @limiter.limit(RateLimits.API_WRITE)
 async def update_user_profile(
     request: Request,
+    response: Response,
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: UserModel = Depends(get_current_user_with_refresh),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -344,9 +347,10 @@ async def update_user_profile(
 @limiter.limit(RateLimits.API_WRITE)
 async def upload_avatar(
     request: Request,
+    response: Response,
     file: UploadFile = File(None, alias="file"),
     avatar: UploadFile = File(None, alias="avatar"),
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: UserModel = Depends(get_current_user_with_refresh),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -404,8 +408,9 @@ async def upload_avatar(
 @limiter.limit(RateLimits.API_WRITE)
 async def change_password(
     request: Request,
+    response: Response,
     password_change: PasswordChange,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: UserModel = Depends(get_current_user_with_refresh),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -444,7 +449,7 @@ async def delete_account(
     request: Request,
     response: Response,
     account_deletion: AccountDeletion,
-    current_user: User = Depends(get_current_user_from_cookie),
+    current_user: UserModel = Depends(get_current_user_with_refresh),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """

@@ -19,11 +19,6 @@ class EmailService:
         configuration = sib_api_v3_sdk.Configuration()
         configuration.api_key['api-key'] = settings.BREVO_API_KEY
         self.api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
-        
-        # Print configuration for debugging (remove in production)
-        print(f"Brevo API key configured: {settings.BREVO_API_KEY[:10]}...")
-        print(f"Brevo from email: {settings.BREVO_FROM_EMAIL}")
-        print(f"Brevo template ID: {settings.BREVO_TEMPLATE_ID}")
 
     def generate_pin_code(self) -> str:
         """Generate a 6-digit PIN code."""

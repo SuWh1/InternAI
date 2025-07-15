@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import type { User } from '../types/api';
 
 class AuthService {
-  private initializationPromise: Promise<void> | null = null;
+  private initializationPromise: Promise<User | null> | null = null;
   
   private getStore() {
     return useAuthStore.getState();
@@ -242,8 +242,6 @@ class AuthService {
     try {
       await api.post('/auth/logout');
     } catch (error) {
-      // Even if logout fails on server, clear local state
-      console.error('Logout error:', error);
     } finally {
       queryClient.clear();
       storeLogout();
@@ -256,7 +254,6 @@ class AuthService {
       return response.data;
     } catch (error: any) {
       if (error.statusCode === 401) {
-        // Silently return null if not logged in
         return null;
       }
       throw error;
@@ -264,23 +261,25 @@ class AuthService {
   }
 
   async refreshTokens(): Promise<void> {
-    try {
-      // Refresh token is sent automatically via cookies
-      const response = await authApi.post<User>('/auth/refresh');
+    const { setLoading, setError, setUser, logout: storeLogout } = this.getStore();
 
-      const user = response.data;
-    
-      // Update store (new tokens are set in httpOnly cookies by the backend)
-    const { setUser } = this.getStore();
-    setUser(user);
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Attempt to refresh tokens using the refresh token cookie (httpOnly)
+      // The backend will automatically send new access and refresh cookies
+      await authApi.post('/auth/refresh');
+      // Re-fetch user data to update the store with the latest info and ensure isAuthenticated is correct
+      const user = await this.getCurrentUser();
+      setUser(user);
     } catch (error: any) {
-      // If refresh fails with 401, it means the refresh token is invalid/expired
-      if (error.statusCode === 401 || error.response?.status === 401) {
-        // Don't log this as an error, it's expected when not logged in
-        throw error;
-      }
-      console.error('Token refresh error:', error);
-      throw error;
+      console.error('[AuthService] Token refresh failed:', error);
+      setError('Session expired. Please log in again.');
+      storeLogout(); // Ensure user is logged out in store
+      throw error; // Re-throw to propagate error to calling interceptor
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -297,40 +296,28 @@ class AuthService {
     }
   }
 
-  async initializeAuth(): Promise<void> {
-    // Prevent multiple simultaneous initialization calls
+  async initializeAuth(): Promise<User | null> {
+    // Ensure only one initialization is running at a time
     if (this.initializationPromise) {
-      return this.initializationPromise;
+      return this.initializationPromise as Promise<User | null>;
     }
 
-    const { setLoading, setUser, isAuthenticated, user } = this.getStore();
-    
-    // If already authenticated with user data, no need to re-initialize
-    if (isAuthenticated && user) {
-      setLoading(false);
-      return;
-    }
+    let user: User | null = null;
 
+    // Wrap the initialization logic in a promise
     this.initializationPromise = (async () => {
       try {
-        setLoading(true);
-        // Try to fetch user data from /me endpoint (will fail if no valid cookie)
-        const user = await this.getCurrentUser();
-        setUser(user);
+        user = await this.getCurrentUser();
       } catch (error) {
-        // No valid authentication cookie, user is not logged in
-        setUser(null);
+        console.error('[AuthService] Auth initialization error:', error);
+        user = null;
       } finally {
-        setLoading(false);
+        this.initializationPromise = null;
       }
+      return user;
     })();
 
-    try {
-      await this.initializationPromise;
-    } finally {
-      // Reset the promise so future calls can run
-      this.initializationPromise = null;
-    }
+    return this.initializationPromise as Promise<User | null>;
   }
 }
 

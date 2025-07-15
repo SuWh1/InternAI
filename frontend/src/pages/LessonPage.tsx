@@ -183,16 +183,16 @@ const LessonPage: React.FC = () => {
     const style = document.createElement('style');
     style.textContent = `
       .user-message-content * {
-        color: #000000 !important;
+        color: inherit;
       }
       .user-message-content p {
-        color: #000000 !important;
+        color: inherit;
       }
       .user-message-content span {
-        color: #000000 !important;
+        color: inherit;
       }
       .user-message-content div {
-        color: #000000 !important;
+        color: inherit;
       }
       
       /* Chat scrollbar styles */
@@ -379,16 +379,38 @@ const LessonPage: React.FC = () => {
   const extractTextFromExplanation = (explanation: any): string => {
     if (typeof explanation === 'string') return explanation;
     if (typeof explanation === 'object' && explanation !== null) {
-      // Handle structured explanation object
       let text = '';
-      if (explanation.title) text += explanation.title + '\n\n';
+      if (explanation.title) {
+        text += `# ${explanation.title}\n\n`; // Make title a heading
+      }
       if (explanation.content) {
-        Object.values(explanation.content).forEach((value: any) => {
+        const contentKeys = Object.keys(explanation.content);
+        const isLikelyNumberedList = contentKeys.every(key => /^[0-9]+$/.test(key));
+        const isLikelyLetteredList = contentKeys.every(key => /^[A-Z]$/.test(key));
+
+        Object.entries(explanation.content).forEach(([key, value]: [string, any]) => {
           if (typeof value === 'string') {
-            text += value + ' ';
+            if (isLikelyNumberedList) {
+              text += `${key}. ${value.trim()}\n`; // Format as numbered list
+            } else if (isLikelyLetteredList) {
+              text += `${key}. ${value.trim()}\n`; // Format as lettered list
+            } else {
+              text += `### ${key}\n${value.trim()}\n\n`; // Treat as subheading if no list pattern
+            }
           } else if (typeof value === 'object' && value !== null) {
-            Object.values(value).forEach((subValue: any) => {
-              if (typeof subValue === 'string') text += subValue + ' ';
+            text += `### ${key}\n`; // Treat key as a subheading
+            // If nested object, treat keys as sub-subheadings or parts
+            Object.entries(value).forEach(([subKey, subValue]: [string, any]) => {
+              if (typeof subValue === 'string') {
+                const isSubLikelyNumberedList = /^[0-9]+$/.test(subKey);
+                const isSubLikelyLetteredList = /^[A-Z]$/.test(subKey);
+
+                if (isSubLikelyNumberedList || isSubLikelyLetteredList) {
+                  text += `  - ${subValue.trim()}\n`; // Nested list item
+                } else {
+                  text += `#### ${subKey}\n${subValue.trim()}\n\n`; // Sub-subheading
+                }
+              }
             });
           }
         });
@@ -1170,7 +1192,7 @@ const LessonPage: React.FC = () => {
                   <div className="lesson-content max-w-none overflow-x-hidden">
                     <div className="w-full">
                       {lesson?.explanation ? (
-                        <SafeMarkdownRenderer content={safeContentExtractor(filterLessonContent(lesson.explanation))} onRenderingError={handleRenderingError} />
+                        <SafeMarkdownRenderer content={safeContentExtractor(filterLessonContent(extractTextFromExplanation(lesson.explanation)))} onRenderingError={handleRenderingError} />
                       ) : (
                         <div className="text-theme-secondary">
                           No learning guide content available. Please try refreshing the lesson.
@@ -1457,23 +1479,23 @@ const LessonPage: React.FC = () => {
                                 : 'bg-theme-secondary border border-theme text-theme-primary rounded-bl-md'
                             }`}
                             style={message.type === 'user' ? { 
-                              color: '#000000',
-                              '--tw-prose-body': '#000000',
-                              '--tw-prose-headings': '#000000',
-                              '--tw-prose-lead': '#000000',
-                              '--tw-prose-links': '#000000',
-                              '--tw-prose-bold': '#000000',
-                              '--tw-prose-counters': '#000000',
-                              '--tw-prose-bullets': '#000000',
-                              '--tw-prose-hr': '#000000',
-                              '--tw-prose-quotes': '#000000',
-                              '--tw-prose-quote-borders': '#000000',
-                              '--tw-prose-captions': '#000000',
-                              '--tw-prose-code': '#000000',
-                              '--tw-prose-pre-code': '#000000',
-                              '--tw-prose-pre-bg': 'rgba(0,0,0,0.1)',
-                              '--tw-prose-th-borders': '#000000',
-                              '--tw-prose-td-borders': '#000000'
+                              color: 'inherit',
+                              '--tw-prose-body': 'inherit',
+                              '--tw-prose-headings': 'inherit',
+                              '--tw-prose-lead': 'inherit',
+                              '--tw-prose-links': 'inherit',
+                              '--tw-prose-bold': 'inherit',
+                              '--tw-prose-counters': 'inherit',
+                              '--tw-prose-bullets': 'inherit',
+                              '--tw-prose-hr': 'inherit',
+                              '--tw-prose-quotes': 'inherit',
+                              '--tw-prose-quote-borders': 'inherit',
+                              '--tw-prose-captions': 'inherit',
+                              '--tw-prose-code': 'inherit',
+                              '--tw-prose-pre-code': 'inherit',
+                              '--tw-prose-pre-bg': 'inherit',
+                              '--tw-prose-th-borders': 'inherit',
+                              '--tw-prose-td-borders': 'inherit'
                             } as React.CSSProperties : {}}>
                               <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'user-message-content' : ''}`}>
                                 <MarkdownRenderer content={message.content} />
@@ -1481,7 +1503,7 @@ const LessonPage: React.FC = () => {
                               <div className={`text-xs mt-2 ${
                                 message.type === 'user' ? '' : 'opacity-70 text-theme-secondary'
                               }`}
-                              style={message.type === 'user' ? { color: 'rgba(0, 0, 0, 0.7)' } : {}}>
+                              style={message.type === 'user' ? { color: 'inherit' } : {}}>
                                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>

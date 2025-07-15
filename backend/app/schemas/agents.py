@@ -2,8 +2,8 @@
 Schemas for the multi-agent system pipeline.
 """
 
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Optional, Dict, Any, ClassVar # Import ClassVar
 from datetime import datetime
 
 # Request schemas
@@ -12,13 +12,14 @@ class AgentPipelineRequest(BaseModel):
     resume_text: Optional[str] = Field(None, description="Raw resume text content")
     resume_file_path: Optional[str] = Field(None, description="Path to resume file")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra = {
             "example": {
                 "resume_text": "John Doe\nSoftware Engineer\n...",
                 "resume_file_path": None
             }
         }
+    )
 
 # Response schemas for individual agents
 class ResumeAnalysisResponse(BaseModel):
@@ -93,8 +94,8 @@ class AgentPipelineResponse(BaseModel):
     pipeline_summary: PipelineSummary
     data: Dict[str, Any] = Field(..., description="Contains resume_summary, roadmap, internship_recommendations, etc.")
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "pipeline_summary": {
@@ -129,6 +130,7 @@ class AgentPipelineResponse(BaseModel):
                 }
             }
         }
+    )
 
 # Error response schemas
 class AgentErrorResponse(BaseModel):

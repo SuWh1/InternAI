@@ -1,4 +1,5 @@
 import React from 'react';
+import { Loader } from 'lucide-react'; // Import Loader icon
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'medium' | 'large';
@@ -29,6 +30,18 @@ export const PageLoadingSpinner: React.FC = () => {
   );
 };
 
+export const RoadmapPageLoadingSpinner: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-theme-primary flex items-center justify-center transition-colors duration-300">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="spin-animation">
+          <Loader className="w-10 h-10 text-theme-accent" />
+        </div>
+        <span className="text-theme-text text-lg">Loading content...</span>
+      </div>
+    </div>
+  );
+};
 
 
 export default LoadingSpinner; 

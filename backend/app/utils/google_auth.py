@@ -24,17 +24,12 @@ async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
         # Basic system time check
         check_system_time()
             
-        print(f"DEBUG: Verifying token with Client ID: {settings.GOOGLE_CLIENT_ID[:20]}...")
-        
         idinfo = id_token.verify_oauth2_token(
             token, 
             requests.Request(), 
             settings.GOOGLE_CLIENT_ID,
             clock_skew_in_seconds=10  # Allow 10 seconds of clock skew tolerance
         )
-        
-        print(f"DEBUG: Token verification successful for user: {idinfo.get('email', 'unknown')}")
-        print(f"DEBUG: Token info: {idinfo}")
         
         # Check if the token is issued by Google
         if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
@@ -57,7 +52,6 @@ async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
             'profile_picture': idinfo.get('picture', None)
         }
         
-        print(f"DEBUG: Returning user data: {user_data}")
         return user_data
         
     except ValueError as e:

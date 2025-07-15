@@ -22,14 +22,22 @@ COPY . .
 # ❗ Build the app (this creates /app/dist)
 RUN npm run build
 
-# # 🚀 Production stage
-FROM nginx:alpine
+# Use a minimal image for the final stage
+FROM node:20-alpine
 
-# Copy built frontend to nginx's default public folder
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Expose the port nginx will run on
-EXPOSE 80
+# Copy the built files
+COPY --from=builder /app/dist ./dist
 
-# Run nginx in the foreground
-CMD ["nginx", "-g", "daemon off;"]
+# Copy package.json for potential rebuild
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Expose port (not actually used, just for documentation)
+EXPOSE 3000
+
+# Default command
+CMD ["echo", "Frontend build container ready"]

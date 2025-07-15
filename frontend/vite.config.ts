@@ -5,6 +5,7 @@ import critical from 'rollup-plugin-critical'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '.',
   appType: 'spa', 
   plugins: [
     react(),
@@ -42,6 +43,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: 'index.html',
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {

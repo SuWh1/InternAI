@@ -9,7 +9,6 @@ import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PageLoadingSpinner } from './components/common/LoadingSpinner';
 import CookieBanner from './components/common/CookieBanner';
-import { firePageView } from './utils/analytics';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -36,7 +35,16 @@ function AppRoutes() {
 
   // Fire GA pageview on route change
   useEffect(() => {
-    firePageView(location.pathname);
+    // Ensure gtag is available and analytics storage consent is granted before sending pageview
+    if (typeof window !== 'undefined' && (window as any).gtag && (window as any).dataLayer) {
+      // Only send page_view if analytics_storage consent is granted
+      // This relies on Google Analytics Consent Mode to handle the actual data sending based on consent status.
+      (window as any).gtag('event', 'page_view', {
+        page_path: location.pathname,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    }
   }, [location.pathname]);
 
   return (
@@ -71,6 +79,10 @@ function App() {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // GA script and consent logic are now handled in index.html and CookieBanner.tsx
+  // No need to load GA script or handle consent here.
+  // All previous useEffects related to GA loading or consent are removed.
 
   // Show loading screen only on initial app load
   if (authLoading) {

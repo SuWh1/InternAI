@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { hasCookieConsent, setCookieConsent, loadGoogleAnalytics } from '../../utils/analytics';
+import { hasCookieConsent, setCookieConsent } from '../../utils/analytics';
 
 const GA_MEASUREMENT_ID = 'G-XSDQGCRFEW';
 
@@ -8,7 +8,14 @@ const CookieBanner: React.FC = () => {
 
   useEffect(() => {
     if (hasCookieConsent()) {
-      loadGoogleAnalytics(GA_MEASUREMENT_ID);
+      // If consent was previously given, update GA consent and send initial pageview
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'analytics_storage': 'granted'
+        });
+        (window as any).gtag('config', GA_MEASUREMENT_ID, { 'page_path': window.location.pathname });
+      }
     } else {
       setVisible(true);
     }
@@ -16,7 +23,14 @@ const CookieBanner: React.FC = () => {
 
   const accept = () => {
     setCookieConsent(true);
-    loadGoogleAnalytics(GA_MEASUREMENT_ID);
+    // Update GA consent and send pageview immediately upon acceptance
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('consent', 'update', {
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted'
+      });
+      (window as any).gtag('config', GA_MEASUREMENT_ID, { 'page_path': window.location.pathname });
+    }
     setVisible(false);
   };
 

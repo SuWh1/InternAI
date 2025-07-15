@@ -5,7 +5,7 @@ import critical from 'rollup-plugin-critical'
 
 // https://vite.dev/config/
 export default defineConfig({
-  root: './', 
+  root: './frontend', 
   appType: 'spa', 
   plugins: [
     react(),

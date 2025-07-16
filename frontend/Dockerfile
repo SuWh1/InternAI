@@ -16,30 +16,23 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-COPY index.html ./index.html
-
-# Copy the rest of the source code
+# Copy the entire source code (including index.html)
 COPY . .
 
-# ❗ Build the app (this creates /app/dist)
+# Build the app (this creates /app/dist)
 RUN npm run build
 
-# Use a minimal image for the final stage
-FROM node:20-alpine
+# Use a minimal nginx image for serving
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy built files to nginx html directory
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy the built files
-COPY --from=builder /app/dist ./dist
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy package.json for potential rebuild
-COPY package*.json ./
+# Expose port
+EXPOSE 80
 
-# Install only production dependencies
-RUN npm ci --only=production
-
-# Expose port (not actually used, just for documentation)
-EXPOSE 3000
-
-# Default command
-CMD ["echo", "Frontend build container ready"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

@@ -3,3 +3,5 @@
 .cursorrules
 
 *.pem
+
+db_backups/

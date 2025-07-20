@@ -63,7 +63,7 @@ async def run_agent_pipeline(
     try:
         logger.info(f"Starting agent pipeline for user {current_user.id}")
         
-        # Get user's onboarding data
+        # Get user's onboarding data (fresh from database)
         onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
         
         if not onboarding_data:
@@ -71,6 +71,9 @@ async def run_agent_pipeline(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User must complete onboarding before running the agent pipeline"
             )
+        
+        # Debug: Log key preferences to ensure we're getting fresh data
+        logger.info(f"Roadmap generation for user {current_user.id} - Tech Stack: {onboarding_data.preferred_tech_stack}, Languages: {onboarding_data.programming_languages}, Frameworks: {onboarding_data.frameworks}")
         
         # Convert onboarding data to dictionary
         onboarding_dict = {
@@ -352,6 +355,9 @@ async def get_topic_details(
                 detail="Topic is required"
             )
         
+        # Get user's onboarding data for personalized lesson generation
+        onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
+        
         # Check if explanation already exists for this topic (unless force regenerate)
         if not force_regenerate:
             existing_content = await get_learning_content(
@@ -381,8 +387,8 @@ async def get_topic_details(
                     "cached": True
                 }
         
-        # Generate Gemini explanation
-        explanation = await generate_topic_explanation(topic, context, user_level)
+        # Generate Gemini explanation with user profile for personalization
+        explanation = await generate_topic_explanation(topic, context, user_level, onboarding_data)
         
         # PHASE 1: Content Quality Improvement (Safe, additive)
         retry_count = 0
@@ -398,8 +404,8 @@ async def get_topic_details(
             else:
                 logger.warning(f"Content quality validation failed, attempt {retry_count + 1}/{max_retries + 1}")
                 if retry_count < max_retries:
-                    # Retry with improved prompt
-                    explanation = await generate_topic_explanation(topic, context, user_level)
+                    # Retry with improved prompt and user profile
+                    explanation = await generate_topic_explanation(topic, context, user_level, onboarding_data)
                     retry_count += 1
                 else:
                     # Use post-processing to fix what we can
@@ -437,7 +443,7 @@ async def get_topic_details(
         
         # Only store successful content generation in database
         if not is_error_content(explanation):
-            # Store in database
+            # Store in database with user profile metadata
             learning_content = await upsert_learning_content(
                 db=db,
                 user_id=current_user.id,
@@ -450,7 +456,10 @@ async def get_topic_details(
                     "model": "gemini-2.0-flash",
                     "generated_at": datetime.now().isoformat(),
                     "request_context": context,
-                    "has_youtube_videos": len(explanation.get('youtube_videos', [])) > 0
+                    "has_youtube_videos": len(explanation.get('youtube_videos', [])) > 0,
+                    "user_tech_stack": onboarding_data.preferred_tech_stack if onboarding_data else None,
+                    "user_languages": onboarding_data.programming_languages if onboarding_data else None,
+                    "personalized": True
                 }
             )
             
@@ -481,8 +490,16 @@ async def get_topic_details(
             "cached": False
         }
 
-async def generate_topic_explanation(topic: str, context: str, user_level: str) -> Dict[str, Any]:
-    """Generate detailed explanation using Google Gemini."""
+async def generate_topic_explanation(topic: str, context: str, user_level: str, onboarding_data: any = None) -> Dict[str, Any]:
+    """
+    Generate detailed explanation using Google Gemini with user profile context.
+    
+    This function ensures that:
+    1. All code examples use the user's preferred programming language
+    2. Content is tailored to their chosen tech stack and frameworks
+    3. Resources and examples are relevant to their experience level
+    4. The lesson content matches their personal learning profile
+    """
     
     try:
         # Check if Gemini API key is configured
@@ -553,6 +570,32 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
         
         client = genai.Client(api_key=gemini_api_key)
         
+        # Create user profile summary for personalized lesson generation
+        user_profile = ""
+        if onboarding_data:
+            profile_parts = []
+            profile_parts.append(f"Experience Level: {onboarding_data.experience_level}")
+            
+            if onboarding_data.programming_languages:
+                profile_parts.append(f"Programming Languages: {', '.join(onboarding_data.programming_languages)}")
+            
+            if onboarding_data.frameworks:
+                profile_parts.append(f"Frameworks: {', '.join(onboarding_data.frameworks)}")
+            
+            if onboarding_data.tools:
+                profile_parts.append(f"Tools: {', '.join(onboarding_data.tools)}")
+            
+            if onboarding_data.preferred_tech_stack:
+                profile_parts.append(f"Preferred Tech Stack: {onboarding_data.preferred_tech_stack}")
+            
+            if onboarding_data.target_roles:
+                profile_parts.append(f"Target Roles: {', '.join(onboarding_data.target_roles)}")
+            
+            user_profile = "\n".join(profile_parts)
+            logger.info(f"Lesson generation for '{topic}' - User profile: {user_profile}")
+        else:
+            logger.info(f"Lesson generation for '{topic}' - No user profile available")
+        
         # Check if this is for weeks 5-9 (intermediate weeks that should include LeetCode problems)
         import re
         week_match = re.search(r'Week\s+(\d+)', context)
@@ -563,6 +606,9 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
 
                 User Context: {context}
+                
+                User Profile:
+                {user_profile}
 
                 CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
 
@@ -584,6 +630,13 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
                 ]
                 }}
 
+                CRITICAL USER PROFILE REQUIREMENTS:
+                - ALWAYS use the user's preferred programming language from their profile when generating code examples
+                - If user has specific frameworks listed, prioritize those in examples and resources
+                - Tailor content to their preferred tech stack (frontend, backend, mobile, etc.)
+                - Code examples MUST be in their specified programming language, not a default language
+                - Resources should be relevant to their tech stack and experience level
+
                 ADDITIONAL REQUIREMENT FOR WEEKS 5-9:
                 - Include exactly 2 LeetCode problems that are directly related to "{topic}"
                 - Problems should be appropriate for {user_level} level
@@ -595,6 +648,9 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
 
                         User Context: {context}
+                        
+                        User Profile:
+                        {user_profile}
 
                         CRITICAL: Return ONLY valid JSON with proper string escaping. Use actual newlines in strings, NOT literal \\n characters.
 
@@ -612,9 +668,16 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str) 
                         ]
                         }}
 
+                        CRITICAL USER PROFILE REQUIREMENTS:
+                        - ALWAYS use the user's preferred programming language from their profile when generating code examples
+                        - If user has specific frameworks listed, prioritize those in examples and resources
+                        - Tailor content to their preferred tech stack (frontend, backend, mobile, etc.)
+                        - Code examples MUST be in their specified programming language, not a default language
+                        - Resources should be relevant to their tech stack and experience level
+
                         FORMATTING REQUIREMENTS:
                         - Use actual newlines, not \\n literals
-                        - Code blocks: ```javascript (with proper newlines)
+                        - Code blocks: ```[user_language] (with proper newlines using their preferred language)
                         - Headers: ## Header Name (with newlines before/after)
                         - Bold text: **text** (not **text**)
                         - Lists: Use - or * with spaces
@@ -1358,13 +1421,17 @@ async def lesson_chat(
                 detail="Topic is required"
             )
         
-        # Generate AI response using Gemini
+        # Get user's onboarding data for personalized chat responses
+        onboarding_data = await get_onboarding_data_by_user_id(db, user_id=current_user.id)
+        
+        # Generate AI response using Gemini with user profile
         response = await generate_chat_response(
             message=message,
             topic=topic,
             context=context,
             chat_history=chat_history,
-            lesson_content=lesson_content
+            lesson_content=lesson_content,
+            onboarding_data=onboarding_data
         )
         
         return {
@@ -1388,9 +1455,10 @@ async def generate_chat_response(
     topic: str, 
     context: str, 
     chat_history: List[Dict[str, str]], 
-    lesson_content: str
+    lesson_content: str,
+    onboarding_data: any = None
 ) -> str:
-    """Generate chat response using Google Gemini with lesson context."""
+    """Generate chat response using Google Gemini with lesson context and user profile."""
     
     try:
         # Check if Gemini API key is configured
@@ -1410,6 +1478,21 @@ async def generate_chat_response(
         # Configure Gemini client (same pattern as existing code)
         client = genai.Client(api_key=gemini_api_key)
         
+        # Create user profile summary for personalized responses
+        user_profile = ""
+        if onboarding_data:
+            profile_parts = []
+            if onboarding_data.programming_languages:
+                profile_parts.append(f"Programming Languages: {', '.join(onboarding_data.programming_languages)}")
+            if onboarding_data.frameworks:
+                profile_parts.append(f"Frameworks: {', '.join(onboarding_data.frameworks)}")
+            if onboarding_data.preferred_tech_stack:
+                profile_parts.append(f"Preferred Tech Stack: {onboarding_data.preferred_tech_stack}")
+            user_profile = "\n".join(profile_parts)
+            logger.info(f"Chat response for '{topic}' - User profile: {user_profile}")
+        else:
+            logger.info(f"Chat response for '{topic}' - No user profile available")
+        
         # Build conversation history
         conversation_context = ""
         if chat_history:
@@ -1426,6 +1509,9 @@ async def generate_chat_response(
 
             Lesson summary: {lesson_content[:500] if lesson_content else 'No summary available'}
 
+            Student Profile:
+            {user_profile}
+
             Previous conversation:
             {conversation_context}
 
@@ -1436,8 +1522,10 @@ async def generate_chat_response(
             2. Stay focused ONLY on the lesson topic: {topic}
             3. If the question is unrelated to {topic}, politely redirect to the lesson
             4. Use simple, clear language appropriate for learning
-            5. Include a brief code example if relevant and helpful
-            6. Be encouraging and supportive
+            5. ALWAYS use the student's preferred programming language from their profile for code examples
+            6. Include a brief code example if relevant and helpful
+            7. Be encouraging and supportive
+            8. Tailor explanations to their tech stack and experience level
 
             Response:"""
 

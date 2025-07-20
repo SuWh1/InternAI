@@ -70,6 +70,11 @@ const MyRoadmapPage = () => {
 
   const handleConfirmRegenerate = async () => {
     setShowRegenerateConfirm(false);
+    
+    // Small delay to ensure any recent settings changes are fully saved
+    // This prevents race conditions where roadmap generation runs before settings are committed
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     await generateRoadmap();
   };
 

@@ -53,16 +53,30 @@ async def get_onboarding_data_by_user_id(db: AsyncSession, user_id: uuid.UUID) -
 
 async def update_onboarding_data(db: AsyncSession, user_id: uuid.UUID, onboarding_update: OnboardingUpdate) -> Optional[OnboardingData]:
     """Update onboarding data for a user."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     db_onboarding = await get_onboarding_data_by_user_id(db, user_id)
     if not db_onboarding:
         return None
     
     update_data = onboarding_update.dict(exclude_unset=True)
+    
+    # Debug: Log what's being updated
+    logger.info(f"Updating onboarding for user {user_id}: {update_data}")
+    
     for field, value in update_data.items():
+        old_value = getattr(db_onboarding, field, None)
         setattr(db_onboarding, field, value)
+        if field in ['preferred_tech_stack', 'programming_languages', 'frameworks', 'tools']:
+            logger.info(f"Updated {field}: {old_value} -> {value}")
     
     await db.commit()
     await db.refresh(db_onboarding)
+    
+    # Debug: Confirm the updated values were saved
+    logger.info(f"Confirmed saved values - Tech Stack: {db_onboarding.preferred_tech_stack}, Languages: {db_onboarding.programming_languages}")
+    
     return db_onboarding
 
 async def delete_onboarding_data(db: AsyncSession, user_id: uuid.UUID) -> bool:

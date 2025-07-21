@@ -28,30 +28,7 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="py-20 bg-theme-secondary transition-colors duration-300 relative overflow-hidden">
-      {/* Animated background pattern */}
-      <motion.div
-        className="absolute inset-0 opacity-5"
-        animate={{
-          backgroundPosition: ["0% 0%", "100% 100%"],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          repeatType: "reverse",
-        }}
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            #C700FF,
-            #C700FF 10px,
-            transparent 10px,
-            transparent 20px
-          )`,
-          backgroundSize: "28px 28px",
-        }}
-      />
-
+    <section className="py-20 bg-theme-primary transition-colors duration-300 relative overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
           className="text-center mb-16"

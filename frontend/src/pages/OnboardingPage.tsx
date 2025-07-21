@@ -8,6 +8,97 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import TextAreaWithCounter from '../components/common/TextAreaWithCounter';
 import type { OnboardingFormData, OnboardingOptions } from '../types/onboarding';
 
+// LocalStorage key for persisting onboarding data
+const ONBOARDING_STORAGE_KEY = 'internai_onboarding_draft';
+const STORAGE_VERSION = '1.0';
+
+// Interface for stored onboarding data
+interface StoredOnboardingData {
+  version: string;
+  timestamp: number;
+  formData: OnboardingFormData;
+  currentStep: number;
+  currentSubStep: number;
+  selectedRecommendedPath: string;
+  otherMajor: string;
+}
+
+// LocalStorage helper functions
+const saveOnboardingToStorage = (data: Partial<StoredOnboardingData>) => {
+  try {
+    const existingData = loadOnboardingFromStorage();
+    const dataToSave: StoredOnboardingData = {
+      version: STORAGE_VERSION,
+      timestamp: Date.now(),
+      formData: existingData?.formData || {
+        current_year: '',
+        major: '',
+        programming_languages: [],
+        frameworks: [],
+        tools: [],
+        preferred_tech_stack: '',
+        experience_level: '',
+        skill_confidence: '',
+        has_internship_experience: false,
+        previous_internships: '',
+        projects: '',
+        target_roles: [],
+        preferred_company_types: [],
+        preferred_locations: [],
+        application_timeline: '',
+        additional_info: '',
+        source_of_discovery: ''
+      },
+      currentStep: existingData?.currentStep || 1,
+      currentSubStep: existingData?.currentSubStep || 1,
+      selectedRecommendedPath: existingData?.selectedRecommendedPath || '',
+      otherMajor: existingData?.otherMajor || '',
+      ...data
+    };
+    
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(dataToSave));
+  } catch (error) {
+    console.warn('Failed to save onboarding data to localStorage:', error);
+  }
+};
+
+const loadOnboardingFromStorage = (): StoredOnboardingData | null => {
+  try {
+    const stored = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (!stored) return null;
+    
+    const data = JSON.parse(stored) as StoredOnboardingData;
+    
+    // Validate version and structure
+    if (data.version !== STORAGE_VERSION) {
+      console.warn('Onboarding data version mismatch, clearing storage');
+      clearOnboardingFromStorage();
+      return null;
+    }
+    
+    // Validate required fields exist
+    if (!data.formData || !data.currentStep) {
+      console.warn('Invalid onboarding data structure, clearing storage');
+      clearOnboardingFromStorage();
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.warn('Failed to load onboarding data from localStorage:', error);
+    clearOnboardingFromStorage();
+    return null;
+  }
+};
+
+const clearOnboardingFromStorage = () => {
+  try {
+    localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+  } catch (error) {
+    console.warn('Failed to clear onboarding data from localStorage:', error);
+  }
+};
+
 // Tech Stack Mappings - Comprehensive mapping of stacks to their relevant technologies
 const TECH_STACK_MAPPINGS = {
   'Full-Stack Web Development': {
@@ -1077,6 +1168,25 @@ const OnboardingPage: React.FC = () => {
 
 
 
+  // Load saved data from localStorage on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const savedData = loadOnboardingFromStorage();
+    if (savedData) {
+      setFormData(savedData.formData);
+      setCurrentStep(savedData.currentStep);
+      setCurrentSubStep(savedData.currentSubStep);
+      setSelectedRecommendedPath(savedData.selectedRecommendedPath);
+      setOtherMajor(savedData.otherMajor);
+      
+      // Initialize otherMajor state if major contains "Other - " format
+      if (savedData.formData.major.startsWith('Other - ')) {
+        setOtherMajor(savedData.formData.major.substring(8));
+      }
+    }
+  }, [isAuthenticated]);
+
   // Load onboarding options on mount
   useEffect(() => {
     const loadOptions = async () => {
@@ -1120,6 +1230,15 @@ const OnboardingPage: React.FC = () => {
     setOtherMajor(value);
     // Store in format "Other - <user_input>" or just "Other" if empty
     updateFormData('major', value ? `Other - ${value}` : 'Other');
+    
+    // Save otherMajor to localStorage
+    saveCurrentState({
+      formData: {
+        ...formData,
+        major: value ? `Other - ${value}` : 'Other'
+      },
+      otherMajor: value
+    });
   };
 
   // Helper function to get display value for major select
@@ -1142,11 +1261,40 @@ const OnboardingPage: React.FC = () => {
     return otherMajor;
   };
 
+  // Helper function to save current state to localStorage
+  const saveCurrentState = (overrides?: Partial<StoredOnboardingData>) => {
+    if (isAuthenticated) {
+      saveOnboardingToStorage({
+        formData,
+        currentStep,
+        currentSubStep,
+        selectedRecommendedPath,
+        otherMajor,
+        ...overrides
+      });
+    }
+  };
+
   const updateFormData = (field: keyof OnboardingFormData, value: any) => {
-    setFormData(prev => ({
+    setFormData(prev => {
+      const newFormData = {
       ...prev,
       [field]: value
-    }));
+      };
+      
+      // Save to localStorage with the new form data
+      if (isAuthenticated) {
+        saveOnboardingToStorage({
+          formData: newFormData,
+          currentStep,
+          currentSubStep,
+          selectedRecommendedPath,
+          otherMajor
+        });
+      }
+      
+      return newFormData;
+    });
   };
 
   const handleRecommendedPathSelection = (path: string) => {
@@ -1178,6 +1326,11 @@ const OnboardingPage: React.FC = () => {
         updateFormData('tools', [...pathTools, ...concepts]);
       }
     }
+    
+    // Save selectedRecommendedPath to localStorage
+    saveCurrentState({
+      selectedRecommendedPath: path
+    });
     
     // Don't auto-advance - let user see what was selected
   };
@@ -1248,29 +1401,57 @@ const OnboardingPage: React.FC = () => {
 
   const nextStep = () => {
     if (validateStep(currentStep) && currentStep < totalSteps) {
+      const newStep = currentStep + 1;
+      const newSubStep = 1;
       setStepDirection('forward');
-      setCurrentStep(currentStep + 1);
-      setCurrentSubStep(1); // Reset sub-step when moving to next main step
+      setCurrentStep(newStep);
+      setCurrentSubStep(newSubStep); // Reset sub-step when moving to next main step
+      
+      // Save to localStorage
+      saveCurrentState({
+        currentStep: newStep,
+        currentSubStep: newSubStep
+      });
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
+      const newStep = currentStep - 1;
+      const newSubStep = currentStep === 2 ? totalSubSteps : 1;
       setStepDirection('backward');
-      setCurrentStep(currentStep - 1);
-      setCurrentSubStep(currentStep === 2 ? totalSubSteps : 1); // If going back to step 2, go to last sub-step
+      setCurrentStep(newStep);
+      setCurrentSubStep(newSubStep); // If going back to step 2, go to last sub-step
+      
+      // Save to localStorage
+      saveCurrentState({
+        currentStep: newStep,
+        currentSubStep: newSubStep
+      });
     }
   };
 
   const nextSubStep = () => {
     if (validateSubStep(currentSubStep) && currentSubStep < totalSubSteps) {
-      setCurrentSubStep(currentSubStep + 1);
+      const newSubStep = currentSubStep + 1;
+      setCurrentSubStep(newSubStep);
+      
+      // Save to localStorage
+      saveCurrentState({
+        currentSubStep: newSubStep
+      });
     }
   };
 
   const prevSubStep = () => {
     if (currentSubStep > 1) {
-      setCurrentSubStep(currentSubStep - 1);
+      const newSubStep = currentSubStep - 1;
+      setCurrentSubStep(newSubStep);
+      
+      // Save to localStorage
+      saveCurrentState({
+        currentSubStep: newSubStep
+      });
     }
   };
 
@@ -1300,6 +1481,9 @@ const OnboardingPage: React.FC = () => {
 
     const success = await createOnboarding(onboardingData);
     if (success) {
+      // Clear the saved draft from localStorage since onboarding is complete
+      clearOnboardingFromStorage();
+      
       // Redirect to dashboard/main app
       navigate('/my-roadmap');
     }
@@ -1957,6 +2141,7 @@ const OnboardingPage: React.FC = () => {
               <Sparkles className="w-4 h-4" />
               <span>Step {currentStep} of {totalSteps}</span>
             </div>
+            
             <h1 className="text-4xl md:text-5xl font-bold text-theme-primary mb-4 transition-colors duration-300">
               Let's get you set up!
             </h1>

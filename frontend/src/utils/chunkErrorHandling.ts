@@ -1,6 +1,7 @@
 // Utility for handling chunk loading errors with retry logic
 import React from 'react';
 import { reportChunkError } from '../services/errorReporting';
+import { debounce, requestIdleCallback } from './performance';
 
 interface RetryOptions {
   maxRetries?: number;
@@ -151,10 +152,22 @@ export const lazyWithRetry = <T extends React.ComponentType<any>>(
   );
 };
 
-// Global error handler for unhandled chunk errors
+// Global error handler for unhandled chunk errors (optimized to prevent performance issues)
 export const setupGlobalChunkErrorHandling = (): void => {
+  // Debounced cache clearing to prevent multiple simultaneous operations
+  const debouncedCacheClear = debounce(async () => {
+    try {
+      await clearAppCaches();
+      console.log('Caches cleared due to chunk error, reloading...');
+      window.location.reload();
+    } catch (clearError) {
+      console.error('Failed to clear caches:', clearError);
+      window.location.reload();
+    }
+  }, 1000);
+
   // Handle unhandled promise rejections (chunk loading failures)
-  window.addEventListener('unhandledrejection', async (event) => {
+  window.addEventListener('unhandledrejection', (event) => {
     const error = event.reason;
     
     if (isChunkError(error)) {
@@ -164,41 +177,31 @@ export const setupGlobalChunkErrorHandling = (): void => {
       // Prevent the default browser error handling
       event.preventDefault();
       
-      // Try to recover by clearing caches and reloading
-      try {
-        await clearAppCaches();
-        console.log('Caches cleared due to chunk error, reloading...');
-        window.location.reload();
-      } catch (clearError) {
-        console.error('Failed to clear caches:', clearError);
-        // Fall back to simple reload
-        window.location.reload();
-      }
+      // Use requestIdleCallback to defer heavy operations and prevent blocking
+      requestIdleCallback(() => {
+        debouncedCacheClear();
+      }, { timeout: 2000 });
     }
   });
   
   // Handle regular JavaScript errors
-  window.addEventListener('error', async (event) => {
+  window.addEventListener('error', (event) => {
     const error = event.error;
     
     if (isChunkError(error)) {
       console.warn('Chunk loading error in global handler:', error);
       reportChunkError(error, { context: 'global-error-handler' });
       
-      // Give the app a moment to handle it with error boundaries
-      setTimeout(async () => {
-        try {
-          await clearAppCaches();
-          window.location.reload();
-        } catch (clearError) {
-          console.error('Failed to clear caches:', clearError);
-          window.location.reload();
-        }
-      }, 2000);
+      // Defer heavy operations to prevent blocking the main thread
+      requestIdleCallback(() => {
+        setTimeout(() => {
+          debouncedCacheClear();
+        }, 2000);
+      }, { timeout: 5000 });
     }
   });
   
-  console.log('Global chunk error handling initialized');
+  console.log('Optimized global chunk error handling initialized');
 };
 
 // Hook for manual error recovery

@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../contexts/ThemeContext';
 
 const testimonials = [
   {
@@ -30,6 +31,8 @@ const testimonials = [
 ];
 
 const Testimonials = () => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Auto-change testimonials every 7 seconds
@@ -53,6 +56,119 @@ const Testimonials = () => {
 
   return (
     <section className="py-20 bg-theme-primary transition-colors duration-300 relative overflow-hidden" style={{ position: 'relative' }}>
+      {/* Beautiful Background Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Radial spotlight from top */}
+        <motion.div
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-96 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(168, 85, 247, 0.7)' 
+                : 'rgba(147, 51, 234, 0.3)'
+            } 0%, transparent 70%)`
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.8, 1, 0.8],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Left side orb */}
+        <motion.div
+          className="absolute top-1/3 left-0 w-72 h-72 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(196, 145, 255, 0.8)' 
+                : 'rgba(168, 85, 247, 0.35)'
+            } 0%, transparent 60%)`
+          }}
+          animate={{
+            x: [-20, 20, -20],
+            y: [0, -30, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 14,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Right side orb */}
+        <motion.div
+          className="absolute top-2/3 right-0 w-64 h-64 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(221, 199, 255, 0.7)' 
+                : 'rgba(192, 132, 252, 0.4)'
+            } 0%, transparent 65%)`
+          }}
+          animate={{
+            x: [20, -10, 20],
+            y: [0, 25, 0],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{
+            duration: 11,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Bottom glow */}
+        <motion.div
+          className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full h-32 blur-2xl"
+          style={{
+            background: `linear-gradient(to top, ${
+              isDarkMode 
+                ? 'rgba(147, 51, 234, 0.6)' 
+                : 'rgba(147, 51, 234, 0.25)'
+            } 0%, transparent 100%)`
+          }}
+          animate={{
+            opacity: [0.6, 1, 0.6],
+            scaleY: [1, 1.3, 1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Floating particles */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-3 h-3 rounded-full blur-sm"
+            style={{
+              background: isDarkMode ? 'rgba(196, 145, 255, 0.9)' : 'rgba(168, 85, 247, 0.6)',
+              left: `${20 + i * 15}%`,
+              top: `${30 + i * 10}%`,
+            }}
+            animate={{
+              y: [0, -20, 0],
+              opacity: [0.6, 1, 0.6],
+              scale: [1, 1.5, 1],
+            }}
+            transition={{
+              duration: 3 + i,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.5,
+            }}
+          />
+        ))}
+      </div>
+      
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
           className="text-center mb-10"

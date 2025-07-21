@@ -338,7 +338,7 @@ const Navbar = () => {
                               onClick={() => setIsOpen(false)}
                               className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
                             >
-                              My Roadmap
+                              Career
                             </Link>
                           </motion.div>
                           <motion.div variants={mobileItemVariants}>

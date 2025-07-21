@@ -1,6 +1,7 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../contexts/ThemeContext';
+import { OptimizedInterval } from '../utils/performance';
 import { 
   MapPin, 
   Calendar, 
@@ -42,6 +43,10 @@ const MyRoadmapPage = () => {
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  
+  // Use refs for optimized intervals
+  const messageIntervalRef = useRef<OptimizedInterval | null>(null);
+  const stepIntervalRef = useRef<OptimizedInterval | null>(null);
 
   const personalizedMessages = [
     "Calibrating roadmap based on your unique skills...",
@@ -90,7 +95,7 @@ const MyRoadmapPage = () => {
     await updateProgress(weekNumber, taskId, completed);
   };
 
-  // Handle ESC key to close modal and manage step animations
+  // Handle ESC key to close modal (optimized event handling)
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && showRegenerateConfirm) {
@@ -99,36 +104,42 @@ const MyRoadmapPage = () => {
     };
 
     document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [showRegenerateConfirm]);
 
-    // Personalized messages interval
-    const messageIntervalId = setInterval(() => {
-      if (loading && roadmap !== null) {
-        setCurrentMessageIndex(prevIndex => (prevIndex + 1) % personalizedMessages.length);
+  // Optimized intervals management
+  useEffect(() => {
+    // Clean up existing intervals
+    messageIntervalRef.current?.destroy();
+    stepIntervalRef.current?.destroy();
+
+    if (loading) {
+      // Only start message rotation if we have roadmap data
+      if (roadmap !== null) {
+        messageIntervalRef.current = new OptimizedInterval(() => {
+          setCurrentMessageIndex(prevIndex => (prevIndex + 1) % personalizedMessages.length);
+        }, 3300);
+        messageIntervalRef.current.start();
       }
-    }, 3300);
 
-    // Progress steps sequential animation - cycle through one at a time
-    let stepTimeout: number;
-    
-    if (loading && !roadmap) {
-      // Start with first step
-      setCurrentStep(0);
-      
-      // Cycle through steps every 5 seconds
-      stepTimeout = setInterval(() => {
-        setCurrentStep(prevIndex => (prevIndex + 1) % progressSteps.length);
-      }, 5000) as unknown as number;
+      // Only start step animation if no roadmap yet
+      if (!roadmap) {
+        setCurrentStep(0);
+        stepIntervalRef.current = new OptimizedInterval(() => {
+          setCurrentStep(prevIndex => (prevIndex + 1) % progressSteps.length);
+        }, 5000);
+        stepIntervalRef.current.start();
+      }
     } else {
       // Reset when not loading
       setCurrentStep(0);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscKey);
-      clearInterval(messageIntervalId);
-      if (stepTimeout) clearInterval(stepTimeout as unknown as ReturnType<typeof setInterval>);
+      messageIntervalRef.current?.destroy();
+      stepIntervalRef.current?.destroy();
     };
-  }, [showRegenerateConfirm, loading, roadmap, personalizedMessages.length, progressSteps.length]);
+  }, [loading, roadmap, personalizedMessages.length, progressSteps.length]);
 
   // Calculate overall progress
   const overallProgress = progress.length > 0 

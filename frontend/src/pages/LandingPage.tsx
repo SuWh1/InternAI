@@ -1,7 +1,8 @@
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll } from 'framer-motion';
 import { useRef } from 'react';
 import HeroSection from '../components/HeroSection';
 import HowItWorks from '../components/HowItWorks';
+import FaangToMango from '../components/FaangToMango';
 import TargetAudience from '../components/TargetAudience';
 import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
@@ -15,45 +16,8 @@ const LandingPage = () => {
     offset: ["start start", "end end"]
   });
 
-  // Parallax transforms
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const backgroundOpacity = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0.5, 0.3]);
-
   return (
     <div ref={containerRef} className="bg-theme-primary transition-colors duration-300 relative overflow-hidden">
-      {/* Animated background gradient */}
-      <motion.div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(199, 0, 255, 0.1) 0%, transparent 70%)",
-          y: backgroundY,
-          opacity: backgroundOpacity,
-        }}
-      />
-
-      {/* Floating particles background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-theme-accent rounded-full opacity-30"
-            initial={{
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-            }}
-            animate={{
-              x: Math.random() * window.innerWidth,
-              y: [null, -100],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Infinity,
-              ease: "linear",
-              delay: Math.random() * 5,
-            }}
-          />
-        ))}
-      </div>
 
       {/* Content sections with enhanced animations */}
       <motion.div
@@ -70,19 +34,23 @@ const LandingPage = () => {
           <HowItWorks />
         </AnimatedSection>
         
-        <AnimatedSection animation="scale" delay={2} amount={0.3}>
+        <AnimatedSection animation="fade-in-up" delay={2} amount={0.3}>
+          <FaangToMango />
+        </AnimatedSection>
+        
+        <AnimatedSection animation="scale" delay={3} amount={0.3}>
           <TargetAudience />
         </AnimatedSection>
         
-        <AnimatedSection animation="fade-in-up" delay={3} amount={0.3}>
+        <AnimatedSection animation="fade-in-up" delay={4} amount={0.3}>
           <Testimonials />
         </AnimatedSection>
         
-        <AnimatedSection animation="blur" delay={4} amount={0.3}>
+        <AnimatedSection animation="blur" delay={5} amount={0.3}>
           <FAQ />
         </AnimatedSection>
         
-        <AnimatedSection animation="fade-in-up" delay={5} amount={0.5}>
+        <AnimatedSection animation="fade-in-up" delay={6} amount={0.5}>
           <Footer />
         </AnimatedSection>
       </motion.div>

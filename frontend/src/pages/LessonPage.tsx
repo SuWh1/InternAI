@@ -29,6 +29,7 @@ import MarkdownRenderer from '../components/common/MarkdownRenderer';
 import TextAreaWithCounter from '../components/common/TextAreaWithCounter';
 import { useTheme } from '../contexts/ThemeContext';
 import type { GPTTopicResponse } from '../types/roadmap';
+import { OptimizedInterval, debounce, batchDOMOperations } from '../utils/performance';
 
 // Safe wrapper for MarkdownRenderer that handles parsing errors
 interface SafeMarkdownRendererProps {
@@ -237,10 +238,21 @@ const LessonPage: React.FC = () => {
         scrollbar-color: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05)'};
       }
     `;
-    document.head.appendChild(style);
+    
+    // Use batched DOM operations for better performance
+    batchDOMOperations([
+      () => document.head.appendChild(style)
+    ]);
     
     return () => {
-      document.head.removeChild(style);
+      // Clean up more safely to prevent performance issues
+      try {
+        if (style.parentNode) {
+          document.head.removeChild(style);
+        }
+      } catch (error) {
+        console.warn('Failed to remove lesson page styles:', error);
+      }
     };
   }, [theme]);
   
@@ -267,6 +279,9 @@ const LessonPage: React.FC = () => {
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [chatMessagesEndRef, setChatMessagesEndRef] = useState<HTMLDivElement | null>(null);
+  
+  // Optimized interval ref for step cycling
+  const stepIntervalRef = React.useRef<OptimizedInterval | null>(null);
 
   // Handle both new slug format and legacy URL format
   let topic = '';
@@ -329,22 +344,23 @@ const LessonPage: React.FC = () => {
     };
   }, [loading]);
 
-    // Cycle through loading steps
+    // Optimized step cycling to prevent performance issues
   useEffect(() => {
-    let stepInterval: number;
+    // Clean up existing interval
+    stepIntervalRef.current?.destroy();
     
     if (loading) {
       setCurrentStep(0);
       
-      stepInterval = window.setInterval(() => {
+      // Use OptimizedInterval instead of regular setInterval
+      stepIntervalRef.current = new OptimizedInterval(() => {
         setCurrentStep(prev => (prev + 1) % 3);
       }, 7000);
+      stepIntervalRef.current.start();
     }
 
     return () => {
-      if (stepInterval) {
-        clearInterval(stepInterval);
-      }
+      stepIntervalRef.current?.destroy();
     };
   }, [loading]);
 

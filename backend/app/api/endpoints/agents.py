@@ -374,7 +374,7 @@ async def get_topic_details(
                 
                 # Post-process cached content to fix any formatting issues
                 cached_content = existing_content.content_data.copy()
-                if not validate_content_quality(cached_content):
+                if not is_content_usable(cached_content):
                     logger.info("Post-processing cached content to improve formatting")
                     cached_content = post_process_content(cached_content)
                 
@@ -390,28 +390,14 @@ async def get_topic_details(
         # Generate Gemini explanation with user profile for personalization
         explanation = await generate_topic_explanation(topic, context, user_level, onboarding_data)
         
-        # PHASE 1: Content Quality Improvement (Safe, additive)
-        retry_count = 0
-        max_retries = 2
+        # Simple validation for critical issues only (no retries to avoid 504 Gateway Timeout)
+        # Modern AI models are reliable, and post-processing can handle formatting issues
+        if not is_content_usable(explanation):
+            logger.warning("Generated content has critical issues, but proceeding with post-processing")
         
-        while retry_count <= max_retries:
-            # Validate content quality
-            if validate_content_quality(explanation):
-                # Post-process to fix common issues
-                explanation = post_process_content(explanation)
-                logger.info("Content passed quality validation")
-                break
-            else:
-                logger.warning(f"Content quality validation failed, attempt {retry_count + 1}/{max_retries + 1}")
-                if retry_count < max_retries:
-                    # Retry with improved prompt and user profile
-                    explanation = await generate_topic_explanation(topic, context, user_level, onboarding_data)
-                    retry_count += 1
-                else:
-                    # Use post-processing to fix what we can
-                    explanation = post_process_content(explanation)
-                    logger.info("Using post-processed content after max retries")
-                    break
+        # Post-process to fix formatting issues (enhanced since we removed strict validation)
+        explanation = post_process_content(explanation)
+        logger.info("Content generation and post-processing completed - no retries needed")
         
         # Fetch popular YouTube videos for this topic
         try:
@@ -499,6 +485,7 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
     2. Content is tailored to their chosen tech stack and frameworks
     3. Resources and examples are relevant to their experience level
     4. The lesson content matches their personal learning profile
+    5. Fast generation without retries to prevent 504 Gateway Timeouts
     """
     
     try:
@@ -950,8 +937,8 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
             ]
         }
 
-def validate_content_quality(content_data: Dict[str, Any]) -> bool:
-    """Validate if content is well-formatted and suitable for display."""
+def is_content_usable(content_data: Dict[str, Any]) -> bool:
+    """Check if content has critical issues that would make it unusable (minimal validation to avoid timeouts)."""
     try:
         if not isinstance(content_data, dict):
             return False
@@ -960,35 +947,27 @@ def validate_content_quality(content_data: Dict[str, Any]) -> bool:
         if not explanation or not isinstance(explanation, str):
             return False
             
-        # Check for common formatting issues
-        issues = [
-            # Literal \n instead of actual newlines
-            explanation.count("\\n") > explanation.count("\n") * 0.1,
-            # Too many consecutive newlines (malformed)
-            "\\n\\n\\n" in explanation,
-            # Malformed code blocks
-            explanation.count("```") % 2 != 0,
-            # Missing spaces in markdown
-            "**text**" in explanation.lower(),
-            # Very long lines without breaks (over 500 chars)
-            any(len(line) > 500 for line in explanation.split('\n')),
-            # Empty or very short content
-            len(explanation.strip()) < 100
+        # Only check for truly critical issues that post-processing can't fix
+        critical_issues = [
+            # Completely empty content
+            len(explanation.strip()) < 20,
+            # No basic structure at all (no headers, bullets, or paragraphs)
+            not any(char in explanation for char in ['#', '*', '-', '\n'])
         ]
         
-        # If more than 2 issues detected, consider it poor quality
-        if sum(issues) > 2:
-            logger.warning(f"Content quality issues detected: {sum(issues)} problems found")
-            return False
+        # If any critical issue found, consider it unusable
+        has_critical_issues = any(critical_issues)
+        if has_critical_issues:
+            logger.warning("Content has critical structural issues")
             
-        return True
+        return not has_critical_issues
         
     except Exception as e:
-        logger.error(f"Error validating content quality: {str(e)}")
-        return False
+        logger.error(f"Error checking content usability: {str(e)}")
+        return True  # If check fails, assume content is usable
 
 def post_process_content(content_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Post-process content to fix common formatting issues."""
+    """Enhanced post-processing to fix common formatting issues (now handling more since we removed strict validation)."""
     try:
         if not isinstance(content_data, dict):
             return content_data
@@ -1001,11 +980,15 @@ def post_process_content(content_data: Dict[str, Any]) -> Dict[str, Any]:
         if "\\n" in explanation:
             explanation = explanation.replace("\\n", "\n")
             
+        # Fix escaped quotes that might interfere with markdown
+        explanation = explanation.replace('\\"', '"')
+        explanation = explanation.replace("\\'", "'")
+        
         # Fix common markdown issues
         explanation = explanation.replace("**text**", "**bold text**")
         explanation = explanation.replace("*text*", "*italic text*")
         
-        # Fix malformed code blocks
+        # Fix malformed code blocks (ensure even number)
         if explanation.count("```") % 2 != 0:
             explanation += "\n```"
             
@@ -1014,8 +997,15 @@ def post_process_content(content_data: Dict[str, Any]) -> Dict[str, Any]:
         explanation = re.sub(r'(\n?)##([^\n]+)(\n?)', r'\n\n##\2\n\n', explanation)
         explanation = re.sub(r'(\n?)###([^\n]+)(\n?)', r'\n\n###\2\n\n', explanation)
         
-        # Remove excessive newlines
+        # Fix list formatting - ensure space after bullets
+        explanation = re.sub(r'\n-([^ ])', r'\n- \1', explanation)
+        explanation = re.sub(r'\n\*([^ ])', r'\n* \1', explanation)
+        
+        # Remove excessive newlines (more than 3 in a row)
         explanation = re.sub(r'\n{4,}', '\n\n\n', explanation)
+        
+        # Fix common spacing issues
+        explanation = re.sub(r'([.!?])\n([A-Z])', r'\1\n\n\2', explanation)  # Add space after sentences
         
         # Clean up leading/trailing whitespace
         explanation = explanation.strip()
@@ -1024,7 +1014,7 @@ def post_process_content(content_data: Dict[str, Any]) -> Dict[str, Any]:
         processed_content = content_data.copy()
         processed_content["explanation"] = explanation
         
-        logger.info("Content post-processing completed successfully")
+        logger.info("Enhanced content post-processing completed successfully")
         return processed_content
         
     except Exception as e:

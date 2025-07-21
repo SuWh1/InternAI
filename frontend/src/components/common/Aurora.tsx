@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Renderer, Program, Mesh, Color, Triangle } from "ogl";
+import { throttle, prefersReducedMotion } from "../../utils/performance";
 
 const VERT = `#version 300 es
 in vec2 position;
@@ -142,6 +143,17 @@ export default function Aurora(props: AuroraProps) {
   propsRef.current = props;
 
   const ctnDom = useRef<HTMLDivElement>(null);
+  
+  // Memoize color calculations to prevent recalculation on every frame
+  const colorStopsArray = useMemo(() => {
+    return themeColors.map((hex) => {
+      const c = new Color(hex);
+      return [c.r, c.g, c.b];
+    });
+  }, [themeColors]);
+
+  // Skip animation if user prefers reduced motion
+  const shouldAnimate = useMemo(() => !prefersReducedMotion(), []);
 
   useEffect(() => {
     const ctn = ctnDom.current;
@@ -153,7 +165,8 @@ export default function Aurora(props: AuroraProps) {
     let animateId = 0;
     let isDestroyed = false;
     
-    const resize = () => {
+    // Throttle resize to prevent performance issues
+    const resize = throttle(() => {
       if (!ctn || !program || isDestroyed || typeof window === 'undefined') return;
       try {
         const width = window.innerWidth;
@@ -165,7 +178,7 @@ export default function Aurora(props: AuroraProps) {
       } catch (error) {
         console.warn('Aurora resize error:', error);
       }
-    };
+    }, 250); // Throttle to max 4 resizes per second
 
     try {
       renderer = new Renderer({
@@ -189,11 +202,6 @@ export default function Aurora(props: AuroraProps) {
       delete (geometry.attributes).uv;
     }
 
-    const colorStopsArray = themeColors.map((hex) => {
-      const c = new Color(hex);
-      return [c.r, c.g, c.b];
-    });
-
     program = new Program(gl, {
       vertex: VERT,
       fragment: FRAG,
@@ -209,28 +217,36 @@ export default function Aurora(props: AuroraProps) {
       mesh = new Mesh(gl, { geometry, program });
     ctn.appendChild(gl.canvas);
 
+    let lastFrameTime = 0;
+    const targetFrameTime = shouldAnimate ? 1000 / 30 : 1000 / 10; // 30fps when animating, 10fps when not
+    
     const update = (t: number) => {
         if (isDestroyed || !program || !renderer) return;
         
+        // Skip frame if we haven't reached target frame time (performance optimization)
+        if (t - lastFrameTime < targetFrameTime) {
+          animateId = requestAnimationFrame(update);
+          return;
+        }
+        
+        lastFrameTime = t;
+        
+        // Skip rendering when page is hidden (performance optimization)
+        if (document.hidden) {
+          animateId = requestAnimationFrame(update);
+          return;
+        }
+        
         try {
       animateId = requestAnimationFrame(update);
-      const { time = t * 0.01, speed = 1.0 } = propsRef.current;
+      const { time = t * 0.01, speed = shouldAnimate ? 1.0 : 0.1 } = propsRef.current;
           
         program.uniforms.uTime.value = time * speed * 0.1;
         program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
         program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
           
-        // Get current theme colors with fallback
-        const currentProps = propsRef.current;
-        const currentColorStops = currentProps.colorStops || (
-          currentProps.theme === 'light' 
-            ? ["#C084FC", "#DDD6FE", "#A78BFA"] 
-            : ["#9333EA", "#F472B6", "#A855F7"]
-        );
-        program.uniforms.uColorStops.value = currentColorStops.map((hex: string) => {
-          const c = new Color(hex);
-          return [c.r, c.g, c.b];
-        });
+        // Use memoized color stops to avoid recalculation
+        program.uniforms.uColorStops.value = colorStopsArray;
           
                      if (mesh) {
         renderer.render({ scene: mesh });

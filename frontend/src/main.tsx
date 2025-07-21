@@ -6,6 +6,8 @@ import App from './App.tsx';
 import './index.css';
 import { GoogleProviderWrapper } from './components/auth/GoogleProviderWrapper';
 import { CACHE_LIMITS } from './utils/constants';
+import { setupGlobalChunkErrorHandling } from './utils/chunkErrorHandling';
+import { logMemoryUsage } from './utils/performance';
 
 // Apply global styling to prevent scrolling issues
 document.documentElement.style.overflowX = 'hidden';
@@ -17,6 +19,14 @@ window.history.scrollRestoration = 'manual';
 window.scrollTo(0, 0);
 document.documentElement.scrollTop = 0;
 document.body.scrollTop = 0;
+
+// Initialize optimized performance monitoring
+if (process.env.NODE_ENV === 'development') {
+  logMemoryUsage('App initialization');
+}
+
+// Setup optimized global error handling to prevent performance issues
+setupGlobalChunkErrorHandling();
 
 // Also reset on beforeunload to handle edge cases
 window.addEventListener('beforeunload', () => {

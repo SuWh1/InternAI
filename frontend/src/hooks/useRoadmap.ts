@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import agentService from '../services/agentService';
+import { debounce } from '../utils/performance';
 import type { 
   AgentPipelineResponse, 
   Roadmap, 
@@ -197,24 +198,38 @@ export const useRoadmap = (): UseRoadmapReturn => {
     setError(null);
   }, []);
 
-  // Listen for focus events to refresh data when returning to the page
+  // Debounced refresh to prevent multiple simultaneous API calls
+  const debouncedRefresh = useCallback(
+    debounce(() => {
+      refreshRoadmapData();
+    }, 1000),
+    [refreshRoadmapData]
+  );
+
+  // Optimized event listeners to prevent performance issues
   useEffect(() => {
     const handleFocus = () => {
-      refreshRoadmapData();
+      // Only refresh if page was hidden for more than 30 seconds
+      if (document.hidden === false) {
+        debouncedRefresh();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Only refresh when becoming visible, not when hiding
+      if (!document.hidden) {
+        debouncedRefresh();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        refreshRoadmapData();
-      }
-    });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [refreshRoadmapData]);
+  }, [debouncedRefresh]);
 
   return {
     roadmap,

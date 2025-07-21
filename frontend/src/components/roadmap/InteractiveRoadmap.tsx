@@ -13,6 +13,7 @@ import ReactFlow, {
 } from 'reactflow';
 import type { Node, Edge, Viewport } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { throttle } from '../../utils/performance';
 
 import WeekNode from './WeekNode';
 import TopicDetailsModal from './TopicDetailsModal';
@@ -386,39 +387,31 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
     setSelectedTopic(null);
   }, []);
 
-  // Enhanced touch and gesture support for omnidirectional movement
-  const handleTouchStart = useCallback((event: React.TouchEvent) => {
+  // Optimized touch and gesture support using throttled handlers
+  const handleTouchStart = useCallback(throttle((event: React.TouchEvent) => {
     const target = event.currentTarget as HTMLElement;
     
     if (event.touches.length === 1) {
-      // Single finger - enable smooth omnidirectional panning
       target.style.touchAction = 'pan-x pan-y';
       target.style.overscrollBehavior = 'contain';
     } else if (event.touches.length === 2) {
-      // Two fingers - allow pinch zoom while maintaining pan capability
       target.style.touchAction = 'pan-x pan-y pinch-zoom';
       target.style.overscrollBehavior = 'contain';
     }
-  }, []);
+  }, 16), []); // ~60fps throttling
 
-  const handleTouchMove = useCallback((event: React.TouchEvent) => {
-    // Prevent default scrolling behavior to ensure smooth panning
+  const handleTouchMove = useCallback(throttle((event: React.TouchEvent) => {
     if (event.touches.length >= 1) {
       event.preventDefault();
     }
-  }, []);
+  }, 16), []); // ~60fps throttling
 
-  const handleWheel = useCallback((event: React.WheelEvent) => {
-    // Enhanced trackpad/wheel support for omnidirectional movement
+  const handleWheel = useCallback(throttle((event: React.WheelEvent) => {
     if (event.ctrlKey || event.metaKey) {
-      // Zoom with Ctrl/Cmd + scroll - let ReactFlow handle this
-      return;
+      return; // Let ReactFlow handle zoom
     }
-    
-    // For trackpad users, enable smooth diagonal movement
-    // ReactFlow will handle the actual panning via panOnScroll
     event.stopPropagation();
-  }, []);
+  }, 16), []); // ~60fps throttling
 
   // Calculate progress stats for the info panel
   const progressStats = useMemo(() => {

@@ -175,7 +175,7 @@ const HeroSection = () => {
                 </motion.span>
                 {/* <FAANGIcons /> */}
                 <motion.span 
-                  className="inline-block"
+                  className="inline-block mr-3"
                   initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
                   animate={{ opacity: 1, scale: 1, rotate: 0 }}
                   transition={{ 

@@ -956,25 +956,25 @@ const SubStepIndicator: React.FC<{
   totalSubSteps: number;
   subStepNames: string[];
 }> = ({ currentSubStep, totalSubSteps, subStepNames }) => (
-  <div className="flex items-center justify-center mb-8">
+  <div className="flex items-center justify-center mb-6 sm:mb-8 px-4">
     {Array.from({ length: totalSubSteps }, (_, i) => (
       <React.Fragment key={i}>
         <div className={`
-          relative flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold transition-all duration-300
+          relative flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-xs font-semibold transition-all duration-300
           ${i + 1 <= currentSubStep 
             ? 'bg-purple-500 text-white shadow-md' 
             : 'bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary'
           }
         `}>
           {i + 1 < currentSubStep ? (
-            <Check className="w-4 h-4" />
+            <Check className="w-3 h-3 sm:w-4 sm:h-4" />
           ) : (
-            <span>{i + 1}</span>
+            <span className="text-xs">{i + 1}</span>
           )}
         </div>
         {i < totalSubSteps - 1 && (
           <div className={`
-            w-8 h-0.5 mx-2 rounded-full transition-all duration-300
+            w-4 sm:w-6 md:w-8 h-0.5 mx-1 sm:mx-2 rounded-full transition-all duration-300
             ${i + 1 < currentSubStep ? 'bg-purple-500' : 'bg-theme-hover'}
           `} />
         )}
@@ -1490,20 +1490,20 @@ const OnboardingPage: React.FC = () => {
   };
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-12">
+    <div className="flex items-center justify-center mb-8 sm:mb-12 px-4">
       {Array.from({ length: totalSteps }, (_, i) => (
         <React.Fragment key={i}>
           <div className={`
-            relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-500 ease-out transform
+            relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 transition-all duration-500 ease-out transform
             ${i + 1 <= currentStep 
               ? 'bg-purple-500 border-purple-500 text-white shadow-lg scale-110' 
               : 'bg-theme-secondary border-purple-300 dark:border-purple-600 text-theme-primary hover:border-purple-500 hover:scale-105'
             }
           `}>
             {i + 1 < currentStep ? (
-              <Check className="w-6 h-6 animate-in zoom-in-50 duration-300" />
+              <Check className="w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 animate-in zoom-in-50 duration-300" />
             ) : (
-              <span className="text-sm font-semibold">{i + 1}</span>
+              <span className="text-xs sm:text-sm font-semibold">{i + 1}</span>
             )}
             {i + 1 === currentStep && (
               <div className="absolute inset-0 rounded-full bg-purple-500 opacity-20 animate-ping"></div>
@@ -1511,7 +1511,7 @@ const OnboardingPage: React.FC = () => {
           </div>
           {i < totalSteps - 1 && (
             <div className={`
-              w-16 h-1 mx-3 rounded-full transition-all duration-500 ease-out
+              w-8 sm:w-12 md:w-16 h-1 mx-1 sm:mx-2 md:mx-3 rounded-full transition-all duration-500 ease-out
               ${i + 1 < currentStep 
                 ? 'bg-purple-500 shadow-sm' 
                 : 'bg-theme-hover'
@@ -1528,13 +1528,13 @@ const OnboardingPage: React.FC = () => {
   );
 
   const renderStep1 = () => (
-    <div className={`space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
-      <div className="text-center mb-10">
+    <div className={`space-y-6 sm:space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
+      <div className="text-center mb-6 sm:mb-8 md:mb-10">
         <div className="relative inline-block">
-          <User className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
+          <User className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-purple-500 mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Academic Background</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Tell us about your current academic status</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-2 sm:mb-3 animate-in slide-in-from-bottom duration-500 delay-200 px-2">Academic Background</h2>
+        <p className="text-base sm:text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300 px-4">Tell us about your current academic status</p>
       </div>
 
       <div className="space-y-6">
@@ -1575,13 +1575,13 @@ const OnboardingPage: React.FC = () => {
   );
 
   const renderStep2 = () => (
-    <div className={`space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
-      <div className="text-center mb-10">
+    <div className={`space-y-6 sm:space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
+      <div className="text-center mb-6 sm:mb-8 md:mb-10">
         <div className="relative inline-block">
-          <Code className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
+          <Code className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-purple-500 mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Technical Background</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Let's build your technical profile step by step</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-2 sm:mb-3 animate-in slide-in-from-bottom duration-500 delay-200 px-2">Technical Background</h2>
+        <p className="text-base sm:text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300 px-4">Let's build your technical profile step by step</p>
       </div>
 
       <div className="space-y-8">
@@ -1900,33 +1900,36 @@ const OnboardingPage: React.FC = () => {
         )}
 
         {/* Sub-step navigation */}
-        <div className="flex justify-between items-center mt-6 pt-4 border-t border-theme">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 mt-6 pt-4 border-t border-theme">
           <button
             onClick={prevSubStep}
             disabled={currentSubStep === 1}
-            className="flex items-center space-x-2 px-4 py-2 text-theme-secondary font-medium rounded-lg border-2 border-theme hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group"
+            className="flex items-center space-x-2 w-full sm:w-auto px-4 py-2 text-theme-secondary font-medium rounded-lg border-2 border-theme hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group justify-center sm:justify-start order-2 sm:order-1"
           >
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
-            <span>
+            <span className="hidden sm:inline">
               {currentSubStep > 1 ? subStepNames[currentSubStep - 2] : ''}
             </span>
+            <span className="sm:hidden">Back</span>
           </button>
 
-          <div className="flex items-center space-x-3 px-4 py-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg transition-colors duration-300 opacity-100">
+          <div className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg transition-colors duration-300 opacity-100 order-1 sm:order-2">
             <div className="w-2 h-2 bg-purple-600 dark:bg-purple-400 rounded-full"></div>
-            <span className="text-sm font-medium text-purple-800 dark:text-purple-300">
-              {currentSubStep} of {totalSubSteps}: {subStepNames[currentSubStep - 1]}
+            <span className="text-xs sm:text-sm font-medium text-purple-800 dark:text-purple-300">
+              <span className="hidden sm:inline">{currentSubStep} of {totalSubSteps}: {subStepNames[currentSubStep - 1]}</span>
+              <span className="sm:hidden">{currentSubStep}/{totalSubSteps}</span>
             </span>
           </div>
 
           <button
             onClick={nextSubStep}
             disabled={currentSubStep === totalSubSteps || !validateSubStep(currentSubStep)}
-            className="flex items-center space-x-2 px-4 py-2 text-theme-secondary font-medium rounded-lg border-2 border-theme hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group"
+            className="flex items-center space-x-2 w-full sm:w-auto px-4 py-2 text-theme-secondary font-medium rounded-lg border-2 border-theme hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group justify-center sm:justify-start order-3 sm:order-3"
           >
-            <span>
+            <span className="hidden sm:inline">
               {currentSubStep < totalSubSteps ? subStepNames[currentSubStep] : 'Complete'}
             </span>
+            <span className="sm:hidden">Next</span>
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
           </button>
         </div>
@@ -1935,13 +1938,13 @@ const OnboardingPage: React.FC = () => {
   );
 
   const renderStep3 = () => (
-    <div className={`space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
-      <div className="text-center mb-10">
+    <div className={`space-y-6 sm:space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
+      <div className="text-center mb-6 sm:mb-8 md:mb-10">
         <div className="relative inline-block">
-          <Briefcase className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
+          <Briefcase className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-purple-500 mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Experience</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Tell us about your internship and project experience</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-2 sm:mb-3 animate-in slide-in-from-bottom duration-500 delay-200 px-2">Experience</h2>
+        <p className="text-base sm:text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300 px-4">Tell us about your internship and project experience</p>
       </div>
 
       <div className="space-y-8">
@@ -1999,13 +2002,13 @@ const OnboardingPage: React.FC = () => {
   );
 
   const renderStep4 = () => (
-    <div className={`space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
-      <div className="text-center mb-10">
+    <div className={`space-y-6 sm:space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
+      <div className="text-center mb-6 sm:mb-8 md:mb-10">
         <div className="relative inline-block">
-          <Target className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
+          <Target className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-purple-500 mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Career Goals</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Help us understand your career aspirations</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-2 sm:mb-3 animate-in slide-in-from-bottom duration-500 delay-200 px-2">Career Goals</h2>
+        <p className="text-base sm:text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300 px-4">Help us understand your career aspirations</p>
       </div>
 
       
@@ -2060,13 +2063,13 @@ const OnboardingPage: React.FC = () => {
   );
 
   const renderStep5 = () => (
-    <div className={`space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
-      <div className="text-center mb-10">
+    <div className={`space-y-6 sm:space-y-8 animate-in ${stepDirection === 'forward' ? 'slide-in-from-right' : 'slide-in-from-left'} duration-500 ease-out`}>
+      <div className="text-center mb-6 sm:mb-8 md:mb-10">
         <div className="relative inline-block">
-          <Rocket className="w-20 h-20 text-purple-500 mx-auto mb-6 animate-in zoom-in duration-700 delay-100" />
+          <Rocket className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 text-purple-500 mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-700 delay-100" />
         </div>
-        <h2 className="text-3xl font-bold text-theme-primary mb-3 animate-in slide-in-from-bottom duration-500 delay-200">Final Touches</h2>
-        <p className="text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300">Just a couple more things to personalize your experience.</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-2 sm:mb-3 animate-in slide-in-from-bottom duration-500 delay-200 px-2">Final Touches</h2>
+        <p className="text-base sm:text-lg text-theme-secondary animate-in slide-in-from-bottom duration-500 delay-300 px-4">Just a couple more things to personalize your experience.</p>
       </div>
 
       <div className="space-y-8">
@@ -2132,17 +2135,17 @@ const OnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-theme-primary py-8 px-4 transition-colors duration-300" ref={topOfPageRef}>
+    <div className="min-h-screen bg-theme-primary py-4 sm:py-8 px-4 transition-colors duration-300" ref={topOfPageRef}>
       <div className="max-w-5xl mx-auto">
-        <div className="bg-theme-secondary/95 backdrop-blur-sm rounded-2xl shadow-xl border border-theme p-8 md:p-12 animate-in zoom-in duration-700 transition-colors duration-300">
+        <div className="bg-theme-secondary/95 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl border border-theme p-4 sm:p-6 md:p-8 lg:p-12 animate-in zoom-in duration-700 transition-colors duration-300">
           {/* Header */}
-          <div className="text-center mb-12 animate-in slide-in-from-bottom duration-500">
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-6 py-2 rounded-full text-sm font-semibold mb-6 mt-4 animate-in zoom-in duration-500 delay-100">
+          <div className="text-center mb-8 sm:mb-12 animate-in slide-in-from-bottom duration-500">
+            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 sm:px-6 py-2 rounded-full text-sm font-semibold mb-4 sm:mb-6 mt-2 sm:mt-4 animate-in zoom-in duration-500 delay-100">
               <Sparkles className="w-4 h-4" />
               <span>Step {currentStep} of {totalSteps}</span>
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold text-theme-primary mb-4 transition-colors duration-300">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-theme-primary mb-4 transition-colors duration-300 px-2">
               Let's get you set up!
             </h1>
           </div>
@@ -2177,39 +2180,43 @@ const OnboardingPage: React.FC = () => {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between items-center mt-12 pt-8 border-t border-theme">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-theme">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center space-x-2 px-6 py-3 text-theme-secondary font-medium rounded-xl hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group"
+              className="flex items-center justify-center space-x-2 w-full sm:w-auto px-4 sm:px-6 py-3 text-theme-secondary font-medium rounded-xl hover:bg-theme-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 group order-2 sm:order-1"
             >
               <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
-              <span>Back to {currentStep === 2 ? 'Academic Background' : currentStep === 3 ? 'Technical Background' : currentStep === 4 ? 'Experience' : currentStep === 5 ? 'Career Goals' : 'Previous'}</span>
+              <span className="hidden sm:inline">Back to {currentStep === 2 ? 'Academic Background' : currentStep === 3 ? 'Technical Background' : currentStep === 4 ? 'Experience' : currentStep === 5 ? 'Career Goals' : 'Previous'}</span>
+              <span className="sm:hidden">Back</span>
             </button>
 
             {currentStep < totalSteps ? (
               <button
                 onClick={nextStep}
                 disabled={!validateStep(currentStep) || (currentStep === 2 && !canProceedFromStep2())}
-                className="flex items-center space-x-2 px-8 py-3 bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 sm:px-8 py-3 bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group order-1 sm:order-2"
               >
-                <span>Continue to {currentStep === 1 ? 'Technical Background' : currentStep === 2 ? 'Experience' : currentStep === 3 ? 'Career Goals' : 'Final Steps'}</span>
+                <span className="hidden sm:inline">Continue to {currentStep === 1 ? 'Technical Background' : currentStep === 2 ? 'Experience' : currentStep === 3 ? 'Career Goals' : 'Final Steps'}</span>
+                <span className="sm:hidden">Continue</span>
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={!validateStep(currentStep) || loading}
-                className="flex items-center space-x-2 px-8 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 sm:px-8 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group order-1 sm:order-2"
               >
                 {loading ? (
                   <>
                     <LoadingSpinner size="small" />
-                    <span>Creating Your Roadmap...</span>
+                    <span className="hidden sm:inline">Creating Your Roadmap...</span>
+                    <span className="sm:hidden">Creating...</span>
                   </>
                 ) : (
                   <>
-                    <span>Complete Onboarding</span>
+                    <span className="hidden sm:inline">Complete Onboarding</span>
+                    <span className="sm:hidden">Complete</span>
                     <Check className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
                   </>
                 )}

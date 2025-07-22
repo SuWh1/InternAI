@@ -58,84 +58,19 @@ const Testimonials = () => {
     <section className="py-20 bg-theme-primary transition-colors duration-300 relative overflow-hidden" style={{ position: 'relative' }}>
       {/* Beautiful Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Radial spotlight from top */}
+        {/* Central glow - middle center */}
         <motion.div
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-96 rounded-full blur-3xl"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full blur-3xl"
           style={{
             background: `radial-gradient(circle, ${
-              isDarkMode 
-                ? 'rgba(168, 85, 247, 0.7)' 
-                : 'rgba(147, 51, 234, 0.3)'
-            } 0%, transparent 70%)`
-          }}
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.8, 1, 0.8],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        
-        {/* Left side orb */}
-        <motion.div
-          className="absolute top-1/3 left-0 w-72 h-72 rounded-full blur-3xl"
-          style={{
-            background: `radial-gradient(circle, ${
-              isDarkMode 
-                ? 'rgba(196, 145, 255, 0.8)' 
-                : 'rgba(168, 85, 247, 0.35)'
-            } 0%, transparent 60%)`
-          }}
-          animate={{
-            x: [-20, 20, -20],
-            y: [0, -30, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 14,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        
-        {/* Right side orb */}
-        <motion.div
-          className="absolute top-2/3 right-0 w-64 h-64 rounded-full blur-3xl"
-          style={{
-            background: `radial-gradient(circle, ${
-              isDarkMode 
-                ? 'rgba(221, 199, 255, 0.7)' 
-                : 'rgba(192, 132, 252, 0.4)'
-            } 0%, transparent 65%)`
-          }}
-          animate={{
-            x: [20, -10, 20],
-            y: [0, 25, 0],
-            scale: [1, 1.15, 1],
-          }}
-          transition={{
-            duration: 11,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        
-        {/* Bottom glow */}
-        <motion.div
-          className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full h-32 blur-2xl"
-          style={{
-            background: `linear-gradient(to top, ${
               isDarkMode 
                 ? 'rgba(147, 51, 234, 0.6)' 
-                : 'rgba(147, 51, 234, 0.25)'
-            } 0%, transparent 100%)`
+                : 'rgba(147, 51, 234, 0.3)'
+            } 0%, transparent 75%)`
           }}
           animate={{
-            opacity: [0.6, 1, 0.6],
-            scaleY: [1, 1.3, 1],
+            scale: [1, 1.15, 1],
+            opacity: [0.8, 1, 0.8],
           }}
           transition={{
             duration: 8,
@@ -144,26 +79,115 @@ const Testimonials = () => {
           }}
         />
         
-        {/* Floating particles */}
-        {[...Array(6)].map((_, i) => (
+        {/* Left middle orb */}
+        <motion.div
+          className="absolute top-1/2 left-10 transform -translate-y-1/2 w-64 h-64 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(168, 85, 247, 0.7)' 
+                : 'rgba(168, 85, 247, 0.4)'
+            } 0%, transparent 70%)`
+          }}
+          animate={{
+            x: [0, 25, 0],
+            y: [0, -15, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Right middle orb */}
+        <motion.div
+          className="absolute top-1/2 right-10 transform -translate-y-1/2 w-56 h-56 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(196, 145, 255, 0.8)' 
+                : 'rgba(192, 132, 252, 0.4)'
+            } 0%, transparent 70%)`
+          }}
+          animate={{
+            x: [0, -20, 0],
+            y: [0, 20, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Soft accent orbs for depth */}
+        <motion.div
+          className="absolute top-1/3 left-1/4 w-40 h-40 rounded-full blur-2xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(221, 199, 255, 0.6)' 
+                : 'rgba(221, 199, 255, 0.3)'
+            } 0%, transparent 60%)`
+          }}
+          animate={{
+            y: [0, -12, 0],
+            x: [0, 8, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 7,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        />
+        
+        <motion.div
+          className="absolute top-2/3 right-1/4 w-48 h-48 rounded-full blur-2xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(147, 51, 234, 0.6)' 
+                : 'rgba(147, 51, 234, 0.3)'
+            } 0%, transparent 65%)`
+          }}
+          animate={{
+            y: [0, 15, 0],
+            x: [0, -12, 0],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{
+            duration: 9,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+        />
+        
+        {/* Gentle floating particles */}
+        {[...Array(4)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-3 h-3 rounded-full blur-sm"
+            className="absolute w-2 h-2 rounded-full blur-sm"
             style={{
               background: isDarkMode ? 'rgba(196, 145, 255, 0.9)' : 'rgba(168, 85, 247, 0.6)',
-              left: `${20 + i * 15}%`,
-              top: `${30 + i * 10}%`,
+              left: `${25 + i * 20}%`,
+              top: `${40 + i * 5}%`,
             }}
             animate={{
-              y: [0, -20, 0],
+              y: [0, -15, 0],
               opacity: [0.6, 1, 0.6],
-              scale: [1, 1.5, 1],
+              scale: [1, 1.3, 1],
             }}
             transition={{
-              duration: 3 + i,
+              duration: 4 + i,
               repeat: Infinity,
               ease: "easeInOut",
-              delay: i * 0.5,
+              delay: i * 0.8,
             }}
           />
         ))}

@@ -60,19 +60,20 @@ const FaangToMango: React.FC = () => {
     <section className="py-20 bg-primary transition-colors duration-300 relative overflow-hidden">
       {/* Beautiful Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Large purple orb - top right */}
+        {/* Central purple orb - middle left */}
         <motion.div
-          className="absolute top-10 right-10 w-80 h-80 rounded-full blur-3xl"
+          className="absolute top-1/2 left-20 transform -translate-y-1/2 w-72 h-72 rounded-full blur-3xl"
           style={{
             background: `radial-gradient(circle, ${
               isDarkMode 
-                ? 'rgba(196, 145, 255, 0.8)' 
-                : 'rgba(168, 85, 247, 0.4)'
+                ? 'rgba(147, 51, 234, 0.8)' 
+                : 'rgba(147, 51, 234, 0.4)'
             } 0%, transparent 70%)`
           }}
           animate={{
             scale: [1, 1.1, 1],
             opacity: [0.8, 1, 0.8],
+            x: [0, 15, 0],
           }}
           transition={{
             duration: 8,
@@ -81,20 +82,41 @@ const FaangToMango: React.FC = () => {
           }}
         />
         
-        {/* Medium purple orb - bottom left */}
+        {/* Central purple orb - middle right */}
         <motion.div
-          className="absolute bottom-16 left-16 w-64 h-64 rounded-full blur-2xl"
+          className="absolute top-1/2 right-20 transform -translate-y-1/2 w-64 h-64 rounded-full blur-3xl"
           style={{
             background: `radial-gradient(circle, ${
               isDarkMode 
-                ? 'rgba(147, 51, 234, 0.7)' 
-                : 'rgba(147, 51, 234, 0.35)'
-            } 0%, transparent 60%)`
+                ? 'rgba(168, 85, 247, 0.9)' 
+                : 'rgba(168, 85, 247, 0.5)'
+            } 0%, transparent 65%)`
           }}
           animate={{
             scale: [1, 1.15, 1],
-            x: [0, 20, 0],
-            y: [0, -15, 0],
+            opacity: [0.9, 1, 0.9],
+            x: [0, -20, 0],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        
+        {/* Soft center glow */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl"
+          style={{
+            background: `radial-gradient(circle, ${
+              isDarkMode 
+                ? 'rgba(196, 145, 255, 0.6)' 
+                : 'rgba(192, 132, 252, 0.3)'
+            } 0%, transparent 80%)`
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.7, 1, 0.7],
           }}
           transition={{
             duration: 12,
@@ -103,144 +125,48 @@ const FaangToMango: React.FC = () => {
           }}
         />
         
-        {/* Small accent orb - center right */}
+        {/* Floating accent orbs */}
         <motion.div
-          className="absolute top-1/2 right-20 w-40 h-40 rounded-full blur-2xl"
+          className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full blur-2xl"
           style={{
             background: `radial-gradient(circle, ${
               isDarkMode 
-                ? 'rgba(221, 199, 255, 0.6)' 
-                : 'rgba(192, 132, 252, 0.3)'
-            } 0%, transparent 50%)`
+                ? 'rgba(221, 199, 255, 0.7)' 
+                : 'rgba(221, 199, 255, 0.4)'
+            } 0%, transparent 60%)`
           }}
           animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-        />
-        
-        {/* Soft Purple Light from Top Right Corner */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Main Light Source from Top Right */}
-          <motion.div
-            className="absolute -top-20 -right-20 w-96 h-96 rounded-full blur-3xl"
-            style={{
-              background: `radial-gradient(circle at center, ${
-                isDarkMode 
-                  ? 'rgba(196, 145, 255, 0.4)' 
-                  : 'rgba(168, 85, 247, 0.2)'
-              } 0%, ${
-                isDarkMode 
-                  ? 'rgba(147, 51, 234, 0.2)' 
-                  : 'rgba(147, 51, 234, 0.1)'
-              } 50%, transparent 100%)`
-            }}
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.7, 1, 0.7],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          
-          {/* Soft Light Beam Diagonal */}
-          <motion.div
-            className="absolute top-0 right-0 w-full h-full"
-            style={{
-              background: `linear-gradient(135deg, ${
-                isDarkMode 
-                  ? 'rgba(168, 85, 247, 0.3)' 
-                  : 'rgba(147, 51, 234, 0.15)'
-              } 0%, ${
-                isDarkMode 
-                  ? 'rgba(196, 145, 255, 0.1)' 
-                  : 'rgba(168, 85, 247, 0.08)'
-              } 30%, transparent 60%)`
-            }}
-            animate={{
-              opacity: [0.5, 0.8, 0.5],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          
-          {/* Subtle Secondary Glow */}
-          <motion.div
-            className="absolute top-10 right-10 w-64 h-64 rounded-full blur-2xl"
-            style={{
-              background: `radial-gradient(circle, ${
-                isDarkMode 
-                  ? 'rgba(221, 199, 255, 0.2)' 
-                  : 'rgba(192, 132, 252, 0.12)'
-              } 0%, transparent 70%)`
-            }}
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.6, 0.9, 0.6],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 2
-            }}
-          />
-        </div>
-        
-        {/* Diagonal light beam - top left */}
-        <motion.div
-          className="absolute top-0 left-0 w-96 h-6 blur-md"
-          style={{
-            background: `linear-gradient(45deg, ${
-              isDarkMode 
-                ? 'rgba(168, 85, 247, 0.7)' 
-                : 'rgba(147, 51, 234, 0.4)'
-            } 0%, transparent 100%)`,
-            transform: 'rotate(45deg)',
-            transformOrigin: 'top left'
-          }}
-          animate={{
-            opacity: [0.7, 1, 0.7],
-            scaleX: [1, 1.1, 1],
+            y: [0, -20, 0],
+            x: [0, 10, 0],
+            scale: [1, 1.1, 1],
           }}
           transition={{
             duration: 6,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
+            delay: 1
           }}
         />
         
-        {/* Diagonal light beam - bottom right */}
         <motion.div
-          className="absolute bottom-0 right-0 w-80 h-6 blur-md"
+          className="absolute top-2/3 right-1/3 w-40 h-40 rounded-full blur-2xl"
           style={{
-            background: `linear-gradient(135deg, transparent 0%, ${
+            background: `radial-gradient(circle, ${
               isDarkMode 
-                ? 'rgba(196, 145, 255, 0.7)' 
+                ? 'rgba(147, 51, 234, 0.7)' 
                 : 'rgba(168, 85, 247, 0.4)'
-            } 100%)`,
-            transform: 'rotate(-45deg)',
-            transformOrigin: 'bottom right'
+            } 0%, transparent 70%)`
           }}
           animate={{
-            opacity: [0.5, 0.9, 0.5],
-            scaleX: [1, 1.2, 1],
+            y: [0, 15, 0],
+            x: [0, -15, 0],
+            scale: [1, 1.2, 1],
           }}
           transition={{
             duration: 9,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
+            delay: 2
           }}
         />
       </div>

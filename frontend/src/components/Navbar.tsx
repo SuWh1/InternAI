@@ -135,8 +135,8 @@ const Navbar = () => {
                     </motion.button>
                   )}
 
-                  {/* Brand (hidden on mobile) */}
-                  <Link to="/" className="hidden md:flex items-center space-x-2 group">
+                  {/* Brand - visible on onboarding or desktop */}
+                  <Link to="/" className={`flex items-center space-x-2 group ${isOnboardingMode ? 'flex' : 'hidden md:flex'}`}>
                     <motion.div 
                       className="h-12 w-12 rounded-lg flex items-center justify-center shadow-lg relative overflow-hidden" 
                       style={{ backgroundColor: '#C700FF' }}
@@ -280,25 +280,37 @@ const Navbar = () => {
                 {/* Mobile menu button - Hidden during onboarding */}
                 {!isOnboardingMode && (
                   <div className="md:hidden flex items-center space-x-3">
-                    {/* Theme Toggle and User Avatar for mobile */}
+                    {/* Theme Toggle first */}
                     <ThemeToggle />
+                    {/* Mobile Authentication Buttons after theme toggle */}
+                    {!isAuthenticated && (
+                      <div className="flex items-center space-x-2">
+                        <motion.button
+                          onClick={() => openAuthModal('login')}
+                          className="border border-theme-accent text-theme-accent bg-theme-secondary px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-theme-hover transition-all duration-200"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Login
+                        </motion.button>
+                        <motion.button
+                          onClick={() => openAuthModal('register')}
+                          className="bg-theme-accent text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition-all duration-200"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Sign up
+                        </motion.button>
+                      </div>
+                    )}
+                    {/* User Avatar last */}
                     {isAuthenticated && <UserDropdown />}
                   </div>
                 )}
 
-                {/* Mobile logout button during onboarding */}
-                {isOnboardingMode && isAuthenticated && (
-                  <div className="md:hidden flex items-center space-x-3">
-                    <motion.button
-                      onClick={handleLogout}
-                      className="flex items-center space-x-1 text-theme-secondary hover:text-theme-accent transition-all duration-200"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="text-sm">Logout</span>
-                    </motion.button>
-                    {/* Theme Toggle for mobile */}
+                {/* Theme toggle for mobile during onboarding */}
+                {isOnboardingMode && (
+                  <div className="md:hidden">
                     <ThemeToggle />
                   </div>
                 )}
@@ -392,35 +404,7 @@ const Navbar = () => {
                         </>
                       )}
                     </div>
-                    
-                    {/* Authentication Section */}
-                    {!isAuthenticated && (
-                      <motion.div 
-                        className="pt-2 border-t border-theme"
-                        variants={mobileItemVariants}
-                      >
-                        <div className="flex flex-col space-y-3">
-                          <button
-                            onClick={() => {
-                              openAuthModal('login');
-                              setIsOpen(false);
-                            }}
-                            className="border-2 border-theme-accent text-theme-accent bg-theme-secondary px-4 py-2 rounded-lg font-medium hover:bg-theme-hover transition-all duration-200 w-full"
-                          >
-                            Login
-                          </button>
-                          <button
-                            onClick={() => {
-                              openAuthModal('register');
-                              setIsOpen(false);
-                            }}
-                            className="bg-theme-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 hover:shadow-lg transition-all duration-200 w-full"
-                          >
-                            Sign up
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
+
                   </div>
                 </motion.div>
               )}

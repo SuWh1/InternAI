@@ -24,6 +24,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import agentService from '../services/agentService';
+import { topicService } from '../services/topicService';
 import { createLessonSlug, parseLessonSlug } from '../utils/slugify';
 import MarkdownRenderer from '../components/common/MarkdownRenderer';
 import TextAreaWithCounter from '../components/common/TextAreaWithCounter';
@@ -266,6 +267,8 @@ const LessonPage: React.FC = () => {
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [revealedHints, setRevealedHints] = useState<Set<number>>(new Set());
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [qualityRegenerationCount, setQualityRegenerationCount] = useState(0);
+  const [isQualityEnhancing, setIsQualityEnhancing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   
   // Chat state
@@ -280,21 +283,76 @@ const LessonPage: React.FC = () => {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [chatMessagesEndRef, setChatMessagesEndRef] = useState<HTMLDivElement | null>(null);
   
+  // State for topic loading
+  const [isLoadingTopic, setIsLoadingTopic] = useState(() => {
+    // Initialize as true for topic-based lessons to prevent race condition
+    return params.slug?.match(/^topic-(.+)-(\d+)$/) ? true : false;
+  });
+  const [topicData, setTopicData] = useState<{ topic: string; context: string; weekNumber: string } | null>(null);
+
   // Optimized interval ref for step cycling
   const stepIntervalRef = React.useRef<OptimizedInterval | null>(null);
+
+  // Load topic data for topic-based lessons
+  const loadTopicData = async () => {
+    if (params.slug) {
+      const topicLessonMatch = params.slug.match(/^topic-(.+)-(\d+)$/);
+      if (topicLessonMatch) {
+        const topicId = topicLessonMatch[1];
+        const subtopicIndex = parseInt(topicLessonMatch[2], 10);
+        setIsLoadingTopic(true);
+        
+        try {
+          const topicDataResponse = await topicService.getTopic(topicId);
+          if (topicDataResponse && topicDataResponse.subtopics && topicDataResponse.subtopics[subtopicIndex]) {
+            const subtopic = topicDataResponse.subtopics[subtopicIndex];
+            const topicTitle = typeof subtopic === 'string' ? subtopic : subtopic.title;
+            const topicContext = `Learning Topic: ${topicDataResponse.name}`;
+            const weekNum = ''; // No week number for topic-based lessons
+            return { topic: topicTitle, context: topicContext, weekNumber: weekNum };
+          }
+        } catch (error) {
+          console.error('Error loading topic data for lesson:', error);
+        } finally {
+          setIsLoadingTopic(false);
+        }
+      }
+    }
+    return null;
+  };
+
+  // Effect to load topic data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await loadTopicData();
+      if (data) {
+        setTopicData(data);
+      }
+    };
+    loadData();
+  }, [params.slug]);
 
   // Handle both new slug format and legacy URL format
   let topic = '';
   let context = '';
   let weekNumber = '';
 
-  if (params.slug) {
-    // Parse slug to get lesson data
-    const lessonData = parseLessonSlug(params.slug);
-    if (lessonData) {
-      topic = lessonData.topic;
-      context = `Week ${lessonData.weekNumber}: ${lessonData.topic}`;
-      weekNumber = lessonData.weekNumber.toString();
+  // Use topic data if available, otherwise parse URL
+  if (topicData) {
+    topic = topicData.topic;
+    context = topicData.context;
+    weekNumber = topicData.weekNumber;
+  } else if (params.slug) {
+    // Check if this is a topic-based lesson (format: topic-{topicId}-{subtopicIndex})
+    const topicLessonMatch = params.slug.match(/^topic-(.+)-(\d+)$/);
+    if (!topicLessonMatch) {
+      // Parse regular week-based lesson slug
+      const lessonData = parseLessonSlug(params.slug);
+      if (lessonData) {
+        topic = lessonData.topic;
+        context = `Week ${lessonData.weekNumber}: ${lessonData.topic}`;
+        weekNumber = lessonData.weekNumber.toString();
+      }
     }
   } else if (params.topic && params.context) {
     // Legacy URL format - decode and use directly
@@ -317,19 +375,38 @@ const LessonPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // For topic-based lessons, wait for topic data to be loaded
+    const isTopicBasedLesson = params.slug?.match(/^topic-(.+)-(\d+)$/);
+    
+    if (isTopicBasedLesson) {
+      // If topic data is still loading, wait
+      if (isLoadingTopic) {
+        return;
+      }
+      
+      // If topic data failed to load or topic is empty, show error
+      if (!topicData || !topic) {
+        setError('Lesson not found. The lesson may have been moved or deleted.');
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // Only proceed if we have a valid topic
     if (topic) {
       loadLessonContent();
-    } else if (params.slug) {
+    } else if (params.slug && !isTopicBasedLesson) {
+      // For non-topic lessons, show error if no topic found
       setError('Lesson not found. The lesson may have been moved or deleted.');
       setLoading(false);
     }
-  }, [topic, context]);
+  }, [topic, context, topicData, isLoadingTopic]);
 
   // Show timeout warning after 20 seconds of loading
   useEffect(() => {
     let timeoutWarning: number;
     
-    if (loading) {
+    if (loading || isLoadingTopic) {
       timeoutWarning = window.setTimeout(() => {
         setShowTimeoutWarning(true);
       }, 20000);
@@ -349,12 +426,12 @@ const LessonPage: React.FC = () => {
     // Clean up existing interval
     stepIntervalRef.current?.destroy();
     
-    if (loading) {
+    if (loading || isLoadingTopic) {
       setCurrentStep(0);
       
       // Use OptimizedInterval instead of regular setInterval
       stepIntervalRef.current = new OptimizedInterval(() => {
-        setCurrentStep(prev => (prev + 1) % 3);
+        setCurrentStep(prev => (prev + 1) % 4);
       }, 7000);
       stepIntervalRef.current.start();
     }
@@ -362,7 +439,7 @@ const LessonPage: React.FC = () => {
     return () => {
       stepIntervalRef.current?.destroy();
     };
-  }, [loading]);
+  }, [loading, isLoadingTopic]);
 
   // Calculate reading progress based on scroll
   useEffect(() => {
@@ -436,9 +513,37 @@ const LessonPage: React.FC = () => {
     return '';
   };
 
-  const loadLessonContent = async (isRetry = false) => {
+  // Function to check lesson content quality
+  const checkLessonQuality = (lesson: GPTTopicResponse): boolean => {
+    // First check if lesson is valid and successful
+    if (!lesson || lesson.success === false) {
+      console.log('Quality check failed: lesson is invalid or unsuccessful');
+      return false;
+    }
+    
+    // Check if explanation exists and is not empty
+    if (!lesson.explanation || lesson.explanation.trim().length === 0) {
+      console.log('Quality check failed: explanation is missing or empty');
+      return false;
+    }
+    
+    const explanationText = extractTextFromExplanation(lesson.explanation);
+    if (!explanationText || explanationText.trim().length === 0) {
+      console.log('Quality check failed: extracted text is empty');
+      return false;
+    }
+    
+    const characterCount = explanationText.length;
+    console.log(`Quality check: lesson has ${characterCount} characters (minimum: 10000)`);
+    
+    return characterCount >= 10000;
+  };
+
+  const loadLessonContent = async (isRetry = false, attemptNumber = 1, isQualityRegeneration = false) => {
     const startTime = Date.now();
     const minimumLoadingTime = 2000; // 2 seconds (only for freshly generated lessons)
+    const maxAutoRetries = 2; // Maximum automatic retries for transient failures
+    const maxQualityRetries = 2; // Maximum quality enhancement attempts
     let isCachedResponse = false;
     
     setError(null);
@@ -449,18 +554,62 @@ const LessonPage: React.FC = () => {
         topic: topic,
         context: context,
         user_level: 'intermediate',
-        force_regenerate: isRetry
+        force_regenerate: isRetry || isQualityRegeneration
       });
+      
+      // Check if the response indicates a failure
+      if (!details.success && attemptNumber <= maxAutoRetries && !isRetry && !isQualityRegeneration) {
+        console.log(`Lesson generation attempt ${attemptNumber} failed, retrying automatically...`);
+        // Wait a bit before retrying to handle transient issues
+        await new Promise(resolve => setTimeout(resolve, 1000 * attemptNumber));
+        return loadLessonContent(false, attemptNumber + 1, false);
+      }
+      
+      // Quality check for non-cached lessons
+      if (!details.cached && !isQualityRegeneration && qualityRegenerationCount < maxQualityRetries) {
+        const isQualityGood = checkLessonQuality(details);
+        
+        if (!isQualityGood) {
+          console.log(`Lesson quality below threshold (${qualityRegenerationCount + 1}/${maxQualityRetries}), enhancing...`);
+          setQualityRegenerationCount(prev => prev + 1);
+          setIsQualityEnhancing(true);
+          
+          // Update loading step to show quality enhancement
+          setCurrentStep(3); // "Enhancing content quality"
+          
+          // Wait a moment to show the quality enhancement step
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          return loadLessonContent(false, 1, true);
+        }
+      }
       
       setLesson(details);
       isCachedResponse = details.cached;
 
+      // Debug logging for lesson content issues
+      console.log('Lesson loaded:', {
+        success: details.success,
+        hasExplanation: !!details.explanation,
+        explanationType: typeof details.explanation,
+        explanationLength: details.explanation?.length || 0,
+        cached: details.cached,
+        topic: topic
+      });
+
+      // Validate lesson content quality
+      if (!details.explanation || details.explanation.trim().length === 0) {
+        console.warn('Lesson loaded with empty or missing explanation:', details);
+      }
+
       // If the lesson came from cache (already generated), stop loading immediately
-      if (isCachedResponse && !isRetry) {
+      if (isCachedResponse && !isRetry && !isQualityRegeneration) {
         setLoading(false);
+        setIsQualityEnhancing(false);
       }
       
       setRetryCount(0); // Reset retry count on success
+      setIsQualityEnhancing(false);
       
       // Calculate estimated reading time (assuming 200 words per minute)
       const explanationText = extractTextFromExplanation(details.explanation);
@@ -485,9 +634,19 @@ const LessonPage: React.FC = () => {
     } catch (error: any) {
       console.error('Error loading lesson content:', error);
       
+      // Auto-retry for transient failures (network issues, timeouts) on first attempt
+      if (attemptNumber <= maxAutoRetries && !isRetry && !isQualityRegeneration) {
+        console.log(`Network error on attempt ${attemptNumber}, retrying automatically...`);
+        // Wait progressively longer between retries
+        await new Promise(resolve => setTimeout(resolve, 1500 * attemptNumber));
+        return loadLessonContent(false, attemptNumber + 1, false);
+      }
+      
       if (isRetry) {
         setRetryCount(prev => prev + 1);
       }
+      
+      setIsQualityEnhancing(false);
       
       // Different error messages based on error type
       if (error?.error?.includes('timeout')) {
@@ -499,11 +658,12 @@ const LessonPage: React.FC = () => {
       }
     } finally {
       // If loading is already turned off (cached case) do nothing
-      if (!isCachedResponse || isRetry) {
+      if (!isCachedResponse || isRetry || isQualityRegeneration) {
         const elapsedTime = Date.now() - startTime;
         const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
         setTimeout(() => {
           setLoading(false);
+          setIsQualityEnhancing(false);
         }, remainingTime);
       }
     }
@@ -519,7 +679,7 @@ const LessonPage: React.FC = () => {
     setRenderingError(null);
     setLesson(null); // Clear any error content from backend
     setLoading(true);
-    await loadLessonContent(true);
+    await loadLessonContent(true, 1); // Reset attempt counter for manual regeneration
     setIsRegenerating(false);
   };
 
@@ -529,7 +689,7 @@ const LessonPage: React.FC = () => {
 
   // Check if lesson response indicates an error (using response structure, not content text)
   const hasLessonError = (lesson: GPTTopicResponse | null): boolean => {
-    return !lesson || !lesson.success;
+    return lesson !== null && !lesson.success;
   };
 
   const handleShare = async () => {
@@ -924,11 +1084,12 @@ const LessonPage: React.FC = () => {
     }).filter(Boolean);
   };
 
-  if (loading) {
+  if (loading || isLoadingTopic) {
     const loadingSteps = [
       "Breaking down core concepts",
       "Creating code demonstrations", 
-      "Designing real-world practice tasks"
+      "Designing real-world practice tasks",
+      "Enhancing content quality"
     ];
 
     return (
@@ -936,54 +1097,68 @@ const LessonPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-12 transition-colors duration-300">
             <div className="text-center">
-              {/* Animated Shiny Brain */}
+              {/* Animated Jumping Play Icon (same as roadmap) */}
               <div className="mb-8">
-                <Brain className="h-16 w-16 mx-auto text-theme-accent animate-brain-breathe brain-glow" />
+                <motion.div
+                  className="mx-auto w-20 h-20 flex items-center justify-center"
+                  animate={{ 
+                    y: [0, -10, 0],
+                    scale: [1, 1.05, 1]
+                  }}
+                  transition={{ 
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <Brain className="h-16 w-16 text-theme-accent" />
+                </motion.div>
               </div>
               
               <h2 className="text-2xl font-semibold text-theme-primary mb-4 transition-colors duration-300">
-                Expert AI is crafting your lesson...
+                {isQualityEnhancing ? 'Enhancing lesson quality...' : 'Expert AI is crafting your lesson...'}
               </h2>
               <p className="text-theme-secondary max-w-2xl mx-auto mb-8 transition-colors duration-300">
-                Creating an in-depth learning guide on <strong>{topic}</strong> with real code examples, practical demonstrations and tasks.
+                {isQualityEnhancing 
+                  ? <>Ensuring comprehensive coverage and depth for <strong>{topic}</strong> with detailed explanations and examples.</>
+                  : <>Creating an in-depth learning guide on <strong>{topic}</strong> with real code examples, practical demonstrations and tasks.</>
+                }
               </p>
               
-              {/* Sequential Loading Step */}
-              <div className="max-w-md mx-auto mb-8">
-                <div className="min-h-[60px] flex items-center justify-center">
-                  <AnimatePresence mode="wait">
+              {/* Progress Steps - matching roadmap style exactly */}
+              <div className="max-w-md mx-auto h-20 flex items-center justify-center mb-8">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ 
+                      duration: 0.6,
+                      ease: "easeInOut"
+                    }}
+                    className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-theme-hover/50 w-full"
+                  >
+                    {/* Animated dot */}
                     <motion.div
-                      key={currentStep}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ 
-                        duration: 0.6,
+                      className="w-3 h-3 rounded-full bg-theme-accent"
+                      animate={{
+                        scale: [1, 1.3, 1],
+                        opacity: [0.7, 1, 0.7]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
                         ease: "easeInOut"
                       }}
-                      className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-theme-hover/50 w-full"
-                    >
-                      {/* Animated dot */}
-                      <motion.div
-                        className="w-3 h-3 rounded-full bg-theme-accent"
-                        animate={{
-                          scale: [1, 1.3, 1],
-                          opacity: [0.7, 1, 0.7]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      />
-                      
-                      {/* Step text */}
-                      <span className="text-sm font-medium text-theme-primary">
-                        {loadingSteps[currentStep]}
-                      </span>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
+                    />
+                    
+                    {/* Step text */}
+                    <span className="text-sm font-medium text-theme-primary">
+                      {loadingSteps[currentStep]}
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
               </div>
               
               {/* Simple Info Message */}
@@ -1167,7 +1342,7 @@ const LessonPage: React.FC = () => {
                   </div>
                 )}
                 
-                {renderingError || hasLessonError(lesson) ? (
+                {!loading && !isLoadingTopic && (renderingError || hasLessonError(lesson)) ? (
                   <div className="text-center py-12">
                                           <div className="relative mb-8">
                         <AlertTriangle className={`h-16 w-16 ${useSemanticColors(theme).warning.text} mx-auto`} />
@@ -1207,11 +1382,33 @@ const LessonPage: React.FC = () => {
                 ) : (
                   <div className="lesson-content max-w-none overflow-x-hidden">
                     <div className="w-full">
-                      {lesson?.explanation ? (
+                      {lesson?.explanation && lesson.success !== false ? (
                         <SafeMarkdownRenderer content={safeContentExtractor(filterLessonContent(extractTextFromExplanation(lesson.explanation)))} onRenderingError={handleRenderingError} />
+                      ) : lesson && lesson.success === false ? (
+                        <div className="text-theme-secondary">
+                          <p className="mb-4">Unable to generate lesson content at this time.</p>
+                          <p className="text-sm opacity-75">This might be due to high server load or a temporary issue.</p>
+                          <button
+                            onClick={handleRegenerateLesson}
+                            disabled={isRegenerating}
+                            className="mt-4 px-4 py-2 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-all duration-300 flex items-center space-x-2"
+                          >
+                            <RotateCcw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                            <span>{isRegenerating ? 'Retrying...' : 'Retry'}</span>
+                          </button>
+                        </div>
                       ) : (
                         <div className="text-theme-secondary">
-                          No learning guide content available. Please try refreshing the lesson.
+                          <p className="mb-4">No learning guide content available.</p>
+                          <p className="text-sm opacity-75 mb-4">This might happen due to network issues or server problems.</p>
+                          <button
+                            onClick={handleRegenerateLesson}
+                            disabled={isRegenerating}
+                            className="px-4 py-2 bg-theme-accent text-white rounded-lg hover:opacity-90 transition-all duration-300 flex items-center space-x-2"
+                          >
+                            <RotateCcw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                            <span>{isRegenerating ? 'Retrying...' : 'Retry'}</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1588,40 +1785,61 @@ const LessonPage: React.FC = () => {
             </motion.div>
 
             {/* Navigation */}
-            {weekNumber && (
-              <motion.div 
-                className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-5 transition-colors duration-300"
-                variants={{
-                  hidden: { opacity: 0, x: 30 },
-                  visible: { opacity: 1, x: 0 }
-                }}
-                whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
-                transition={{ duration: 0.3 }}
-              >
-                <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-theme-accent" />
-                  Navigation
-                </h3>
-                <div className="space-y-2">
-                  <motion.button
-                    onClick={() => navigate(`/roadmap/week/${weekNumber}`)}
-                    className="w-full text-left px-3 py-2 text-sm text-theme-accent hover:bg-theme-accent/10 rounded-md transition-colors duration-300 font-medium"
-                    whileHover={{ x: 5 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    📚 Week {weekNumber} Overview
-                  </motion.button>
-                  <motion.button
-                    onClick={() => navigate('/my-roadmap')}
-                    className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
-                    whileHover={{ x: 5 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    🗺️ Full Roadmap
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-5 transition-colors duration-300"
+              variants={{
+                hidden: { opacity: 0, x: 30 },
+                visible: { opacity: 1, x: 0 }
+              }}
+              whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
+              transition={{ duration: 0.3 }}
+            >
+              <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300 flex items-center gap-2">
+                <Target className="w-4 h-4 text-theme-accent" />
+                Navigation
+              </h3>
+              <div className="space-y-2">
+                {weekNumber ? (
+                  <>
+                    <motion.button
+                      onClick={() => navigate(`/roadmap/week/${weekNumber}`)}
+                      className="w-full text-left px-3 py-2 text-sm text-theme-accent hover:bg-theme-accent/10 rounded-md transition-colors duration-300 font-medium"
+                      whileHover={{ x: 5 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      📚 Week {weekNumber} Overview
+                    </motion.button>
+                    <motion.button
+                      onClick={() => navigate('/my-roadmap')}
+                      className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
+                      whileHover={{ x: 5 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      🗺️ Full Roadmap
+                    </motion.button>
+                  </>
+                ) : (
+                  <>
+                    <motion.button
+                      onClick={() => navigate(-1)}
+                      className="w-full text-left px-3 py-2 text-sm text-theme-accent hover:bg-theme-accent/10 rounded-md transition-colors duration-300 font-medium"
+                      whileHover={{ x: 5 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      📚 Back to Topic
+                    </motion.button>
+                    <motion.button
+                      onClick={() => navigate('/my-topics')}
+                      className="w-full text-left px-3 py-2 text-sm text-theme-secondary hover:bg-theme-hover rounded-md transition-colors duration-300"
+                      whileHover={{ x: 5 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      🗂️ All Topics
+                    </motion.button>
+                  </>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
           </div>
       </motion.div>
@@ -1629,4 +1847,4 @@ const LessonPage: React.FC = () => {
   );
 };
 
-export default LessonPage; 
+export default LessonPage;

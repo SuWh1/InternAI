@@ -1,5 +1,4 @@
-"""
-YouTube API service for fetching popular educational videos.
+"""YouTube API service for fetching popular educational videos.
 
 SETUP INSTRUCTIONS:
 1. Go to Google Cloud Console (https://console.cloud.google.com/)
@@ -14,18 +13,86 @@ FEATURES:
 - Provides fallback curated videos if API is unavailable
 - Smart search queries based on topic and context
 - Video metadata including views, duration, thumbnails
+- Quota management and circuit breaker pattern
+- Graceful degradation when quota is exceeded
 
-FALLBACK: If no API key is configured, returns curated video search URLs
+FALLBACK: If no API key is configured or quota is exceeded, returns curated video search URLs
 from high-quality programming channels.
 """
 
 import os
 import logging
+import time
 from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
+
+
+class YouTubeQuotaManager:
+    """Manages YouTube API quota usage and implements circuit breaker pattern."""
+    
+    def __init__(self):
+        self.quota_exceeded = False
+        self.quota_exceeded_time = None
+        self.daily_requests = 0
+        self.last_reset_date = datetime.now().date()
+        self.max_daily_requests = 9000  # Conservative limit (YouTube allows 10,000)
+        self.circuit_breaker_duration = 3600  # 1 hour in seconds
+        
+    def is_quota_available(self) -> bool:
+        """Check if quota is available for making API requests."""
+        # Reset daily counter if it's a new day
+        current_date = datetime.now().date()
+        if current_date > self.last_reset_date:
+            self.daily_requests = 0
+            self.last_reset_date = current_date
+            self.quota_exceeded = False
+            self.quota_exceeded_time = None
+            
+        # Check if circuit breaker should be reset
+        if self.quota_exceeded and self.quota_exceeded_time:
+            time_since_exceeded = time.time() - self.quota_exceeded_time
+            if time_since_exceeded > self.circuit_breaker_duration:
+                logger.info("YouTube API circuit breaker reset - attempting to restore service")
+                self.quota_exceeded = False
+                self.quota_exceeded_time = None
+                
+        # Check daily quota limit
+        if self.daily_requests >= self.max_daily_requests:
+            if not self.quota_exceeded:
+                logger.warning(f"YouTube API daily quota limit reached ({self.daily_requests}/{self.max_daily_requests})")
+                self.quota_exceeded = True
+                self.quota_exceeded_time = time.time()
+            return False
+            
+        return not self.quota_exceeded
+    
+    def record_request(self, cost: int = 100):
+        """Record an API request with its quota cost."""
+        self.daily_requests += cost
+        
+    def record_quota_exceeded(self):
+        """Record that quota has been exceeded."""
+        self.quota_exceeded = True
+        self.quota_exceeded_time = time.time()
+        logger.error(f"YouTube API quota exceeded. Circuit breaker activated for {self.circuit_breaker_duration} seconds")
+        
+    def get_status(self) -> Dict[str, Any]:
+        """Get current quota status for debugging."""
+        return {
+            "quota_exceeded": self.quota_exceeded,
+            "daily_requests": self.daily_requests,
+            "max_daily_requests": self.max_daily_requests,
+            "quota_available": self.is_quota_available(),
+            "last_reset_date": self.last_reset_date.isoformat(),
+            "circuit_breaker_active": self.quota_exceeded,
+            "time_until_reset": self.circuit_breaker_duration - (time.time() - (self.quota_exceeded_time or 0)) if self.quota_exceeded_time else 0
+        }
+
 
 class YouTubeService:
     """Service for fetching popular YouTube videos related to programming topics."""
@@ -33,6 +100,8 @@ class YouTubeService:
     def __init__(self):
         self.api_key = os.getenv("YOUTUBE_API_KEY")
         self.youtube = None
+        self.quota_manager = YouTubeQuotaManager()
+        
         if self.api_key:
             try:
                 self.youtube = build('youtube', 'v3', developerKey=self.api_key)
@@ -40,11 +109,11 @@ class YouTubeService:
             except Exception as e:
                 logger.error(f"Failed to initialize YouTube API client: {str(e)}")
         else:
-            logger.warning("YOUTUBE_API_KEY not configured")
+            logger.warning("YOUTUBE_API_KEY not configured - using fallback videos only")
 
     async def get_popular_videos(self, topic: str, context: str = "", max_results: int = 3) -> List[Dict[str, Any]]:
         """
-        Get popular YouTube videos related to a programming topic.
+        Get popular YouTube videos related to a programming topic with quota management.
         
         Args:
             topic: The main topic (e.g., "JavaScript Promises")
@@ -55,7 +124,14 @@ class YouTubeService:
             List of video dictionaries with title, url, description, duration, view_count
         """
         
+        # Check quota availability first
+        if not self.quota_manager.is_quota_available():
+            logger.info(f"YouTube API quota not available - using fallback videos for topic: {topic}")
+            return self._get_fallback_videos(topic)
+            
+        # If no API client, use fallback
         if not self.youtube:
+            logger.info(f"YouTube API not configured - using fallback videos for topic: {topic}")
             return self._get_fallback_videos(topic)
             
         try:
@@ -67,6 +143,9 @@ class YouTubeService:
             
             for query in search_queries:
                 try:
+                    # Record the API request cost (search costs 100 quota units)
+                    self.quota_manager.record_request(100)
+                    
                     # Search for videos
                     search_response = self.youtube.search().list(
                         q=query,
@@ -87,6 +166,9 @@ class YouTubeService:
                     new_video_ids = [vid_id for vid_id in video_ids if vid_id not in seen_video_ids]
                     
                     if new_video_ids:
+                        # Record additional API request cost (videos.list costs 1 quota unit per video)
+                        self.quota_manager.record_request(len(new_video_ids))
+                        
                         # Get detailed video statistics
                         videos_response = self.youtube.videos().list(
                             part='snippet,statistics,contentDetails',
@@ -110,8 +192,17 @@ class YouTubeService:
                             break
                             
                 except HttpError as e:
-                    logger.error(f"YouTube API error for query '{query}': {str(e)}")
-                    continue
+                    error_details = str(e)
+                    
+                    # Check for quota exceeded error specifically
+                    if "quotaExceeded" in error_details or "quota" in error_details.lower():
+                        logger.error(f"YouTube API quota exceeded: {error_details}")
+                        self.quota_manager.record_quota_exceeded()
+                        # Immediately return fallback videos
+                        return self._get_fallback_videos(topic)
+                    else:
+                        logger.error(f"YouTube API error for query '{query}': {error_details}")
+                        continue
             
             # Final deduplication by URL (just in case)
             unique_videos = []
@@ -125,11 +216,27 @@ class YouTubeService:
             
             # Sort by relevance score and return top results
             unique_videos.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
-            return unique_videos[:max_results]
+            result = unique_videos[:max_results]
+            
+            # If we got very few results from API, supplement with fallback
+            if len(result) < 2:
+                logger.info(f"Got only {len(result)} videos from API, supplementing with fallback videos")
+                fallback_videos = self._get_fallback_videos(topic)
+                # Add fallback videos that aren't already in results
+                existing_urls = {v.get('url', '') for v in result}
+                for fallback_video in fallback_videos:
+                    if fallback_video.get('url', '') not in existing_urls and len(result) < max_results:
+                        result.append(fallback_video)
+                        
+            return result
             
         except Exception as e:
             logger.error(f"Error fetching YouTube videos: {str(e)}")
             return self._get_fallback_videos(topic)
+
+    def get_quota_status(self) -> Dict[str, Any]:
+        """Get current YouTube API quota status for debugging."""
+        return self.quota_manager.get_status()
 
     def _generate_search_queries(self, topic: str, context: str) -> List[str]:
         """Generate smart search queries for the topic."""
@@ -291,7 +398,7 @@ class YouTubeService:
     def _get_fallback_videos(self, topic: str) -> List[Dict[str, Any]]:
         """Fallback videos when API is not available - returns actual video URLs."""
         
-        # Curated high-quality programming videos by topic
+        # Expanded curated high-quality programming videos by topic
         curated_videos = {
             'javascript': [
                 {
@@ -372,10 +479,122 @@ class YouTubeService:
                     'duration': '1:09:13',
                     'description': 'Complete Git tutorial covering all the fundamentals in one hour.'
                 }
+            ],
+            'html': [
+                {
+                    'title': 'HTML Tutorial for Beginners: HTML Crash Course',
+                    'url': 'https://www.youtube.com/watch?v=qz0aGYrrlhU',
+                    'channel': 'Programming with Mosh',
+                    'duration': '1:09:33',
+                    'description': 'Learn HTML from scratch in this comprehensive crash course for beginners.'
+                },
+                {
+                    'title': 'HTML Full Course - Build a Website Tutorial',
+                    'url': 'https://www.youtube.com/watch?v=pQN-pnXPaVg',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '2:04:25',
+                    'description': 'Complete HTML course covering everything you need to build websites.'
+                }
+            ],
+            'css': [
+                {
+                    'title': 'CSS Tutorial - Zero to Hero (Complete Course)',
+                    'url': 'https://www.youtube.com/watch?v=1Rs2ND1ryYc',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '6:18:36',
+                    'description': 'Complete CSS course from beginner to advanced level.'
+                },
+                {
+                    'title': 'CSS Crash Course For Absolute Beginners',
+                    'url': 'https://www.youtube.com/watch?v=yfoY53QXEnI',
+                    'channel': 'Traversy Media',
+                    'duration': '1:25:06',
+                    'description': 'Learn CSS fundamentals in this crash course for beginners.'
+                }
+            ],
+            'sql': [
+                {
+                    'title': 'SQL Tutorial - Full Database Course for Beginners',
+                    'url': 'https://www.youtube.com/watch?v=HXV3zeQKqGY',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '4:20:33',
+                    'description': 'Complete SQL course covering database fundamentals and advanced queries.'
+                },
+                {
+                    'title': 'MySQL Tutorial for Beginners [Full Course]',
+                    'url': 'https://www.youtube.com/watch?v=7S_tz1z_5bA',
+                    'channel': 'Programming with Mosh',
+                    'duration': '3:10:44',
+                    'description': 'Learn MySQL database management from scratch.'
+                }
+            ],
+            'nodejs': [
+                {
+                    'title': 'Node.js Tutorial for Beginners: Learn Node in 1 Hour',
+                    'url': 'https://www.youtube.com/watch?v=TlB_eWDSMt4',
+                    'channel': 'Programming with Mosh',
+                    'duration': '1:08:35',
+                    'description': 'Complete Node.js tutorial covering server-side JavaScript development.'
+                },
+                {
+                    'title': 'Node.js Crash Course',
+                    'url': 'https://www.youtube.com/watch?v=fBNz5xF-Kx4',
+                    'channel': 'Traversy Media',
+                    'duration': '1:33:06',
+                    'description': 'Learn Node.js fundamentals in this comprehensive crash course.'
+                }
+            ],
+            'algorithms': [
+                {
+                    'title': 'Algorithms and Data Structures Tutorial - Full Course for Beginners',
+                    'url': 'https://www.youtube.com/watch?v=8hly31xKli0',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '5:18:57',
+                    'description': 'Complete course on algorithms and data structures for programming interviews.'
+                },
+                {
+                    'title': 'Data Structures Easy to Advanced Course - Full Tutorial',
+                    'url': 'https://www.youtube.com/watch?v=RBSGKlAvoiM',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '8:52:52',
+                    'description': 'Comprehensive data structures course from basic to advanced concepts.'
+                }
+            ],
+            'database': [
+                {
+                    'title': 'Database Design Course - Learn how to design and plan a database',
+                    'url': 'https://www.youtube.com/watch?v=ztHopE5Wnpc',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '8:36:33',
+                    'description': 'Learn database design principles and best practices.'
+                },
+                {
+                    'title': 'SQL vs NoSQL or MySQL vs MongoDB',
+                    'url': 'https://www.youtube.com/watch?v=ZS_kXvOeQ5Y',
+                    'channel': 'Academind',
+                    'duration': '18:09',
+                    'description': 'Understanding the differences between SQL and NoSQL databases.'
+                }
+            ],
+            'api': [
+                {
+                    'title': 'APIs for Beginners - How to use an API (Full Course)',
+                    'url': 'https://www.youtube.com/watch?v=GZvSYJDk-us',
+                    'channel': 'freeCodeCamp.org',
+                    'duration': '2:19:16',
+                    'description': 'Complete guide to understanding and using APIs.'
+                },
+                {
+                    'title': 'REST API concepts and examples',
+                    'url': 'https://www.youtube.com/watch?v=7YcW25PHnAA',
+                    'channel': 'WebConcepts',
+                    'duration': '8:53',
+                    'description': 'Learn REST API fundamentals with practical examples.'
+                }
             ]
         }
         
-        # Smart topic matching
+        # Enhanced smart topic matching with better coverage
         topic_lower = topic.lower()
         selected_videos = []
         
@@ -385,21 +604,52 @@ class YouTubeService:
                 selected_videos = videos[:2]  # Take first 2 videos
                 break
         
-        # If no exact match, use general programming videos
+        # If no exact match, use keyword-based matching with broader coverage
         if not selected_videos:
-            if any(word in topic_lower for word in ['javascript', 'js', 'node', 'npm']):
+            # JavaScript and related
+            if any(word in topic_lower for word in ['javascript', 'js', 'node', 'npm', 'express', 'jquery']):
                 selected_videos = curated_videos['javascript'][:2]
-            elif any(word in topic_lower for word in ['python', 'django', 'flask']):
+            # Node.js specific
+            elif any(word in topic_lower for word in ['nodejs', 'node.js', 'server', 'backend', 'express']):
+                selected_videos = curated_videos['nodejs'][:2]
+            # Python and related
+            elif any(word in topic_lower for word in ['python', 'django', 'flask', 'pandas', 'numpy']):
                 selected_videos = curated_videos['python'][:2]
-            elif any(word in topic_lower for word in ['react', 'jsx', 'component']):
+            # React and related
+            elif any(word in topic_lower for word in ['react', 'jsx', 'component', 'hooks', 'redux']):
                 selected_videos = curated_videos['react'][:2]
-            elif any(word in topic_lower for word in ['promise', 'async', 'await']):
+            # Async programming
+            elif any(word in topic_lower for word in ['promise', 'async', 'await', 'callback', 'asynchronous']):
                 selected_videos = curated_videos['promises'][:2]
-            elif any(word in topic_lower for word in ['git', 'github', 'version']):
+            # Version control
+            elif any(word in topic_lower for word in ['git', 'github', 'version', 'commit', 'branch', 'merge']):
                 selected_videos = curated_videos['git'][:2]
+            # HTML and markup
+            elif any(word in topic_lower for word in ['html', 'markup', 'semantic', 'dom', 'element']):
+                selected_videos = curated_videos['html'][:2]
+            # CSS and styling
+            elif any(word in topic_lower for word in ['css', 'style', 'flexbox', 'grid', 'responsive', 'bootstrap']):
+                selected_videos = curated_videos['css'][:2]
+            # Database and SQL
+            elif any(word in topic_lower for word in ['sql', 'database', 'mysql', 'postgresql', 'query', 'table']):
+                selected_videos = curated_videos['sql'][:2]
+            # Database design and concepts
+            elif any(word in topic_lower for word in ['database', 'db', 'nosql', 'mongodb', 'schema', 'relational']):
+                selected_videos = curated_videos['database'][:2]
+            # Algorithms and data structures
+            elif any(word in topic_lower for word in ['algorithm', 'data structure', 'sorting', 'searching', 'tree', 'graph', 'array', 'linked list']):
+                selected_videos = curated_videos['algorithms'][:2]
+            # APIs and web services
+            elif any(word in topic_lower for word in ['api', 'rest', 'endpoint', 'http', 'request', 'response', 'json']):
+                selected_videos = curated_videos['api'][:2]
             else:
-                # Default to JavaScript videos as they're most common
-                selected_videos = curated_videos['javascript'][:2]
+                # If still no match, provide general programming content (mix of popular topics)
+                # Instead of defaulting to JavaScript, provide a mix
+                general_videos = [
+                    curated_videos['javascript'][0],  # One JS video
+                    curated_videos['python'][0]       # One Python video
+                ]
+                selected_videos = general_videos
         
         # Format as our standard structure and ensure no duplicates
         formatted_videos = []
@@ -425,4 +675,4 @@ class YouTubeService:
         return formatted_videos
 
 # Create singleton instance
-youtube_service = YouTubeService() 
+youtube_service = YouTubeService()

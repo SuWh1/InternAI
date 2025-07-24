@@ -138,24 +138,50 @@ const HeroSection = () => {
 
         <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            {/* Peerlist Launch Badge */}
+            {/* Launch Badges */}
             <AnimatedSection animation="fade-in-up" delay={0}>
-              <motion.div 
-                className="mb-8 flex justify-center"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                whileHover={{ 
-                  scale: 1.05,
-                  transition: { type: "spring", stiffness: 300 }
-                }}
-              >
-                <img
-                  src={theme === 'dark' ? '/peerlist/Launch_SVG_Dark.svg' : '/peerlist/Launch_SVG_Light.svg'}
-                  alt="Live on Peerlist"
-                  className="h-12 sm:h-14 md:h-16 w-auto opacity-90 hover:opacity-100 transition-opacity duration-200"
-                />
-              </motion.div>
+              <div className="mb-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    transition: { type: "spring", stiffness: 300 }
+                  }}
+                >
+                  <img
+                    src={theme === 'dark' ? '/peerlist/Launch_SVG_Dark.svg' : '/peerlist/Launch_SVG_Light.svg'}
+                    alt="Live on Peerlist"
+                    className="h-12 sm:h-14 md:h-16 w-auto opacity-90 hover:opacity-100 transition-opacity duration-200"
+                  />
+                </motion.div>
+                
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    transition: { type: "spring", stiffness: 300 }
+                  }}
+                >
+                  <a 
+                    href="https://www.producthunt.com/products/internai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-internai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <img 
+                      src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=996659&theme=light&t=1753373907725" 
+                      alt="InternAI - AI roadmap to help students land tech internships. | Product Hunt" 
+                      style={{ width: '250px', height: '54px' }} 
+                      width="250" 
+                      height="54" 
+                      className="opacity-90 hover:opacity-100 transition-opacity duration-200"
+                    />
+                  </a>
+                </motion.div>
+              </div>
             </AnimatedSection>
 
             {/* Main heading with stagger animation */}

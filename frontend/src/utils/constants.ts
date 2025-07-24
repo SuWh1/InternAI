@@ -1,6 +1,6 @@
 // Application Constants
 export const TIMEOUTS = {
-  API_REQUEST: 120_000, // 120 seconds for AI content generation
+  API_REQUEST: 300_000, // 300 seconds (5 minutes) for AI content generation - allows Gemini sufficient time for complex content
   CACHE_STALE: 5 * 60 * 1000, // 5 minutes
   ANIMATION_DELAY: 100,
   FOCUS_DELAY: 600,
@@ -60,4 +60,4 @@ export const QUERY_KEYS = {
     ["subtopics", topic, context, userLevel] as const,
   LEARNING_CONTENT: (contentType: string) => 
     ["learning-content", contentType] as const,
-} as const; 
+} as const;

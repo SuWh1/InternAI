@@ -13,9 +13,12 @@ import CookieBanner from './components/common/CookieBanner';
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const RoadmapInfoPage = lazy(() => import('./pages/RoadmapInfoPage'));
+const TopicsInfoPage = lazy(() => import('./pages/TopicsInfoPage'));
 const ResumeReviewInfoPage = lazy(() => import('./pages/ResumeReviewInfoPage'));
 const InternshipsInfoPage = lazy(() => import('./pages/InternshipsInfoPage'));
 const MyRoadmapPage = lazy(() => import('./pages/MyRoadmapPage'));
+const MyTopicsPage = lazy(() => import('./pages/MyTopicsPage'));
+const TopicDetailPage = lazy(() => import('./pages/TopicDetailPage'));
 const MyResumePage = lazy(() => import('./pages/MyResumePage'));
 const MyInternshipsPage = lazy(() => import('./pages/MyInternshipsPage'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
@@ -53,9 +56,12 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
         <Route path="/roadmap" element={<RoadmapInfoPage />} />
+        <Route path="/topics" element={<TopicsInfoPage />} />
         <Route path="/resume-review" element={<ResumeReviewInfoPage />} />
         <Route path="/internships" element={<InternshipsInfoPage />} />
         <Route path="/my-roadmap" element={<ProtectedRoute><MyRoadmapPage /></ProtectedRoute>} />
+        <Route path="/my-topics" element={<ProtectedRoute><MyTopicsPage /></ProtectedRoute>} />
+        <Route path="/topics/:topicId" element={<ProtectedRoute><TopicDetailPage /></ProtectedRoute>} />
         <Route path="/roadmap/week/:weekNumber" element={<ProtectedRoute><WeekDetailPage /></ProtectedRoute>} />
         <Route path="/lesson/:slug" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
         <Route path="/lesson/:topic/:context/:weekNumber" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />

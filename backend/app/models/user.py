@@ -47,3 +47,6 @@ class User(Base):
     
     # Relationship to learning content
     learning_content = relationship("LearningContent", back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship to topics
+    topics = relationship("Topic", back_populates="user", cascade="all, delete-orphan")

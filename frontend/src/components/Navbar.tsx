@@ -194,6 +194,14 @@ const Navbar = () => {
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           <Link 
+                            to="/my-topics" 
+                            className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                          >
+                            My Topics
+                          </Link>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Link 
                             to="/my-resume" 
                             className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
                           >
@@ -217,6 +225,14 @@ const Navbar = () => {
                             className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
                           >
                             Roadmap
+                          </Link>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Link 
+                            to="/topics" 
+                            className="text-theme-secondary hover:text-purple-500 font-medium transition-all duration-200"
+                          >
+                            Topics
                           </Link>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -355,6 +371,15 @@ const Navbar = () => {
                           </motion.div>
                           <motion.div variants={mobileItemVariants}>
                             <Link 
+                              to="/my-topics" 
+                              onClick={() => setIsOpen(false)}
+                              className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                            >
+                              My Topics
+                            </Link>
+                          </motion.div>
+                          <motion.div variants={mobileItemVariants}>
+                            <Link 
                               to="/my-resume" 
                               onClick={() => setIsOpen(false)}
                               className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
@@ -381,6 +406,15 @@ const Navbar = () => {
                               className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
                             >
                               Roadmap
+                            </Link>
+                          </motion.div>
+                          <motion.div variants={mobileItemVariants}>
+                            <Link 
+                              to="/topics" 
+                              onClick={() => setIsOpen(false)}
+                              className="text-theme-secondary hover:text-theme-accent font-medium transition-all duration-200 py-2 block"
+                            >
+                              Topics
                             </Link>
                           </motion.div>
                           <motion.div variants={mobileItemVariants}>

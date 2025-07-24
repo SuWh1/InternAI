@@ -693,7 +693,7 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
         
         content = response.text
         
-        # Parse JSON response with robust error handling
+        # Parse JSON response with simplified and robust error handling
         try:
             # Clean the response (remove any markdown formatting if present)
             cleaned_content = content.strip()
@@ -703,202 +703,80 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
                 cleaned_content = cleaned_content[:-3]
             cleaned_content = cleaned_content.strip()
             
-            # Try to fix common JSON syntax errors
-            def fix_json_syntax(json_str):
-                try:
-                    # Remove trailing commas before } or ]
-                    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
-                    
-                    # Better approach: Extract each JSON field separately and reconstruct
-                    # This handles very long content with embedded quotes better
-                    
-                    # Extract explanation using a more robust approach
-                    explanation_content = ""
-                    explanation_start = json_str.find('"explanation":')
-                    if explanation_start != -1:
-                        # Find the opening quote after "explanation":
-                        quote_start = json_str.find('"', explanation_start + len('"explanation":'))
-                        if quote_start != -1:
-                            # Find the closing quote by counting brackets and handling escapes
-                            quote_pos = quote_start + 1
-                            bracket_count = 0
-                            escape_next = False
-                            
-                            while quote_pos < len(json_str):
-                                char = json_str[quote_pos]
-                                
-                                if escape_next:
-                                    escape_next = False
-                                elif char == '\\':
-                                    escape_next = True
-                                elif char == '"' and bracket_count == 0:
-                                    # Found the closing quote
-                                    explanation_content = json_str[quote_start + 1:quote_pos]
-                                    break
-                                elif char in ['{', '[']:
-                                    bracket_count += 1
-                                elif char in ['}', ']']:
-                                    bracket_count -= 1
-                                
-                                quote_pos += 1
-                    
-                    # Extract resources array
-                    resources = []
-                    resources_match = re.search(r'"resources":\s*\[(.*?)\]', json_str, re.DOTALL)
-                    if resources_match:
-                        # More robust resource extraction
-                        resources_content = resources_match.group(1)
-                        # Find all quoted strings, handling escaped quotes
-                        resource_pattern = r'"((?:[^"\\]|\\.)*)"'
-                        resource_matches = re.findall(resource_pattern, resources_content)
-                        resources = [r.replace('\\"', '"').replace('\\\\', '\\') for r in resource_matches[:5]]
-                    
-                    if not resources:
-                        resources = [f"Official {topic} documentation", f"Tutorial on {topic}"]
-                    
-                    # Extract subtasks array
-                    subtasks = []
-                    subtasks_match = re.search(r'"subtasks":\s*\[(.*?)\]', json_str, re.DOTALL)
-                    if subtasks_match:
-                        subtasks_content = subtasks_match.group(1)
-                        # More robust subtask extraction
-                        subtask_pattern = r'"((?:[^"\\]|\\.)*)"'
-                        subtask_matches = re.findall(subtask_pattern, subtasks_content)
-                        subtasks = [s.replace('\\"', '"').replace('\\\\', '\\') for s in subtask_matches[:4]]
-                    
-                    if not subtasks:
-                        subtasks = [f"Learn {topic} basics", f"Practice {topic} examples"]
-                    
-                    # Extract LeetCode problems (for weeks 5-9)
-                    leetcode_problems = []
-                    leetcode_match = re.search(r'"leetcode_problems":\s*\[(.*?)\]', json_str, re.DOTALL)
-                    if leetcode_match:
-                        leetcode_content = leetcode_match.group(1)
-                        # Extract individual problem objects
-                        problem_pattern = r'\{[^}]*"title":\s*"([^"]*)"[^}]*"link":\s*"([^"]*)"[^}]*"difficulty":\s*"([^"]*)"[^}]*\}'
-                        problem_matches = re.findall(problem_pattern, leetcode_content)
-                        for title, link, difficulty in problem_matches[:2]:  # Limit to 2 problems
-                            leetcode_problems.append({
-                                "title": title.replace('\\"', '"').replace('\\\\', '\\'),
-                                "link": link.replace('\\"', '"').replace('\\\\', '\\'),
-                                "type": "leetcode",
-                                "difficulty": difficulty.replace('\\"', '"').replace('\\\\', '\\')
-                            })
-                    
-                    # Reconstruct clean JSON
-                    # Properly escape the explanation content
-                    escaped_explanation = explanation_content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
-                    
-                    # Add LeetCode problems to resources if present
-                    if leetcode_problems:
-                        resources.extend(leetcode_problems)
-                    
-                    clean_json = {
-                        "explanation": explanation_content,  # Use raw content, not escaped
-                        "resources": resources,
-                        "subtasks": subtasks
-                    }
-                    
-                    return json.dumps(clean_json)
-                    
-                except Exception as e:
-                    logger.error(f"Error in fix_json_syntax: {str(e)}")
-                    # Return a basic structure if all else fails
-                    return json.dumps({
-                        "explanation": f"# {topic}\n\nDetailed lesson content about {topic} for {user_level} developers.\n\n## Key Concepts\nThis covers the essential aspects of {topic} with practical examples and real-world applications.",
-                        "resources": [f"Official {topic} documentation", "Online tutorials", "Practice exercises"],
-                        "subtasks": ["Learn the basics", "Practice with examples", "Build a project"]
-                    })
-            
-            # First attempt: parse as-is
+            # Simple JSON parsing with fallback
             try:
-                result = json.loads(cleaned_content)
-                # Post-process result to add LeetCode problems to resources if present
-                if 'leetcode_problems' in result and result['leetcode_problems']:
-                    if 'resources' not in result:
-                        result['resources'] = []
-                    # Add LeetCode problems to resources array
-                    for problem in result['leetcode_problems']:
-                        result['resources'].append(problem)
-                    # Remove the separate leetcode_problems field
-                    del result['leetcode_problems']
+                # Try direct JSON parsing first (most reliable)
+                parsed_data = json.loads(cleaned_content)
+                logger.info("Successfully parsed JSON response directly")
+                
+                # Validate required fields
+                if not isinstance(parsed_data, dict):
+                    raise ValueError("Response is not a JSON object")
+                
+                if "explanation" not in parsed_data:
+                    raise ValueError("Missing explanation field")
+                
+                # Ensure all required fields exist with defaults
+                result = {
+                    "explanation": parsed_data.get("explanation", f"# {topic}\n\nContent generation in progress..."),
+                    "resources": parsed_data.get("resources", [f"Official {topic} documentation"]),
+                    "subtasks": parsed_data.get("subtasks", [f"Learn {topic} basics"])
+                }
+                
+                # Handle LeetCode problems if present
+                if "leetcode_problems" in parsed_data:
+                    leetcode_problems = parsed_data["leetcode_problems"]
+                    if isinstance(leetcode_problems, list):
+                        # Add to resources with proper formatting
+                        for problem in leetcode_problems[:2]:  # Limit to 2
+                            if isinstance(problem, dict) and "title" in problem:
+                                result["resources"].append(problem)
+                
                 return result
-            except json.JSONDecodeError:
-                # Second attempt: try to fix common syntax errors
-                fixed_content = fix_json_syntax(cleaned_content)
-                try:
-                    result = json.loads(fixed_content)
-                    # Post-process result to add LeetCode problems to resources if present
-                    if 'leetcode_problems' in result and result['leetcode_problems']:
-                        if 'resources' not in result:
-                            result['resources'] = []
-                        # Add LeetCode problems to resources array
-                        for problem in result['leetcode_problems']:
-                            result['resources'].append(problem)
-                        # Remove the separate leetcode_problems field
-                        del result['leetcode_problems']
-                    logger.info("Successfully parsed JSON after syntax fixes")
-                    return result
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse JSON even after fixes: {str(e)}")
-                    logger.error(f"Original content length: {len(content)}")
-                    logger.error(f"Cleaned content preview: {cleaned_content[:500]}...")
-                    
-                    # Third attempt: extract content using regex patterns (fallback)
-                    try:
-                        logger.info("Attempting regex-based content extraction...")
-                        
-                        # Extract explanation
-                        explanation_match = re.search(r'"explanation":\s*"(.*?)"(?=\s*,\s*"[^"]*":|$)', cleaned_content, re.DOTALL)
-                        explanation = explanation_match.group(1) if explanation_match else f"Basic overview of {topic}"
-                        
-                        # Extract resources array
-                        resources_match = re.search(r'"resources":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
-                        resources = []
-                        if resources_match:
-                            # Simple extraction of quoted strings
-                            resource_items = re.findall(r'"([^"]*)"', resources_match.group(1))
-                            # Clean each resource item
-                            cleaned_resources = []
-                            for item in resource_items[:5]:  # Limit to 5 resources
-                                # Remove extra characters and clean URLs
-                                cleaned_item = item.strip()
-                                # Remove trailing brackets, @ symbols, and other artifacts
-                                cleaned_item = re.sub(r'[@\[\]{}()]+$', '', cleaned_item)
-                                # Remove leading @ symbols and brackets
-                                cleaned_item = re.sub(r'^[@\[\]{}()]+', '', cleaned_item)
-                                # Remove duplicate spaces
-                                cleaned_item = re.sub(r'\s+', ' ', cleaned_item).strip()
-                                if cleaned_item:
-                                    cleaned_resources.append(cleaned_item)
-                            resources = cleaned_resources
-                        
-                        if not resources:
-                            resources = [f"Official {topic} documentation", f"Tutorial on {topic}"]
-                        
-                        # Extract subtasks array  
-                        subtasks_match = re.search(r'"subtasks":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
-                        subtasks = []
-                        if subtasks_match:
-                            # Simple extraction of quoted strings
-                            subtask_items = re.findall(r'"([^"]*)"', subtasks_match.group(1))
-                            subtasks = subtask_items[:4]  # Limit to 4 subtasks
-                        
-                        if not subtasks:
-                            subtasks = [f"Learn {topic} basics", f"Practice {topic} examples"]
-                        
-                        result = {
-                            "explanation": explanation,
-                            "resources": resources,
-                            "subtasks": subtasks
-                        }
-                        
-                        logger.info("Successfully extracted content using regex fallback")
-                        return result
-                        
-                    except Exception as regex_error:
-                        logger.error(f"Regex extraction also failed: {str(regex_error)}")
-                        raise e
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"Direct JSON parsing failed: {str(e)}, attempting fallback parsing")
+                
+                # Fallback: Simple regex extraction (much simpler than before)
+                explanation = ""
+                resources = []
+                subtasks = []
+                
+                # Extract explanation (find content between "explanation": " and next field)
+                explanation_match = re.search(r'"explanation":\s*"(.*?)"(?=\s*,\s*"[^"]*":)', cleaned_content, re.DOTALL)
+                if explanation_match:
+                    explanation = explanation_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+                
+                # Extract resources array (simple approach)
+                resources_match = re.search(r'"resources":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
+                if resources_match:
+                    resources_content = resources_match.group(1)
+                    # Find quoted strings
+                    resource_matches = re.findall(r'"([^"]*)"', resources_content)
+                    resources = resource_matches[:5]  # Limit to 5 resources
+                
+                # Extract subtasks array (simple approach)
+                subtasks_match = re.search(r'"subtasks":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
+                if subtasks_match:
+                    subtasks_content = subtasks_match.group(1)
+                    # Find quoted strings
+                    subtask_matches = re.findall(r'"([^"]*)"', subtasks_content)
+                    subtasks = subtask_matches[:4]  # Limit to 4 subtasks
+                
+                # Provide defaults if extraction failed
+                if not explanation:
+                    explanation = f"# {topic}\n\nComprehensive lesson content for {topic}."
+                if not resources:
+                    resources = [f"Official {topic} documentation", f"{topic} tutorial guide"]
+                if not subtasks:
+                    subtasks = [f"Learn {topic} fundamentals", f"Practice {topic} examples"]
+                
+                logger.info("Successfully used fallback parsing")
+                return {
+                    "explanation": explanation,
+                    "resources": resources,
+                    "subtasks": subtasks
+                }
                     
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response: {str(e)}")
@@ -938,7 +816,7 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
         }
 
 def is_content_usable(content_data: Dict[str, Any]) -> bool:
-    """Check if content has critical issues that would make it unusable (minimal validation to avoid timeouts)."""
+    """Check if content has critical issues that would make it unusable (very minimal validation)."""
     try:
         if not isinstance(content_data, dict):
             return False
@@ -947,20 +825,16 @@ def is_content_usable(content_data: Dict[str, Any]) -> bool:
         if not explanation or not isinstance(explanation, str):
             return False
             
-        # Only check for truly critical issues that post-processing can't fix
-        critical_issues = [
-            # Completely empty content
-            len(explanation.strip()) < 20,
-            # No basic structure at all (no headers, bullets, or paragraphs)
-            not any(char in explanation for char in ['#', '*', '-', '\n'])
-        ]
+        # Only check for truly critical issues - be very lenient
+        explanation_stripped = explanation.strip()
         
-        # If any critical issue found, consider it unusable
-        has_critical_issues = any(critical_issues)
-        if has_critical_issues:
-            logger.warning("Content has critical structural issues")
+        # Content is unusable only if it's completely empty or just whitespace
+        if len(explanation_stripped) < 10:
+            logger.warning("Content is too short to be useful")
+            return False
             
-        return not has_critical_issues
+        # Content is usable in all other cases - let post-processing handle formatting
+        return True
         
     except Exception as e:
         logger.error(f"Error checking content usability: {str(e)}")
@@ -1553,4 +1427,36 @@ async def generate_chat_response(
             
     except Exception as e:
         logger.error(f"Error calling Gemini API for chat: {str(e)}")
-        return "I'm having trouble connecting to the AI service. Please try again in a moment." 
+        return "I'm having trouble connecting to the AI service. Please try again in a moment."
+
+
+@router.get(
+    "/youtube-quota-status",
+    summary="Get YouTube API quota status",
+    description="Debug endpoint to check YouTube API quota usage and availability"
+)
+async def get_youtube_quota_status(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get current YouTube API quota status for debugging purposes.
+    
+    Returns information about:
+    - Whether quota is available
+    - Requests made today
+    - Circuit breaker status
+    - Last quota exceeded time
+    """
+    try:
+        quota_status = youtube_service.get_quota_status()
+        return {
+            "success": True,
+            "quota_status": quota_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting YouTube quota status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get quota status: {str(e)}"
+        )

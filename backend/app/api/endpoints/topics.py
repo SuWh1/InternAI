@@ -104,4 +104,4 @@ async def delete_user_topic(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Topic not found"
         )
-    return GenericResponse(message="Topic deleted successfully") 
+    return GenericResponse(success=True, message="Topic deleted successfully")

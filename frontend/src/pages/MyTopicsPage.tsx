@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, ArrowRight, Clock, CheckCircle, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Plus, Search, ArrowRight, Clock, CheckCircle, Calendar, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,10 @@ const MyTopicsPage = () => {
   const [topicInput, setTopicInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
+  const [validationError, setValidationError] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   const itemsPerPage = 5;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -31,18 +35,100 @@ const MyTopicsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       setTopicInput('');
+      setValidationError(''); // Clear any validation errors on success
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Delete topic mutation
+  const deleteTopicMutation = useMutation({
+    mutationFn: topicService.deleteTopic,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['topics'] });
+      setShowDeleteConfirm(false);
+      setTopicToDelete(null);
+    },
+  });
+
+  // Validate topic input
+  const validateTopicInput = async (input: string): Promise<boolean> => {
+    if (!input.trim()) {
+      setValidationError('Please enter a topic to learn.');
+      return false;
+    }
+
+    setIsValidating(true);
+    setValidationError('');
+
+    try {
+      const response = await fetch('/api/agents/validate-topic-input', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ input: input.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setValidationError(data.detail || 'Validation failed. Please try again.');
+        return false;
+      }
+
+      if (!data.is_valid) {
+        setValidationError(data.message || 'Please enter a technology-related topic.');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Validation error:', error);
+      setValidationError('Unable to validate input. Please try again.');
+      return false;
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!topicInput.trim()) return;
+    
+    // Validate input before creating topic
+    const isValid = await validateTopicInput(topicInput);
+    if (!isValid) return;
     
     createTopicMutation.mutate({ name: topicInput.trim() });
   };
 
+  // Clear validation error when input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTopicInput(e.target.value);
+    if (validationError) {
+      setValidationError('');
+    }
+  };
+
   const handleTopicClick = (topicId: string) => {
     navigate(`/topics/${topicId}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, topic: Topic) => {
+    e.stopPropagation(); // Prevent triggering topic navigation
+    setTopicToDelete(topic);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (topicToDelete) {
+      deleteTopicMutation.mutate(topicToDelete.id);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setTopicToDelete(null);
   };
 
   const getCompletionPercentage = (topic: Topic) => {
@@ -106,28 +192,9 @@ const MyTopicsPage = () => {
 
   return (
     <div className="min-h-screen bg-theme-primary transition-colors duration-300 relative overflow-hidden">
-      {/* Creative animated background with multiple layers */}
-      {/* Layer 1: Floating orbs */}
+      {/* Diagonal waves background */}
       <motion.div
-        className="absolute inset-0 opacity-20"
-        animate={{
-          background: [
-            "radial-gradient(circle at 15% 25%, #00FF47 0%, transparent 40%), radial-gradient(circle at 85% 75%, #00FF73 0%, transparent 35%)",
-            "radial-gradient(circle at 75% 15%, #00FF47 0%, transparent 40%), radial-gradient(circle at 25% 85%, #00FF73 0%, transparent 35%)",
-            "radial-gradient(circle at 45% 65%, #00FF47 0%, transparent 40%), radial-gradient(circle at 65% 35%, #00FF73 0%, transparent 35%)",
-            "radial-gradient(circle at 15% 25%, #00FF47 0%, transparent 40%), radial-gradient(circle at 85% 75%, #00FF73 0%, transparent 35%)",
-          ],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      
-      {/* Layer 2: Diagonal waves */}
-      <motion.div
-        className="absolute inset-0 opacity-15"
+        className="absolute inset-0 opacity-22"
         animate={{
           background: [
             "linear-gradient(45deg, transparent 0%, #00FF47 20%, transparent 40%, #00FF73 60%, transparent 80%)",
@@ -139,47 +206,6 @@ const MyTopicsPage = () => {
         }}
         transition={{
           duration: 40,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-      />
-      
-      {/* Layer 3: Pulsing spots */}
-      <motion.div
-        className="absolute inset-0 opacity-10"
-        animate={{
-          background: [
-            "radial-gradient(ellipse 200px 100px at 20% 50%, #00FF47 0%, transparent 70%), radial-gradient(ellipse 150px 200px at 80% 30%, #00FF73 0%, transparent 70%), radial-gradient(ellipse 100px 150px at 60% 80%, #00FF47 0%, transparent 70%)",
-            "radial-gradient(ellipse 150px 200px at 30% 40%, #00FF47 0%, transparent 70%), radial-gradient(ellipse 200px 100px at 70% 60%, #00FF73 0%, transparent 70%), radial-gradient(ellipse 180px 120px at 50% 20%, #00FF47 0%, transparent 70%)",
-            "radial-gradient(ellipse 180px 120px at 40% 70%, #00FF47 0%, transparent 70%), radial-gradient(ellipse 120px 180px at 60% 40%, #00FF73 0%, transparent 70%), radial-gradient(ellipse 160px 100px at 80% 70%, #00FF47 0%, transparent 70%)",
-            "radial-gradient(ellipse 200px 100px at 20% 50%, #00FF47 0%, transparent 70%), radial-gradient(ellipse 150px 200px at 80% 30%, #00FF73 0%, transparent 70%), radial-gradient(ellipse 100px 150px at 60% 80%, #00FF47 0%, transparent 70%)",
-          ],
-        }}
-        transition={{
-          duration: 50,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      
-      {/* Layer 4: Subtle mesh pattern */}
-      <motion.div
-        className="absolute inset-0 opacity-8"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 25% 25%, #00FF47 1px, transparent 1px),
-            radial-gradient(circle at 75% 75%, #00FF73 1px, transparent 1px),
-            radial-gradient(circle at 25% 75%, #00FF47 1px, transparent 1px),
-            radial-gradient(circle at 75% 25%, #00FF73 1px, transparent 1px)
-          `,
-          backgroundSize: '100px 100px, 120px 120px, 80px 80px, 90px 90px'
-        }}
-        animate={{
-          x: [0, 50, 0],
-          y: [0, 30, 0],
-        }}
-        transition={{
-          duration: 60,
           repeat: Infinity,
           ease: "linear"
         }}
@@ -209,20 +235,24 @@ const MyTopicsPage = () => {
                 <input
                   type="text"
                   value={topicInput}
-                  onChange={(e) => setTopicInput(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="What do you want to master? e.g., useEffect, SQL joins, tailwind layout..."
-                  className="w-full pl-12 pr-4 py-4 bg-theme-primary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary text-base sm:text-lg"
+                  className={`w-full pl-12 pr-4 py-4 bg-theme-primary border-2 ${
+                    validationError 
+                      ? 'border-red-400 dark:border-red-500' 
+                      : 'border-purple-300 dark:border-purple-600'
+                  } text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary text-base sm:text-lg`}
                 />
               </div>
               
               <motion.button
                 type="submit"
-                disabled={!topicInput.trim() || createTopicMutation.isPending}
+                disabled={!topicInput.trim() || createTopicMutation.isPending || isValidating}
                 className="w-full sm:w-auto bg-purple-500 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-600 hover:shadow-lg"
-                whileHover={{ scale: topicInput.trim() && !createTopicMutation.isPending ? 1.02 : 1, y: topicInput.trim() && !createTopicMutation.isPending ? -2 : 0 }}
-                whileTap={{ scale: topicInput.trim() && !createTopicMutation.isPending ? 0.98 : 1 }}
+                whileHover={{ scale: topicInput.trim() && !createTopicMutation.isPending && !isValidating ? 1.02 : 1, y: topicInput.trim() && !createTopicMutation.isPending && !isValidating ? -2 : 0 }}
+                whileTap={{ scale: topicInput.trim() && !createTopicMutation.isPending && !isValidating ? 0.98 : 1 }}
               >
-                {createTopicMutation.isPending ? (
+                {createTopicMutation.isPending || isValidating ? (
                   <LoadingSpinner size="small" />
                 ) : (
                   <>
@@ -232,6 +262,21 @@ const MyTopicsPage = () => {
                   </>
                 )}
               </motion.button>
+
+              {/* Validation Error Display */}
+              {validationError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                >
+                  <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-error text-sm font-medium">
+                    {validationError}
+                  </p>
+                </motion.div>
+              )}
             </form>
           </div>
         </AnimatedSection>
@@ -351,8 +396,8 @@ const MyTopicsPage = () => {
                       }}
                       className="bg-theme-secondary rounded-xl shadow-sm border border-theme transition-colors duration-300 cursor-pointer hover:shadow-lg"
                       onClick={() => handleTopicClick(topic.id)}
-                      whileHover={{ scale: 1.02, y: -4 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ scale: 1.005, y: -1 }}
+                      whileTap={{ scale: 0.995 }}
                     >
                       <div className="p-6">
                         <div className="flex items-start justify-between mb-4">
@@ -374,15 +419,28 @@ const MyTopicsPage = () => {
                             </div>
                           </div>
                           
-                          <div className="text-right">
-                            {topic.subtopics && topic.subtopics.length > 0 && (
-                              <div className="text-2xl font-bold text-theme-accent mb-1">
-                                {getCompletionPercentage(topic)}%
+                          <div className="flex items-start gap-3">
+                            <div className="text-right">
+                              {topic.subtopics && topic.subtopics.length > 0 && (
+                                <div className="text-2xl font-bold text-theme-accent mb-1">
+                                  {getCompletionPercentage(topic)}%
+                                </div>
+                              )}
+                              <div className="text-xs text-theme-secondary">
+                                {topic.subtopics && topic.subtopics.length > 0 ? 'Progress' : 'Click to start'}
                               </div>
-                            )}
-                            <div className="text-xs text-theme-secondary">
-                              {topic.subtopics && topic.subtopics.length > 0 ? 'Progress' : 'Click to start'}
                             </div>
+                            
+                            {/* Delete Button */}
+                            <motion.button
+                              onClick={(e) => handleDeleteClick(e, topic)}
+                              className="p-2 text-theme-secondary hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              title="Delete topic"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
                           </div>
                         </div>
 
@@ -474,6 +532,89 @@ const MyTopicsPage = () => {
             )}
           </div>
         </AnimatedSection>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && topicToDelete && (
+          <div className="fixed inset-0 z-[9999] overflow-y-auto">
+            {/* Backdrop with theme-aware blur */}
+            <div 
+              className="fixed inset-0 bg-theme-primary/90 backdrop-blur-sm transition-opacity duration-300"
+              onClick={handleCancelDelete}
+            />
+            
+            {/* Modal - Fixed in center of viewport */}
+            <div className="flex min-h-full items-center justify-center p-6">
+              <div 
+                className="relative bg-theme-secondary rounded-lg shadow-xl max-w-md w-full p-6 transition-all duration-300 animate-in zoom-in-95 border border-theme"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center space-x-3 mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                  <h3 className="text-lg font-semibold text-theme-primary transition-colors duration-300">
+                    Delete Topic?
+                  </h3>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-theme-secondary mb-4 transition-colors duration-300">
+                    Are you sure you want to delete "<strong>{topicToDelete.name}</strong>"? This action will:
+                  </p>
+                  <ul className="text-sm text-theme-secondary space-y-2 mb-4 transition-colors duration-300">
+                    <li className="flex items-start space-x-2">
+                      <span className="text-red-500 font-bold mt-0.5">•</span>
+                      <span><strong>Permanently delete the topic</strong> and all its content</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <span className="text-red-500 font-bold mt-0.5">•</span>
+                      <span><strong>Remove all subtopics and progress</strong> associated with this topic</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <span className="text-red-500 font-bold mt-0.5">•</span>
+                      <span><strong>Cannot be undone</strong> - The topic cannot be recovered</span>
+                    </li>
+                  </ul>
+                  
+                  {topicToDelete.subtopics && topicToDelete.subtopics.length > 0 && getCompletionPercentage(topicToDelete) > 0 && (
+                    <div className="bg-red-500/10 border border-red-400/30 rounded-lg p-3">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        <span className="text-sm font-medium text-red-700">
+                          You have {getCompletionPercentage(topicToDelete)}% progress that will be lost!
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex space-x-3 justify-end">
+                  <button
+                    onClick={handleCancelDelete}
+                    className="px-4 py-2 text-theme-secondary bg-theme-hover rounded-lg hover:bg-theme-accent hover:text-white transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    disabled={deleteTopicMutation.isPending}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {deleteTopicMutation.isPending ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        <span>Yes, Delete</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -115,6 +115,11 @@ body.light {
   --error-icon: #F87171;
 }
 
+/* Error text utility class */
+.text-error {
+  color: var(--error-text);
+}
+
 /* Modern animated gradient background */
 @keyframes gradient-shift {
   0% {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, CheckCircle, Circle, Brain, Lightbulb, Lock, ChevronRight, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Circle, Brain, Lightbulb, Lock, ChevronRight, LoaderCircle, GraduationCap } from 'lucide-react';
 import agentService from '../services/agentService';
 
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -639,6 +639,35 @@ const WeekDetailPage: React.FC = () => {
               </div>
             </motion.div>
 
+            {/* Learn in Depth */}
+            <motion.div 
+              className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.15 }}
+              whileHover={{ y: -2, scale: 1.02 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                 <GraduationCap className="w-5 h-5 text-cyan-400" />
+                 <h3 className="font-semibold text-theme-primary transition-colors duration-300">Need More Help?</h3>
+               </div>
+               
+               <div className="space-y-4">
+                 <p className="text-sm text-theme-secondary leading-relaxed transition-colors duration-300">
+                   Don't understand a topic? Learn it in depth with our comprehensive topic guides.
+                 </p>
+                 <motion.button
+                   onClick={() => navigate('/my-topics')}
+                   className="w-full bg-[#32F1FF] hover:bg-[#28D4E8] text-black font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 group"
+                   whileHover={{ scale: 1.02 }}
+                   whileTap={{ scale: 0.98 }}
+                 >
+                   <span>Explore Topics</span>
+                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                 </motion.button>
+               </div>
+            </motion.div>
+
             {/* Navigation */}
             <motion.div 
               className="bg-theme-secondary rounded-lg shadow-sm border border-theme p-6 transition-colors duration-300"
@@ -704,4 +733,4 @@ const WeekDetailPage: React.FC = () => {
   );
 };
 
-export default WeekDetailPage; 
+export default WeekDetailPage;

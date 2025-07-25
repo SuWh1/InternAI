@@ -591,6 +591,12 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
         # Create a concise, effective prompt using best practices
         if is_week_5_to_9:
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
+            
+            LENGTH REQUIREMENTS:
+            - Explanation should be 1800-2500 words (comprehensive but focused)
+            - MINIMUM 10,000 characters in the explanation field (this is critical for quality)
+            - Include 2-3 code examples with explanations
+            - Cover theory, practical examples, and real-world applications
 
                 User Context: {context}
                 
@@ -633,6 +639,12 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
             """
         else:
             prompt = f"""Create a comprehensive lesson about "{topic}" for a {user_level} developer preparing for internships.
+            
+            LENGTH REQUIREMENTS:
+            - Explanation should be 1800-2500 words (comprehensive but focused)
+            - MINIMUM 10,000 characters in the explanation field (this is critical for quality)
+            - Include 2-3 code examples with explanations
+            - Cover theory, practical examples, and real-world applications
 
                         User Context: {context}
                         
@@ -705,8 +717,17 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
             
             # Simple JSON parsing with fallback
             try:
+                # Try to repair common JSON issues before parsing
+                repaired_content = cleaned_content
+                
+                # Fix missing commas between JSON objects/arrays
+                repaired_content = re.sub(r'"\s*\n\s*"', '",\n"', repaired_content)
+                repaired_content = re.sub(r'}\s*\n\s*{', '},\n{', repaired_content)
+                repaired_content = re.sub(r']\s*\n\s*"', '],\n"', repaired_content)
+                repaired_content = re.sub(r'"\s*\n\s*\[', '",\n[', repaired_content)
+                
                 # Try direct JSON parsing first (most reliable)
-                parsed_data = json.loads(cleaned_content)
+                parsed_data = json.loads(repaired_content)
                 logger.info("Successfully parsed JSON response directly")
                 
                 # Validate required fields
@@ -747,13 +768,32 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
                 if explanation_match:
                     explanation = explanation_match.group(1).replace('\\"', '"').replace('\\n', '\n')
                 
-                # Extract resources array (simple approach)
+                # Extract resources array (handle both string and object formats)
                 resources_match = re.search(r'"resources":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
                 if resources_match:
                     resources_content = resources_match.group(1)
-                    # Find quoted strings
-                    resource_matches = re.findall(r'"([^"]*)"', resources_content)
-                    resources = resource_matches[:5]  # Limit to 5 resources
+                    
+                    # Try to detect if resources are objects or simple strings
+                    if '{' in resources_content and '}' in resources_content:
+                        # Handle object format - try multiple extraction methods
+                        # First try titles
+                        object_matches = re.findall(r'\{[^}]*"title":\s*"([^"]*)"[^}]*\}', resources_content)
+                        if object_matches:
+                            resources = object_matches[:5]
+                        else:
+                            # Try descriptions if no titles
+                            desc_matches = re.findall(r'\{[^}]*"description":\s*"([^"]*)"[^}]*\}', resources_content)
+                            if desc_matches:
+                                resources = desc_matches[:5]
+                            else:
+                                # Fallback to any quoted strings, but filter field names
+                                resource_matches = re.findall(r'"([^"]*)"', resources_content)
+                                filtered_resources = [r for r in resource_matches if r not in ['title', 'description', 'url', 'type', 'name', 'link']]
+                                resources = filtered_resources[:5] if filtered_resources else [f"Official {topic} documentation"]
+                    else:
+                        # Simple string array format
+                        resource_matches = re.findall(r'"([^"]*)"', resources_content)
+                        resources = resource_matches[:5] if resource_matches else [f"Official {topic} documentation"]
                 
                 # Extract subtasks array (simple approach)
                 subtasks_match = re.search(r'"subtasks":\s*\[(.*?)\]', cleaned_content, re.DOTALL)
@@ -767,7 +807,7 @@ async def generate_topic_explanation(topic: str, context: str, user_level: str, 
                 if not explanation:
                     explanation = f"# {topic}\n\nComprehensive lesson content for {topic}."
                 if not resources:
-                    resources = [f"Official {topic} documentation", f"{topic} tutorial guide"]
+                    resources = [f"Official {topic} documentation", f"{topic} tutorial guide", f"{topic} community resources"]
                 if not subtasks:
                     subtasks = [f"Learn {topic} fundamentals", f"Practice {topic} examples"]
                 
@@ -828,9 +868,9 @@ def is_content_usable(content_data: Dict[str, Any]) -> bool:
         # Only check for truly critical issues - be very lenient
         explanation_stripped = explanation.strip()
         
-        # Content is unusable only if it's completely empty or just whitespace
-        if len(explanation_stripped) < 10:
-            logger.warning("Content is too short to be useful")
+        # Content is unusable only if it's too short (less than 10,000 characters)
+        if len(explanation_stripped) < 10000:
+            logger.warning(f"Content is too short ({len(explanation_stripped)} chars, need 10,000+)")
             return False
             
         # Content is usable in all other cases - let post-processing handle formatting
@@ -1429,6 +1469,189 @@ async def generate_chat_response(
         logger.error(f"Error calling Gemini API for chat: {str(e)}")
         return "I'm having trouble connecting to the AI service. Please try again in a moment."
 
+
+@router.post(
+    "/validate-topic-input",
+    summary="Validate if topic input is technology-related",
+    description="Check if user input is appropriate for creating a tech learning topic"
+)
+@limiter.limit(RateLimits.AI_CHAT)
+async def validate_topic_input(
+    request: Request,
+    validation_request: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Validate if the user's topic input is technology-related.
+    
+    Request should contain:
+    - input: User's topic input to validate
+    """
+    
+    try:
+        user_input = validation_request.get("input", "").strip()
+        
+        # Basic validation
+        if not user_input:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Input is required"
+            )
+        
+        if len(user_input) > 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Input must be 200 characters or less"
+            )
+        
+        # Check if Gemini API key is configured
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            logger.warning("Gemini API key not configured for topic validation")
+            # Fallback to basic keyword validation
+            return await basic_topic_validation(user_input)
+        
+        # Use AI validation
+        validation_result = await ai_topic_validation(user_input)
+        return validation_result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in topic validation: {str(e)}")
+        # Fallback to basic validation on error
+        return await basic_topic_validation(user_input)
+
+async def ai_topic_validation(user_input: str) -> Dict[str, Any]:
+    """Use AI to validate if input is technology-related."""
+    
+    try:
+        # Import Google AI Python SDK
+        from google import genai
+        from google.genai import types
+        
+        # Configure Gemini client
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        client = genai.Client(api_key=gemini_api_key)
+        
+        # Create validation prompt
+        prompt = f"""You are an AI validator for a technology learning platform. Your job is to determine if a user's input is appropriate for creating a technology learning topic.
+
+User input: "{user_input}"
+
+Analyze this input and determine:
+1. Is this related to technology, programming, software development, computer science, or technical skills?
+2. Is this appropriate for creating a learning roadmap?
+
+Technology-related topics include:
+- Programming languages (Python, JavaScript, Java, etc.)
+- Frameworks and libraries (React, Django, Spring, etc.)
+- Development tools (Git, Docker, VS Code, etc.)
+- Technical concepts (algorithms, data structures, APIs, etc.)
+- Software development practices (testing, deployment, etc.)
+- Technology domains (web development, mobile development, AI/ML, etc.)
+- Technical skills (debugging, optimization, etc.)
+
+NOT technology-related:
+- General life topics (cooking, sports, travel)
+- Non-technical subjects (history, literature, art)
+- Personal activities (fitness, hobbies)
+- Business topics unrelated to tech
+- Random words or nonsense
+
+Respond with ONLY one of these formats:
+- If valid: "VALID"
+- If invalid: "INVALID: [brief explanation of why it's not tech-related]"
+
+Response:"""
+
+        # Generate validation response
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.1,  # Low temperature for consistent validation
+                top_p=0.8,
+                max_output_tokens=100,
+            )
+        )
+        
+        if response and response.text:
+            ai_response = response.text.strip()
+            
+            if ai_response.startswith("VALID"):
+                return {
+                    "success": True,
+                    "is_valid": True,
+                    "message": "Topic is technology-related and appropriate for learning."
+                }
+            elif ai_response.startswith("INVALID:"):
+                error_message = ai_response.replace("INVALID:", "").strip()
+                return {
+                    "success": True,
+                    "is_valid": False,
+                    "message": error_message or "This topic doesn't appear to be technology-related."
+                }
+            else:
+                # Fallback if AI response is unexpected
+                return await basic_topic_validation(user_input)
+        else:
+            return await basic_topic_validation(user_input)
+            
+    except Exception as e:
+        logger.error(f"Error in AI topic validation: {str(e)}")
+        return await basic_topic_validation(user_input)
+
+async def basic_topic_validation(user_input: str) -> Dict[str, Any]:
+    """Basic keyword-based validation as fallback."""
+    
+    # Common tech keywords
+    tech_keywords = [
+        'python', 'javascript', 'java', 'react', 'node', 'html', 'css', 'sql', 'git',
+        'docker', 'kubernetes', 'aws', 'api', 'database', 'algorithm', 'data structure',
+        'programming', 'coding', 'development', 'software', 'web', 'mobile', 'app',
+        'framework', 'library', 'backend', 'frontend', 'fullstack', 'devops', 'testing',
+        'debugging', 'deployment', 'server', 'client', 'machine learning', 'ai', 'ml',
+        'typescript', 'angular', 'vue', 'django', 'flask', 'spring', 'express',
+        'mongodb', 'postgresql', 'mysql', 'redis', 'elasticsearch', 'graphql', 'rest',
+        'microservices', 'cloud', 'azure', 'gcp', 'linux', 'windows', 'macos',
+        'android', 'ios', 'swift', 'kotlin', 'flutter', 'react native', 'xamarin',
+        'unity', 'game development', 'blockchain', 'cryptocurrency', 'cybersecurity',
+        'network', 'protocol', 'http', 'https', 'tcp', 'udp', 'dns', 'ssl', 'tls'
+    ]
+    
+    # Check if input contains tech keywords
+    input_lower = user_input.lower()
+    has_tech_keywords = any(keyword in input_lower for keyword in tech_keywords)
+    
+    # Common non-tech keywords that should be rejected
+    non_tech_keywords = [
+        'cooking', 'recipe', 'food', 'sport', 'football', 'basketball', 'travel',
+        'vacation', 'music', 'art', 'painting', 'drawing', 'fitness', 'workout',
+        'diet', 'health', 'medicine', 'history', 'literature', 'poetry', 'novel'
+    ]
+    
+    has_non_tech_keywords = any(keyword in input_lower for keyword in non_tech_keywords)
+    
+    if has_non_tech_keywords:
+        return {
+            "success": True,
+            "is_valid": False,
+            "message": "Please enter a technology-related topic like programming languages, frameworks, or development tools."
+        }
+    
+    if has_tech_keywords or len(user_input.split()) <= 3:  # Allow short inputs that might be tech terms
+        return {
+            "success": True,
+            "is_valid": True,
+            "message": "Topic appears to be technology-related."
+        }
+    else:
+        return {
+            "success": True,
+            "is_valid": False,
+            "message": "Please enter a technology-related topic like programming languages, frameworks, or development tools."
+        }
 
 @router.get(
     "/youtube-quota-status",

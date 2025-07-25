@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader } from 'lucide-react'; // Import Loader icon
+import { Loader, LoaderCircle } from 'lucide-react'; // Import Loader and LoaderCircle icons
 
 interface LoadingSpinnerProps {
   size?: 'small' | 'medium' | 'large';
@@ -11,13 +11,13 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   className = '' 
 }) => {
   const sizeClasses = {
-    small: 'h-4 w-4',
-    medium: 'h-8 w-8',
-    large: 'h-12 w-12'
+    small: 'w-4 h-4',
+    medium: 'w-6 h-6',
+    large: 'w-8 h-8'
   };
 
   return (
-    <div className={`animate-spin rounded-full border-2 border-theme-hover border-t-theme-accent transition-colors duration-300 ${sizeClasses[size]} ${className}`} />
+    <LoaderCircle className={`text-white spin-animation ${sizeClasses[size]} ${className}`} />
   );
 };
 
@@ -44,4 +44,4 @@ export const RoadmapPageLoadingSpinner: React.FC = () => {
 };
 
 
-export default LoadingSpinner; 
+export default LoadingSpinner;

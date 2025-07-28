@@ -24,6 +24,7 @@ class User(Base):
     hashed_password = Column(String, nullable=True)  # Nullable for social logins
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)  # Admin status
+    is_bot = Column(Boolean, default=False)  # Bot status
     google_id = Column(String, unique=True, nullable=True, index=True)
     profile_picture = Column(String, nullable=True)
     phone = Column(String, nullable=True)  # User phone number

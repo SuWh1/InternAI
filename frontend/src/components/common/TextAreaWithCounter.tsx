@@ -29,7 +29,7 @@ const TextAreaWithCounter: React.FC<TextAreaWithCounterProps> = React.memo(({
         maxLength={maxLength}
         rows={rows}
         disabled={disabled}
-        className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-3 bg-theme-secondary border-2 border-purple-300 dark:border-purple-600 text-theme-primary rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-sm placeholder-theme-secondary resize-none disabled:opacity-50 disabled:cursor-not-allowed chat-input"
       />
       <div className="absolute bottom-3 right-3 text-xs text-theme-secondary">
         {value.length} / {maxLength}
@@ -40,4 +40,4 @@ const TextAreaWithCounter: React.FC<TextAreaWithCounterProps> = React.memo(({
 
 TextAreaWithCounter.displayName = 'TextAreaWithCounter';
 
-export default TextAreaWithCounter; 
+export default TextAreaWithCounter;

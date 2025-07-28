@@ -180,82 +180,71 @@ const LessonPage: React.FC = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
 
-  // Add CSS for user message text and scrollbars
+  // Memoize CSS styles to prevent expensive DOM operations
+  const chatStyles = React.useMemo(() => {
+    const isDark = theme === 'dark';
+    return {
+      scrollbarTrack: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+      scrollbarThumb: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)',
+      scrollbarThumbHover: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)',
+    };
+  }, [theme]);
+
+  // Add CSS for user message text and scrollbars - optimized
   React.useEffect(() => {
-    const style = document.createElement('style');
+    const styleId = 'lesson-page-chat-styles';
+    let style = document.getElementById(styleId) as HTMLStyleElement;
+    
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    
     style.textContent = `
-      .user-message-content * {
-        color: inherit;
+      .user-message-content * { color: inherit; }
+      .chat-messages::-webkit-scrollbar { width: 8px; }
+      .chat-messages::-webkit-scrollbar-track { 
+        background: ${chatStyles.scrollbarTrack}; 
+        border-radius: 4px; 
       }
-      .user-message-content p {
-        color: inherit;
+      .chat-messages::-webkit-scrollbar-thumb { 
+        background: ${chatStyles.scrollbarThumb}; 
+        border-radius: 4px; 
       }
-      .user-message-content span {
-        color: inherit;
+      .chat-messages::-webkit-scrollbar-thumb:hover { 
+        background: ${chatStyles.scrollbarThumbHover}; 
       }
-      .user-message-content div {
-        color: inherit;
+      .chat-input::-webkit-scrollbar { width: 6px; }
+      .chat-input::-webkit-scrollbar-track { 
+        background: ${chatStyles.scrollbarTrack}; 
+        border-radius: 3px; 
       }
-      
-      /* Chat scrollbar styles */
-      .chat-messages::-webkit-scrollbar {
-        width: 8px;
+      .chat-input::-webkit-scrollbar-thumb { 
+        background: ${chatStyles.scrollbarThumb}; 
+        border-radius: 3px; 
       }
-      .chat-messages::-webkit-scrollbar-track {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
-        border-radius: 4px;
+      .chat-input::-webkit-scrollbar-thumb:hover { 
+        background: ${chatStyles.scrollbarThumbHover}; 
       }
-      .chat-messages::-webkit-scrollbar-thumb {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)'};
-        border-radius: 4px;
+      .chat-messages { 
+        scrollbar-width: thin; 
+        scrollbar-color: ${chatStyles.scrollbarThumb} ${chatStyles.scrollbarTrack}; 
       }
-      .chat-messages::-webkit-scrollbar-thumb:hover {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)'};
-      }
-      
-      /* Chat input scrollbar styles */
-      .chat-input::-webkit-scrollbar {
-        width: 6px;
-      }
-      .chat-input::-webkit-scrollbar-track {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
-        border-radius: 3px;
-      }
-      .chat-input::-webkit-scrollbar-thumb {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.15)'};
-        border-radius: 3px;
-      }
-      .chat-input::-webkit-scrollbar-thumb:hover {
-        background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.25)'};
-      }
-      
-      /* Firefox scrollbar styles */
-      .chat-messages {
-        scrollbar-width: thin;
-        scrollbar-color: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05)'};
-      }
-      .chat-input {
-        scrollbar-width: thin;
-        scrollbar-color: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.05)'};
+      .chat-input { 
+        scrollbar-width: thin; 
+        scrollbar-color: ${chatStyles.scrollbarThumb} ${chatStyles.scrollbarTrack}; 
       }
     `;
     
-    // Use batched DOM operations for better performance
-    batchDOMOperations([
-      () => document.head.appendChild(style)
-    ]);
-    
     return () => {
-      // Clean up more safely to prevent performance issues
-      try {
-        if (style.parentNode) {
-          document.head.removeChild(style);
-        }
-      } catch (error) {
-        console.warn('Failed to remove lesson page styles:', error);
+      // Only remove on unmount, not on theme change
+      const styleElement = document.getElementById(styleId);
+      if (styleElement) {
+        styleElement.remove();
       }
     };
-  }, [theme]);
+  }, [chatStyles]);
   
   const [lesson, setLesson] = useState<GPTTopicResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -785,20 +774,54 @@ const LessonPage: React.FC = () => {
     }
   }, [handleSendMessage]);
 
+  // Optimized chat input handler - immediate UI update, debounced expensive operations
   const handleChatInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Update state immediately for responsive UI
     setChatInput(e.target.value);
   }, []);
 
-  // Auto-scroll chat to bottom when new messages arrive
+  // Memoize user message styles to prevent re-calculation
+  const userMessageStyles = React.useMemo(() => ({
+    color: 'inherit',
+    '--tw-prose-body': 'inherit',
+    '--tw-prose-headings': 'inherit',
+    '--tw-prose-lead': 'inherit',
+    '--tw-prose-links': 'inherit',
+    '--tw-prose-bold': 'inherit',
+    '--tw-prose-counters': 'inherit',
+    '--tw-prose-bullets': 'inherit',
+    '--tw-prose-hr': 'inherit',
+    '--tw-prose-quotes': 'inherit',
+    '--tw-prose-quote-borders': 'inherit',
+    '--tw-prose-captions': 'inherit',
+    '--tw-prose-code': 'inherit',
+    '--tw-prose-pre-code': 'inherit',
+    '--tw-prose-pre-bg': 'inherit',
+    '--tw-prose-th-borders': 'inherit',
+    '--tw-prose-td-borders': 'inherit'
+  } as React.CSSProperties), []);
+
+  // Debounced auto-scroll to prevent performance issues
+  const debouncedScrollToBottom = React.useCallback(
+    debounce(() => {
+      if (chatMessagesEndRef) {
+        // Use requestAnimationFrame for better performance
+        requestAnimationFrame(() => {
+          chatMessagesEndRef.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        });
+      }
+    }, 100),
+    [chatMessagesEndRef]
+  );
+
+  // Auto-scroll chat to bottom when new messages arrive - optimized
   useEffect(() => {
-    if (chatMessagesEndRef) {
-      chatMessagesEndRef.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'nearest'
-      });
-    }
-  }, [chatMessages, chatMessagesEndRef]);
+    debouncedScrollToBottom();
+  }, [chatMessages.length, debouncedScrollToBottom]); // Only trigger on message count change
 
   // Create clean display title from context (extract just "Week N - Topic")
   const cleanDisplayTitle = context ? (() => {
@@ -1322,7 +1345,7 @@ const LessonPage: React.FC = () => {
                 hidden: { opacity: 0, y: 12 },
                 visible: { opacity: 1, y: 0 }
               }}
-              whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+              whileHover={{ y: -1 }}
               transition={{ duration: 0.3 }}
             >
               <div className="p-8">
@@ -1425,7 +1448,7 @@ const LessonPage: React.FC = () => {
                   hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
-                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                whileHover={{ y: -1 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="p-8">
@@ -1465,7 +1488,7 @@ const LessonPage: React.FC = () => {
                   hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
-                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                whileHover={{ y: -1 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="p-8">
@@ -1505,7 +1528,7 @@ const LessonPage: React.FC = () => {
                   hidden: { opacity: 0, y: 12 },
                   visible: { opacity: 1, y: 0 }
                 }}
-                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+                whileHover={{ y: -1 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="p-8">
@@ -1633,7 +1656,7 @@ const LessonPage: React.FC = () => {
                 hidden: { opacity: 0, x: 30 },
                 visible: { opacity: 1, x: 0 }
               }}
-              whileHover={{ y: -2, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+              whileHover={{ y: -1 }}
               transition={{ duration: 0.3 }}
             >
               {/* Chat Header */}
@@ -1691,25 +1714,7 @@ const LessonPage: React.FC = () => {
                                 ? 'bg-theme-accent rounded-br-md'
                                 : 'bg-theme-secondary border border-theme text-theme-primary rounded-bl-md'
                             }`}
-                            style={message.type === 'user' ? { 
-                              color: 'inherit',
-                              '--tw-prose-body': 'inherit',
-                              '--tw-prose-headings': 'inherit',
-                              '--tw-prose-lead': 'inherit',
-                              '--tw-prose-links': 'inherit',
-                              '--tw-prose-bold': 'inherit',
-                              '--tw-prose-counters': 'inherit',
-                              '--tw-prose-bullets': 'inherit',
-                              '--tw-prose-hr': 'inherit',
-                              '--tw-prose-quotes': 'inherit',
-                              '--tw-prose-quote-borders': 'inherit',
-                              '--tw-prose-captions': 'inherit',
-                              '--tw-prose-code': 'inherit',
-                              '--tw-prose-pre-code': 'inherit',
-                              '--tw-prose-pre-bg': 'inherit',
-                              '--tw-prose-th-borders': 'inherit',
-                              '--tw-prose-td-borders': 'inherit'
-                            } as React.CSSProperties : {}}>
+                            style={message.type === 'user' ? userMessageStyles : {}}>
                               <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'user-message-content' : ''}`}>
                                 <MarkdownRenderer content={message.content} />
                               </div>
@@ -1791,7 +1796,7 @@ const LessonPage: React.FC = () => {
                 hidden: { opacity: 0, x: 30 },
                 visible: { opacity: 1, x: 0 }
               }}
-              whileHover={{ y: -2, boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
+              whileHover={{ y: -1 }}
               transition={{ duration: 0.3 }}
             >
               <h3 className="font-semibold text-theme-primary mb-4 transition-colors duration-300 flex items-center gap-2">

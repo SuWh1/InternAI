@@ -1,33 +1,50 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, ArrowRight, Clock, CheckCircle, Calendar, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Loader } from 'lucide-react';
+import { BookOpen, Plus, Search, ArrowRight, Clock, CheckCircle, Calendar, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Loader, Eye, EyeOff, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AnimatedSection from '../components/common/AnimatedSection';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import ToggleSwitch from '../components/common/ToggleSwitch';
 import { topicService } from '../services/topicService';
 import type { Topic } from '../services/topicService';
+import { calculatePublicTopicCompletion } from '../utils/publicTopicProgress';
 
 const MyTopicsPage = () => {
   const [topicInput, setTopicInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'private' | 'public'>('private');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
+  const [publishingTopicId, setPublishingTopicId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const itemsPerPage = 5;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Fetch topics using React Query
-  const { data: topicsData, isLoading, error } = useQuery({
+  // Fetch user's own topics
+  const { data: userTopicsData, isLoading: isLoadingUserTopics, error: userTopicsError } = useQuery({
     queryKey: ['topics'],
     queryFn: topicService.getTopics,
   });
 
-  const topics = topicsData?.topics || [];
+  // Fetch all public topics from all users
+  const { data: publicTopicsData, isLoading: isLoadingPublicTopics, error: publicTopicsError } = useQuery({
+    queryKey: ['publicTopics'],
+    queryFn: topicService.getPublicTopics,
+    enabled: viewMode === 'public', // Only fetch when viewing public topics
+  });
+
+  // Determine which topics to show based on view mode
+  const topics = viewMode === 'private' 
+    ? (userTopicsData?.topics || [])
+    : (publicTopicsData?.topics || []);
+
+  const isLoading = viewMode === 'private' ? isLoadingUserTopics : isLoadingPublicTopics;
+  const error = viewMode === 'private' ? userTopicsError : publicTopicsError;
 
   // Create topic mutation
   const createTopicMutation = useMutation({
@@ -46,6 +63,21 @@ const MyTopicsPage = () => {
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       setShowDeleteConfirm(false);
       setTopicToDelete(null);
+    },
+  });
+
+  // Toggle topic visibility mutation
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: ({ topicId, isPublic }: { topicId: string; isPublic: boolean }) =>
+      topicService.toggleTopicVisibility(topicId, isPublic),
+    onSuccess: () => {
+      // Invalidate both queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['topics'] });
+      queryClient.invalidateQueries({ queryKey: ['publicTopics'] });
+      setPublishingTopicId(null);
+    },
+    onError: () => {
+      setPublishingTopicId(null);
     },
   });
 
@@ -131,15 +163,30 @@ const MyTopicsPage = () => {
     setTopicToDelete(null);
   };
 
+  const handleToggleVisibility = (e: React.MouseEvent, topic: Topic) => {
+    e.stopPropagation(); // Prevent triggering topic navigation
+    setPublishingTopicId(topic.id);
+    toggleVisibilityMutation.mutate({
+      topicId: topic.id,
+      isPublic: !topic.is_public,
+    });
+  };
+
   const getCompletionPercentage = (topic: Topic) => {
     if (!topic.subtopics || topic.subtopics.length === 0) return 0;
+    
+    // For public topics, use localStorage-based progress
+    if (viewMode === 'public') {
+      return calculatePublicTopicCompletion(topic.id, topic.subtopics.length);
+    }
+    
+    // For private topics, use the original logic
     return Math.round((topic.completed_subtopics.length / topic.subtopics.length) * 100);
   };
 
   // Pagination calculations
-  const filteredTopics = topics.filter(topic =>
-    topic.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTopics = topics
+    .filter(topic => topic.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -284,12 +331,46 @@ const MyTopicsPage = () => {
         {/* Topics List Section */}
         <AnimatedSection delay={0} amount={0.1}>
           <div className="space-y-6">
+            {/* Toggle switch on its own line - full width */}
+            <div className="w-full flex justify-center mb-4 px-4">
+              <ToggleSwitch
+                value={viewMode}
+                onChange={(value) => setViewMode(value as 'private' | 'public')}
+                options={[
+                  { value: 'private', label: 'Private' },
+                  { value: 'public', label: 'Public' }
+                ]}
+                fullWidth={true}
+                className="w-full max-w-md"
+              />
+            </div>
+            
+            {/* Title and search on separate line */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              {/* Left: Title with count */}
+              <h2 className="text-xl sm:text-2xl font-semibold text-theme-primary transition-colors duration-300 text-center sm:text-left">
+                {viewMode === 'private' ? 'Your Learning Topics' : 'Public Topics'} 
+                {topics.length > 0 && ` (${topics.length})`}
+              </h2>
+              
+              {/* Search Input - Only show when there are topics */}
+              {topics.length > 0 && (
+                <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-theme-secondary h-4 w-4" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search topics..."
+                    className="w-full pl-10 pr-4 py-2 bg-theme-secondary border border-theme rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-theme-primary placeholder-theme-secondary text-sm"
+                  />
+                </div>
+              )}
+            </div>
+
             {topics.length === 0 ? (
               // Empty State
               <div className="bg-theme-secondary rounded-xl shadow-sm border border-theme p-6 sm:p-8 transition-colors duration-300">
-                <h2 className="text-xl sm:text-2xl font-semibold text-theme-primary mb-6 transition-colors duration-300">
-                  Your Learning Topics
-                </h2>
                 <div className="text-center py-12">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -303,44 +384,31 @@ const MyTopicsPage = () => {
                   </motion.div>
                   
                   <h3 className="text-xl font-semibold text-theme-primary mb-3 transition-colors duration-300">
-                    No topics created yet
+                    {viewMode === 'private' ? 'No topics created yet' : 'No public topics available'}
                   </h3>
                   <p className="text-theme-secondary mb-6 max-w-md mx-auto transition-colors duration-300">
-                    Start by adding your first learning topic above. Our AI will create a personalized roadmap just for you!
+                    {viewMode === 'private' 
+                      ? 'Start by adding your first learning topic above. Our AI will create a personalized roadmap just for you!'
+                      : 'No public topics have been shared yet. Check back later or create your own topics to share!'
+                    }
                   </p>
                   
-                  <motion.button
-                    onClick={() => document.querySelector('input')?.focus()}
-                    className="inline-flex items-center text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Create your first topic
-                  </motion.button>
+                  {viewMode === 'private' && (
+                    <motion.button
+                      onClick={() => document.querySelector('input')?.focus()}
+                      className="inline-flex items-center text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Create your first topic
+                    </motion.button>
+                  )}
                 </div>
               </div>
             ) : (
               // Topics List
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-theme-primary transition-colors duration-300">
-                    Your Learning Topics ({filteredTopics.length}{filteredTopics.length !== topics.length ? ` of ${topics.length}` : ''})
-                  </h2>
-                  
-                  {/* Search Input */}
-                  <div className="relative w-full sm:w-80">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-theme-secondary h-4 w-4" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search topics..."
-                      className="w-full pl-10 pr-4 py-2 bg-theme-secondary border border-theme rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-theme-primary placeholder-theme-secondary text-sm"
-                    />
-                  </div>
-                </div>
-                
                 <motion.div 
                   className="space-y-4"
                   initial="hidden"
@@ -395,7 +463,14 @@ const MyTopicsPage = () => {
                         visible: { opacity: 1, y: 0 }
                       }}
                       className="bg-theme-secondary rounded-xl shadow-sm border border-theme transition-colors duration-300 cursor-pointer hover:shadow-lg"
-                      onClick={() => handleTopicClick(topic.id)}
+                      onClick={() => {
+                        if (viewMode === 'public') {
+                          // For public topics, navigate to detail page but with read-only mode
+                          handleTopicClick(topic.id);
+                        } else {
+                          handleTopicClick(topic.id);
+                        }
+                      }}
                       whileHover={{ scale: 1.005, y: -1 }}
                       whileTap={{ scale: 0.995 }}
                     >
@@ -410,6 +485,13 @@ const MyTopicsPage = () => {
                                 <Calendar className="w-4 h-4" />
                                 {new Date(topic.created_at).toLocaleDateString()}
                               </span>
+                              {/* Show author for public topics */}
+                              {viewMode === 'public' && topic.user_name && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-4 h-4" />
+                                  by {topic.user_name}
+                                </span>
+                              )}
                               {topic.subtopics && topic.subtopics.length > 0 && (
                                 <span className="flex items-center gap-1">
                                   <CheckCircle className="w-4 h-4" />
@@ -431,16 +513,42 @@ const MyTopicsPage = () => {
                               </div>
                             </div>
                             
-                            {/* Delete Button */}
-                            <motion.button
-                              onClick={(e) => handleDeleteClick(e, topic)}
-                              className="p-2 text-theme-secondary hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              title="Delete topic"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </motion.button>
+                            {/* Publish/Unpublish Button - Only show for user's own topics */}
+                            {viewMode === 'private' && (
+                              <motion.button
+                                onClick={(e) => handleToggleVisibility(e, topic)}
+                                disabled={publishingTopicId === topic.id}
+                                className={`p-2 rounded-lg transition-all duration-200 ${
+                                  topic.is_public
+                                    ? 'text-green-600 hover:text-green-700 hover:bg-green-500/10'
+                                    : 'text-theme-secondary hover:text-green-600 hover:bg-green-500/10'
+                                }`}
+                                whileHover={{ scale: publishingTopicId === topic.id ? 1 : 1.1 }}
+                                whileTap={{ scale: publishingTopicId === topic.id ? 1 : 0.9 }}
+                                title={topic.is_public ? 'Make private' : 'Make public'}
+                              >
+                                {publishingTopicId === topic.id ? (
+                                  <Loader className="w-4 h-4 animate-spin" />
+                                ) : topic.is_public ? (
+                                  <Eye className="w-4 h-4" />
+                                ) : (
+                                  <EyeOff className="w-4 h-4" />
+                                )}
+                              </motion.button>
+                            )}
+                            
+                            {/* Delete Button - Only show for user's own topics */}
+                            {viewMode === 'private' && (
+                              <motion.button
+                                onClick={(e) => handleDeleteClick(e, topic)}
+                                className="p-2 text-theme-secondary hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Delete topic"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
+                            )}
                           </div>
                         </div>
 

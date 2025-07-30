@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Clock, CheckCircle, Circle, Brain, Lightbulb, ChevronRight, LoaderCircle, Loader, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,11 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import TruncatedText from '../components/common/TruncatedText';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { 
+  getPublicTopicProgress, 
+  updatePublicTopicProgress
+} from '../utils/publicTopicProgress';
 
 // Simple in-memory cache: topicId -> subtopics array
 const subtopicCache: Map<string, Array<{ title: string; description: string; type?: string } | string>> = new Map();
@@ -17,11 +22,20 @@ const subtopicCache: Map<string, Array<{ title: string; description: string; typ
 const TopicDetailPage: React.FC = () => {
   const { topicId } = useParams<{ topicId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
   const [isGeneratingSubtopics, setIsGeneratingSubtopics] = useState(false);
 
+  // Determine if this is a public topic (from navigation state or topic ownership)
+  const [isPublicTopic, setIsPublicTopic] = useState(false);
+  
+  // State for public topic progress
+  const [publicTopicProgress, setPublicTopicProgress] = useState<number[]>([]);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
+  
   // Study tips rotation state (same as WeekDetailPage)
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   
@@ -54,7 +68,34 @@ const TopicDetailPage: React.FC = () => {
     enabled: !!topicId,
   });
 
-  // Update topic mutation
+  // Determine if this is a public topic after data loads
+  useEffect(() => {
+    if (topic && user) {
+      setIsPublicTopic(topic.user_id !== user.id);
+    }
+  }, [topic, user]);
+
+  // Fetch public topic progress when it's a public topic
+  useEffect(() => {
+    const fetchPublicProgress = async () => {
+      if (isPublicTopic && topicId) {
+        setIsLoadingProgress(true);
+        try {
+          const progress = await getPublicTopicProgress(topicId);
+          setPublicTopicProgress(progress?.completedSubtopics || []);
+        } catch (error) {
+          console.error('Error fetching public topic progress:', error);
+          setPublicTopicProgress([]);
+        } finally {
+          setIsLoadingProgress(false);
+        }
+      }
+    };
+
+    fetchPublicProgress();
+  }, [isPublicTopic, topicId]);
+
+  // Update topic mutation - only for private topics
   const updateTopicMutation = useMutation({
     mutationFn: ({ subtopics, completed_subtopics }: { subtopics?: any[], completed_subtopics?: number[] }) => 
       topicService.updateTopic(topicId!, { subtopics, completed_subtopics }),
@@ -62,6 +103,8 @@ const TopicDetailPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['topic', topicId] });
       queryClient.invalidateQueries({ queryKey: ['topics'] });
     },
+    // Only allow mutations for private topics
+    mutationKey: ['updateTopic', topicId, isPublicTopic ? 'disabled' : 'enabled'],
   });
 
   // Generate subtopics if needed
@@ -136,20 +179,44 @@ const TopicDetailPage: React.FC = () => {
     }
   };
 
-  const handleSubtopicToggle = (subtopicIndex: number) => {
+  const handleSubtopicToggle = async (subtopicIndex: number) => {
     if (!topic) return;
     
-    const newCompletedSubtopics = new Set(topic.completed_subtopics);
-    if (newCompletedSubtopics.has(subtopicIndex)) {
-      newCompletedSubtopics.delete(subtopicIndex);
+    if (isPublicTopic) {
+      // For public topics: Use API-based progress tracking
+      try {
+        const newCompletedSubtopics = publicTopicProgress.includes(subtopicIndex)
+          ? publicTopicProgress.filter(index => index !== subtopicIndex)
+          : [...publicTopicProgress, subtopicIndex];
+        
+        // Update local state immediately for responsive UI
+        setPublicTopicProgress(newCompletedSubtopics);
+        
+        // Update via API
+        await updatePublicTopicProgress(topicId!, newCompletedSubtopics);
+        
+        // Force re-render by invalidating the query
+        queryClient.invalidateQueries({ queryKey: ['topic', topicId] });
+      } catch (error) {
+        console.error('Error updating public topic progress:', error);
+        // Revert local state on error
+        const progress = await getPublicTopicProgress(topicId!);
+        setPublicTopicProgress(progress?.completedSubtopics || []);
+      }
     } else {
-      newCompletedSubtopics.add(subtopicIndex);
+      // For private topics: Use backend mutation
+      const newCompletedSubtopics = new Set(topic.completed_subtopics);
+      if (newCompletedSubtopics.has(subtopicIndex)) {
+        newCompletedSubtopics.delete(subtopicIndex);
+      } else {
+        newCompletedSubtopics.add(subtopicIndex);
+      }
+      
+      const updatedCompletedSubtopics = Array.from(newCompletedSubtopics);
+      
+      // Update via API
+      updateTopicMutation.mutate({ completed_subtopics: updatedCompletedSubtopics });
     }
-    
-    const updatedCompletedSubtopics = Array.from(newCompletedSubtopics);
-    
-    // Update via API
-    updateTopicMutation.mutate({ completed_subtopics: updatedCompletedSubtopics });
   };
 
   const handleGetAIExplanation = (subtopicTitle: string) => {
@@ -166,9 +233,33 @@ const TopicDetailPage: React.FC = () => {
     navigate(`/lesson/${lessonSlug}`);
   };
 
+  // Check if a subtopic is completed
+  const isSubtopicCompleted = (subtopicIndex: number) => {
+    if (!topic) return false;
+    
+    if (isPublicTopic) {
+      // For public topics: Check state-based progress
+      return publicTopicProgress.includes(subtopicIndex);
+    } else {
+      // For private topics: Check backend data
+      return topic.completed_subtopics?.includes(subtopicIndex) || false;
+    }
+  };
+
   const getCompletionPercentage = () => {
-    if (!topic?.subtopics || topic.subtopics.length === 0) return 0;
-    return Math.round((topic.completed_subtopics.length / topic.subtopics.length) * 100);
+    if (!topic) return 0;
+    
+    if (isPublicTopic) {
+      // For public topics: Use state-based progress tracking
+      if (!topic.subtopics || topic.subtopics.length === 0) return 0;
+      const completedCount = publicTopicProgress.length;
+      return Math.round((completedCount / topic.subtopics.length) * 100);
+    } else {
+      // For private topics: Use backend-driven progress calculation
+      if (!topic.subtopics || topic.subtopics.length === 0) return 0;
+      const completedCount = topic.completed_subtopics?.length || 0;
+      return Math.round((completedCount / topic.subtopics.length) * 100);
+    }
   };
 
   if (isLoading) {
@@ -305,7 +396,7 @@ const TopicDetailPage: React.FC = () => {
               <div className="flex items-center gap-3 mb-6">
                 <Brain className="w-6 h-6 text-purple-600" />
                 <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">
-                  Learning Path ({topic.completed_subtopics.length}/{topic.subtopics?.length || 0})
+                  Learning Path ({isPublicTopic ? publicTopicProgress.length : topic.completed_subtopics.length}/{topic.subtopics?.length || 0})
                 </h2>
               </div>
               
@@ -336,7 +427,7 @@ const TopicDetailPage: React.FC = () => {
                     const subtopicTitle = typeof subtopic === 'string' ? subtopic : subtopic.title;
                     const subtopicDescription = typeof subtopic === 'string' ? subtopic : subtopic.description;
                     const isAISuggestion = typeof subtopic === 'object' && subtopic.type === 'ai_suggestion';
-                    const isCompleted = topic.completed_subtopics.includes(index);
+                    const isCompleted = isSubtopicCompleted(index);
                     
                     return (
                       <motion.div

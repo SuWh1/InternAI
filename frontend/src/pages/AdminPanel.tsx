@@ -189,7 +189,7 @@ export default function AdminPanel() {
               >
                 <div className="flex-1">
                   <p className="font-semibold text-theme-primary text-lg">{user.email}</p>
-                  <p className="text-sm text-theme-secondary/70 mt-1">ID: {user.id}</p>
+                  <p className="text-sm text-theme-secondary mt-1">ID: {user.id}</p>
                   <div className="mt-2 flex space-x-2">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${

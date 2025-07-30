@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, JSON
+from sqlalchemy import Column, String, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -13,6 +13,7 @@ class Topic(Base):
     name = Column(String, nullable=False)
     subtopics = Column(JSON, nullable=True)  # Store array of subtopic objects
     completed_subtopics = Column(JSON, nullable=True, default=list)  # Store array of indices
+    is_public = Column(Boolean, nullable=False, default=False)  # Whether topic is public or private
     
     # Relationship to user
-    user = relationship("User", back_populates="topics") 
+    user = relationship("User", back_populates="topics")

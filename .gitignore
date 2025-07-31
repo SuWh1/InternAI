@@ -3,3 +3,7 @@
 .cursorrules
 
 *.pem
+
+# Deployment configs
+.vercel/
+.trae/

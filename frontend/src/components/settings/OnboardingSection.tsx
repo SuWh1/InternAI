@@ -700,6 +700,12 @@ const OnboardingSection: React.FC = () => {
   const [options, setOptions] = useState<OnboardingOptions | null>(null);
   const [formData, setFormData] = useState<OnboardingUpdate>({});
 
+  // Full-Stack specific state
+  const [backendLanguage, setBackendLanguage] = useState<string>('');
+  const [frontendLanguage, setFrontendLanguage] = useState<string>('');
+  const [backendFramework, setBackendFramework] = useState<string>('');
+  const [frontendFramework, setFrontendFramework] = useState<string>('');
+
   // Helper function to normalize tech stack names (remove parenthetical descriptions)
   const normalizeTechStackName = (stackName: string): string => {
     if (!stackName) return stackName;
@@ -707,10 +713,74 @@ const OnboardingSection: React.FC = () => {
     return stackName.replace(/\s*\([^)]*\)/g, '').trim();
   };
 
+  // Helper function to check if Full-Stack is selected
+  const isFullStack = (): boolean => {
+    return normalizeTechStackName(formData.preferred_tech_stack || '') === 'Full-Stack Web Development';
+  };
+
+  // Helper functions for Full-Stack language categorization
+  const getBackendLanguages = (): string[] => {
+    if (!isFullStack()) return [];
+    // Backend languages: Python, Java, C#, Go, PHP, Ruby
+    return ['Python', 'Java', 'C#', 'Go', 'PHP', 'Ruby'];
+  };
+
+  const getFrontendLanguages = (): string[] => {
+    if (!isFullStack()) return [];
+    // Frontend languages: JavaScript, TypeScript
+    return ['JavaScript', 'TypeScript'];
+  };
+
+  // Helper functions for Full-Stack framework categorization
+  const getBackendFrameworks = (): string[] => {
+    if (!isFullStack() || !backendLanguage) return [];
+    const mapping = TECH_STACK_MAPPINGS['Full-Stack Web Development'];
+    const langData = mapping.languages[backendLanguage as keyof typeof mapping.languages];
+    if (!langData) return [];
+    
+    // Filter for backend frameworks
+    const backendFrameworks = langData.frameworks.filter(framework => {
+      const lowerFramework = framework.toLowerCase();
+      return lowerFramework.includes('django') || lowerFramework.includes('flask') || 
+             lowerFramework.includes('fastapi') || lowerFramework.includes('spring') ||
+             lowerFramework.includes('asp.net') || lowerFramework.includes('gin') ||
+             lowerFramework.includes('fiber') || lowerFramework.includes('echo') ||
+             lowerFramework.includes('laravel') || lowerFramework.includes('symfony') ||
+             lowerFramework.includes('rails') || lowerFramework.includes('sinatra') ||
+             lowerFramework.includes('nestjs') || lowerFramework.includes('express') ||
+             lowerFramework.includes('tornado') || lowerFramework.includes('micronaut') ||
+             lowerFramework.includes('beego') || lowerFramework.includes('codeigniter');
+    });
+    
+    return backendFrameworks;
+  };
+
+  const getFrontendFrameworks = (): string[] => {
+    if (!isFullStack() || !frontendLanguage) return [];
+    const mapping = TECH_STACK_MAPPINGS['Full-Stack Web Development'];
+    const langData = mapping.languages[frontendLanguage as keyof typeof mapping.languages];
+    if (!langData) return [];
+    
+    // Filter for frontend frameworks
+    const frontendFrameworks = langData.frameworks.filter(framework => {
+      const lowerFramework = framework.toLowerCase();
+      return lowerFramework.includes('react') || lowerFramework.includes('next.js') ||
+             lowerFramework.includes('angular') || lowerFramework.includes('vue');
+    });
+    
+    return frontendFrameworks;
+  };
+
   // Helper functions for filtering options based on tech stack
   const getRelevantLanguages = () => {
     if (!formData.preferred_tech_stack) return [];
     const normalizedStackName = normalizeTechStackName(formData.preferred_tech_stack);
+    
+    // Exclude Full-Stack from regular language selection
+    if (normalizedStackName === 'Full-Stack Web Development') {
+      return [];
+    }
+    
     const mapping = TECH_STACK_MAPPINGS[normalizedStackName as keyof typeof TECH_STACK_MAPPINGS] as any;
     if (!mapping) {
       return [];
@@ -732,6 +802,12 @@ const OnboardingSection: React.FC = () => {
   const getRelevantFrameworks = () => {
     if (!formData.preferred_tech_stack) return [];
     const normalizedStackName = normalizeTechStackName(formData.preferred_tech_stack);
+    
+    // Handle Full-Stack separately
+    if (normalizedStackName === 'Full-Stack Web Development') {
+      return [];
+    }
+    
     const mapping = TECH_STACK_MAPPINGS[normalizedStackName as keyof typeof TECH_STACK_MAPPINGS] as any;
     if (!mapping) return [];
     
@@ -741,7 +817,7 @@ const OnboardingSection: React.FC = () => {
       
       if (mapping.languages && typeof mapping.languages === 'object' && !Array.isArray(mapping.languages)) {
         // Type 1: Has nested languages object (Frontend, Mobile, etc.)
-        const langData = mapping.languages[selectedLanguage];
+        const langData = mapping.languages[selectedLanguage as keyof typeof mapping.languages];
         if (langData && langData.frameworks && Array.isArray(langData.frameworks)) {
           return langData.frameworks.filter((f: string) => f.trim().length > 0); // Filter out empty strings
         }
@@ -750,7 +826,7 @@ const OnboardingSection: React.FC = () => {
         return [];
       } else {
         // Type 2: Direct language keys (Backend Development)
-        const langData = mapping[selectedLanguage];
+        const langData = mapping[selectedLanguage as keyof typeof mapping];
         if (langData && langData.frameworks && Array.isArray(langData.frameworks)) {
           return langData.frameworks.filter((f: string) => f.trim().length > 0); // Filter out empty strings
         }
@@ -760,7 +836,7 @@ const OnboardingSection: React.FC = () => {
     return [];
   };
 
-  const getRelevantTools = () => {
+  const getRelevantTools = (specificLanguage?: string) => {
     if (!formData.preferred_tech_stack) return [];
     const normalizedStackName = normalizeTechStackName(formData.preferred_tech_stack);
     const mapping = TECH_STACK_MAPPINGS[normalizedStackName as keyof typeof TECH_STACK_MAPPINGS] as any;
@@ -768,13 +844,14 @@ const OnboardingSection: React.FC = () => {
     
     const tools: string[] = [];
     
+    // Use specific language if provided, otherwise use form data
+    const languageToUse = specificLanguage || (formData.programming_languages && formData.programming_languages.length > 0 ? formData.programming_languages[0] : null);
+    
     // If a specific language is selected, show only its tools + common tools
-    if (formData.programming_languages && formData.programming_languages.length > 0) {
-      const selectedLanguage = formData.programming_languages[0]; // Since we only allow one language
-      
+    if (languageToUse) {
       if (mapping.languages && typeof mapping.languages === 'object' && !Array.isArray(mapping.languages)) {
         // Type 1: Has nested languages object (Frontend, Mobile, etc.)
-        const langData = mapping.languages[selectedLanguage];
+        const langData = mapping.languages[languageToUse as keyof typeof mapping.languages];
         if (langData && langData.tools && Array.isArray(langData.tools)) {
           tools.push(...langData.tools);
         }
@@ -788,7 +865,7 @@ const OnboardingSection: React.FC = () => {
         return [];
       } else {
         // Type 2: Direct language keys (Backend Development)
-        const langData = mapping[selectedLanguage];
+        const langData = mapping[languageToUse as keyof typeof mapping];
         if (langData && langData.tools && Array.isArray(langData.tools)) {
           tools.push(...langData.tools);
         }
@@ -801,8 +878,49 @@ const OnboardingSection: React.FC = () => {
     }
     
     // Remove duplicates and filter out empty strings
-    return [...new Set(tools)].filter((tool: string) => tool.trim().length > 0);
-  };
+  return [...new Set(tools)].filter((tool: string) => tool.trim().length > 0);
+};
+
+// Full-Stack event handlers
+const handleBackendLanguageChange = (language: string) => {
+  setBackendLanguage(language);
+  setBackendFramework(''); // Clear framework when language changes
+  updateFullStackLanguages(language, frontendLanguage);
+};
+
+const handleFrontendLanguageChange = (language: string) => {
+  setFrontendLanguage(language);
+  setFrontendFramework(''); // Clear framework when language changes
+  updateFullStackLanguages(backendLanguage, language);
+};
+
+const handleBackendFrameworkChange = (framework: string) => {
+  setBackendFramework(framework);
+  updateFullStackFrameworks(framework, frontendFramework);
+};
+
+const handleFrontendFrameworkChange = (framework: string) => {
+  setFrontendFramework(framework);
+  updateFullStackFrameworks(backendFramework, framework);
+};
+
+const updateFullStackLanguages = (backend: string, frontend: string) => {
+  const languages = [];
+  if (backend) languages.push(backend);
+  if (frontend && frontend !== backend) languages.push(frontend);
+  updateFormData('programming_languages', languages);
+  
+  // Clear frameworks and tools when languages change
+  updateFormData('frameworks', []);
+  updateFormData('tools', []);
+};
+
+const updateFullStackFrameworks = (backend: string, frontend: string) => {
+  const frameworks = [];
+  if (backend) frameworks.push(backend);
+  if (frontend && frontend !== backend) frameworks.push(frontend);
+  updateFormData('frameworks', frameworks);
+};
 
   // Load current onboarding data and options
   useEffect(() => {
@@ -845,6 +963,20 @@ const OnboardingSection: React.FC = () => {
         application_timeline: currentData.application_timeline,
         additional_info: currentData.additional_info
       });
+
+      // Handle Full-Stack specific data loading
+      if (normalizeTechStackName(currentData.preferred_tech_stack) === 'Full-Stack Web Development') {
+        const languages = currentData.programming_languages || [];
+        const frameworks = currentData.frameworks || [];
+        
+        // Set backend/frontend languages (first two languages)
+        if (languages.length > 0) setBackendLanguage(languages[0]);
+        if (languages.length > 1) setFrontendLanguage(languages[1]);
+        
+        // Set backend/frontend frameworks (first two frameworks)
+        if (frameworks.length > 0) setBackendFramework(frameworks[0]);
+        if (frameworks.length > 1) setFrontendFramework(frameworks[1]);
+      }
     } catch (err) {
       setError('Failed to load preferences data');
     } finally {
@@ -856,6 +988,33 @@ const OnboardingSection: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
+      
+      // Full-Stack validation
+      if (isFullStack()) {
+        if (!backendLanguage || !frontendLanguage) {
+          setError('Please select both backend and frontend languages for Full-Stack development');
+          setTimeout(() => setError(null), 3000);
+          setSaving(false);
+          return;
+        }
+        
+        // Update formData with Full-Stack selections
+        const fullStackLanguages = [backendLanguage, frontendLanguage];
+        const fullStackFrameworks = [backendFramework, frontendFramework].filter(Boolean);
+        
+        updateFormData('programming_languages', fullStackLanguages);
+        updateFormData('frameworks', fullStackFrameworks);
+        
+        // Update tools based on both languages
+        const backendTools = getRelevantTools(backendLanguage);
+        const frontendTools = getRelevantTools(frontendLanguage);
+        const combinedTools = [...new Set([...backendTools, ...frontendTools])];
+        
+        // Keep existing selected tools that are still relevant
+        const currentTools = formData.tools || [];
+        const relevantCurrentTools = currentTools.filter(tool => combinedTools.includes(tool));
+        updateFormData('tools', relevantCurrentTools);
+      }
       
       // Filter out unchanged values
       const updateData: OnboardingUpdate = {};
@@ -968,98 +1127,284 @@ const OnboardingSection: React.FC = () => {
                 updateFormData('programming_languages', []);
                 updateFormData('frameworks', []);
                 updateFormData('tools', []);
+                
+                // Clear Full-Stack specific selections
+                setBackendLanguage('');
+                setFrontendLanguage('');
+                setBackendFramework('');
+                setFrontendFramework('');
               }}
               placeholder="Select preferred tech stack"
               options={options?.preferred_tech_stack_options.map(option => ({ value: option, label: option })) || []}
             />
           </div>
 
-          {/* Programming Languages - Single selection */}
-          <div>
-            <label className="block text-sm font-medium text-theme-primary mb-2">
-              Primary Programming Language
-            </label>
-            <div className="space-y-3">
-              <div className="text-sm text-theme-secondary">Select your main programming language</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {getRelevantLanguages().map((language) => (
-                  <label
-                    key={language}
-                    className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
-                  >
-                    <input
-                      type="radio"
-                      name="primary_language"
-                      checked={(formData.programming_languages || []).includes(language)}
-                      onChange={() => {
-                        updateFormData('programming_languages', [language]);
-                        // Clear frameworks and tools when language changes
-                        updateFormData('frameworks', []);
-                        updateFormData('tools', []);
-                      }}
-                      className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
-                    />
-                    <span className="text-sm font-medium text-theme-primary">{language}</span>
-                  </label>
-                ))}
+          {/* Programming Languages - Conditional rendering based on Full-Stack */}
+          {isFullStack() ? (
+            <div className="space-y-4">
+              {/* Backend Language Selection */}
+              <div>
+                <label className="block text-sm font-medium text-theme-primary mb-2">
+                  Backend Programming Language
+                </label>
+                <div className="space-y-3">
+                  <div className="text-sm text-theme-secondary">Select your backend programming language</div>
+                  <div className={`grid gap-3 ${
+                    getBackendLanguages().length <= 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+                    getBackendLanguages().length <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                  }`}>
+                    {getBackendLanguages().map((language) => (
+                      <label
+                        key={`backend-${language}`}
+                        className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                      >
+                        <input
+                          type="radio"
+                          name="backend_language"
+                          checked={backendLanguage === language}
+                          onChange={() => handleBackendLanguageChange(language)}
+                          className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
+                        />
+                        <span className="text-sm font-medium text-theme-primary">{language}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Frontend Language Selection */}
+              <div>
+                <label className="block text-sm font-medium text-theme-primary mb-2">
+                  Frontend Programming Language
+                </label>
+                <div className="space-y-3">
+                  <div className="text-sm text-theme-secondary">Select your frontend programming language</div>
+                  <div className={`grid gap-3 ${
+                    getFrontendLanguages().length <= 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+                    getFrontendLanguages().length <= 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' :
+                    'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                  }`}>
+                    {getFrontendLanguages().map((language) => (
+                      <label
+                        key={`frontend-${language}`}
+                        className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                      >
+                        <input
+                          type="radio"
+                          name="frontend_language"
+                          checked={frontendLanguage === language}
+                          onChange={() => handleFrontendLanguageChange(language)}
+                          className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
+                        />
+                        <span className="text-sm font-medium text-theme-primary">{language}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Frameworks - Single selection, filtered by language */}
-          <div>
-            <label className="block text-sm font-medium text-theme-primary mb-2">
-              Primary Framework
-            </label>
-            <div className="space-y-3">
-              <div className="text-sm text-theme-secondary">
-                {formData.programming_languages && formData.programming_languages.length > 0 
-                  ? getRelevantFrameworks().length > 0
-                    ? `Select your main framework for ${formData.programming_languages[0]}`
-                    : `${formData.programming_languages[0]} is typically used without specific frameworks for this tech stack`
-                  : "Select a programming language first to see available frameworks"
-                }
-              </div>
-              {formData.programming_languages && formData.programming_languages.length > 0 && getRelevantFrameworks().length > 0 && (
-                <div className={`grid gap-3 ${
-                  getRelevantFrameworks().length === 1 ? 'grid-cols-1 max-w-md mx-auto' :
-                  getRelevantFrameworks().length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
-                  'grid-cols-1 md:grid-cols-2'
-                }`}>
-                  {getRelevantFrameworks().map((framework: string) => (
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-theme-primary mb-2">
+                Primary Programming Language
+              </label>
+              <div className="space-y-3">
+                <div className="text-sm text-theme-secondary">Select your main programming language</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getRelevantLanguages().map((language) => (
                     <label
-                      key={framework}
+                      key={language}
                       className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
                     >
                       <input
                         type="radio"
-                        name="primary_framework"
-                        checked={(formData.frameworks || []).includes(framework)}
-                        onChange={() => updateFormData('frameworks', [framework])}
+                        name="primary_language"
+                        checked={(formData.programming_languages || []).includes(language)}
+                        onChange={() => {
+                          updateFormData('programming_languages', [language]);
+                          // Clear frameworks and tools when language changes
+                          updateFormData('frameworks', []);
+                          updateFormData('tools', []);
+                        }}
                         className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
                       />
-                      <span className="text-sm font-medium text-theme-primary">{framework}</span>
+                      <span className="text-sm font-medium text-theme-primary">{language}</span>
                     </label>
                   ))}
                 </div>
-              )}
-              {formData.programming_languages && formData.programming_languages.length > 0 && getRelevantFrameworks().length === 0 && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+              </div>
+            </div>
+          )}
+
+          {/* Frameworks - Conditional rendering based on Full-Stack */}
+          {isFullStack() ? (
+            <div className="space-y-4">
+              {/* Backend Framework Selection */}
+              <div>
+                <label className="block text-sm font-medium text-theme-primary mb-2">
+                  Backend Framework
+                </label>
+                <div className="space-y-3">
+                  <div className="text-sm text-theme-secondary">
+                    {backendLanguage 
+                      ? getBackendFrameworks().length > 0
+                        ? `Select your backend framework for ${backendLanguage}`
+                        : `${backendLanguage} is typically used without specific frameworks for backend development`
+                      : "Select a backend language first to see available frameworks"
+                    }
+                  </div>
+                  {backendLanguage && getBackendFrameworks().length > 0 && (
+                    <div className={`grid gap-3 ${
+                      getBackendFrameworks().length === 1 ? 'grid-cols-1 max-w-md mx-auto' :
+                      getBackendFrameworks().length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+                      'grid-cols-1 md:grid-cols-2'
+                    }`}>
+                      {getBackendFrameworks().map((framework: string) => (
+                        <label
+                          key={`backend-${framework}`}
+                          className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                        >
+                          <input
+                            type="radio"
+                            name="backend_framework"
+                            checked={backendFramework === framework}
+                            onChange={() => handleBackendFrameworkChange(framework)}
+                            className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
+                          />
+                          <span className="text-sm font-medium text-theme-primary">{framework}</span>
+                        </label>
+                      ))}
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">No Heavy Frameworks Needed</h4>
-                      <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
-                        {formData.programming_languages[0]} for {normalizeTechStackName(formData.preferred_tech_stack || '')} focuses on core libraries and specialized tools rather than web frameworks.
-                      </p>
+                  )}
+                  {backendLanguage && getBackendFrameworks().length === 0 && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">No Heavy Frameworks Needed</h4>
+                          <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                            {backendLanguage} for backend development focuses on core libraries and specialized tools rather than web frameworks.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Frontend Framework Selection */}
+              <div>
+                <label className="block text-sm font-medium text-theme-primary mb-2">
+                  Frontend Framework
+                </label>
+                <div className="space-y-3">
+                  <div className="text-sm text-theme-secondary">
+                    {frontendLanguage 
+                      ? getFrontendFrameworks().length > 0
+                        ? `Select your frontend framework for ${frontendLanguage}`
+                        : `${frontendLanguage} is typically used without specific frameworks for frontend development`
+                      : "Select a frontend language first to see available frameworks"
+                    }
+                  </div>
+                  {frontendLanguage && getFrontendFrameworks().length > 0 && (
+                    <div className={`grid gap-3 ${
+                      getFrontendFrameworks().length === 1 ? 'grid-cols-1 max-w-md mx-auto' :
+                      getFrontendFrameworks().length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+                      'grid-cols-1 md:grid-cols-2'
+                    }`}>
+                      {getFrontendFrameworks().map((framework: string) => (
+                        <label
+                          key={`frontend-${framework}`}
+                          className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                        >
+                          <input
+                            type="radio"
+                            name="frontend_framework"
+                            checked={frontendFramework === framework}
+                            onChange={() => handleFrontendFrameworkChange(framework)}
+                            className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
+                          />
+                          <span className="text-sm font-medium text-theme-primary">{framework}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {frontendLanguage && getFrontendFrameworks().length === 0 && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">No Heavy Frameworks Needed</h4>
+                          <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                            {frontendLanguage} for frontend development focuses on core libraries and specialized tools rather than web frameworks.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-theme-primary mb-2">
+                Primary Framework
+              </label>
+              <div className="space-y-3">
+                <div className="text-sm text-theme-secondary">
+                  {formData.programming_languages && formData.programming_languages.length > 0 
+                    ? getRelevantFrameworks().length > 0
+                      ? `Select your main framework for ${formData.programming_languages[0]}`
+                      : `${formData.programming_languages[0]} is typically used without specific frameworks for this tech stack`
+                    : "Select a programming language first to see available frameworks"
+                  }
+                </div>
+                {formData.programming_languages && formData.programming_languages.length > 0 && getRelevantFrameworks().length > 0 && (
+                  <div className={`grid gap-3 ${
+                    getRelevantFrameworks().length === 1 ? 'grid-cols-1 max-w-md mx-auto' :
+                    getRelevantFrameworks().length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+                    'grid-cols-1 md:grid-cols-2'
+                  }`}>
+                    {getRelevantFrameworks().map((framework: string) => (
+                      <label
+                        key={framework}
+                        className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg border-2 border-purple-300 dark:border-purple-600 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                      >
+                        <input
+                          type="radio"
+                          name="primary_framework"
+                          checked={(formData.frameworks || []).includes(framework)}
+                          onChange={() => updateFormData('frameworks', [framework])}
+                          className="rounded border-purple-300 text-purple-500 focus:ring-purple-500 accent-purple-500"
+                        />
+                        <span className="text-sm font-medium text-theme-primary">{framework}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {formData.programming_languages && formData.programming_languages.length > 0 && getRelevantFrameworks().length === 0 && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm">No Heavy Frameworks Needed</h4>
+                        <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                          {formData.programming_languages[0]} for {normalizeTechStackName(formData.preferred_tech_stack || '')} focuses on core libraries and specialized tools rather than web frameworks.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tools - Multiple selection, filtered by language */}
           <div>

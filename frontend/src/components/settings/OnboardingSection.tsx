@@ -1186,4 +1186,4 @@ const OnboardingSection: React.FC = () => {
   );
 };
 
-export default OnboardingSection; 
+export default OnboardingSection;

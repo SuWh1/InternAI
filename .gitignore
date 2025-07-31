@@ -3,5 +3,8 @@
 .cursorrules
 
 *.pem
-
 db_backups/
+
+# Deployment configs
+.vercel/
+.trae/

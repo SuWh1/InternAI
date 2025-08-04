@@ -1292,7 +1292,7 @@ async def lesson_chat(
     Chat with AI about a specific lesson topic.
     
     Request should contain:
-    - message: User's message (max 300 characters)
+    - message: User's message (max 500 characters)
     - topic: Current lesson topic
     - context: Lesson context (e.g., "Week 1: Introduction to React")
     - chat_history: Array of previous messages for context
@@ -1313,10 +1313,10 @@ async def lesson_chat(
                 detail="Message is required"
             )
         
-        if len(message) > 300:
+        if len(message) > 500:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Message must be 300 characters or less"
+                detail="Message must be 500 characters or less"
             )
         
         if not topic:
@@ -1440,7 +1440,7 @@ async def generate_chat_response(
             config=types.GenerateContentConfig(
                 temperature=0.7,
                 top_p=0.9,
-                max_output_tokens=300,  # Keep responses concise
+                max_output_tokens=500,  # Allow longer responses
             )
         )
         

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Check } from 'lucide-react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -13,9 +14,28 @@ interface MarkdownRendererProps {
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
   const { theme } = useTheme();
+  const [copiedBlocks, setCopiedBlocks] = useState<Set<string>>(new Set());
 
   // Inject theme-adaptive scrollbar styles for code blocks
   const styleRef = useRef<HTMLStyleElement | null>(null);
+
+  const handleCopy = async (codeContent: string) => {
+    try {
+      await navigator.clipboard.writeText(codeContent);
+      setCopiedBlocks(prev => new Set(prev).add(codeContent));
+      
+      // Reset after 2 seconds
+      setTimeout(() => {
+        setCopiedBlocks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(codeContent);
+          return newSet;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
 
   useEffect(() => {
     // Remove previous style element if exists
@@ -69,6 +89,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     code({ inline, className, children }: any) {
       const match = /language-(\w+)/.exec(className || '');
       const language = match ? match[1] : 'text';
+      const codeContent = String(children);
+      const isCopied = copiedBlocks.has(codeContent);
       
       if (!inline && match) {
         return (
@@ -80,14 +102,21 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
             }`}>
               <span className="font-medium">{language.toUpperCase()}</span>
               <button
-                onClick={() => navigator.clipboard.writeText(String(children))}
-                className={`transition-colors ${
+                onClick={() => handleCopy(codeContent)}
+                className={`transition-colors flex items-center gap-1 ${
                   theme === 'dark'
                     ? 'text-gray-300 hover:text-white'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Copy
+                {isCopied ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    Copied
+                  </>
+                ) : (
+                  'Copy'
+                )}
               </button>
             </div>
             <SyntaxHighlighter
@@ -261,4 +290,4 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
   );
 };
 
-export default MarkdownRenderer; 
+export default MarkdownRenderer;

@@ -524,9 +524,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 initial="hidden"
                 animate="visible"
               >
-                {/* Error Messages (Not for verification mode) */}
+                {/* Error Messages (Not for verification or reset mode) */}
                 <AnimatePresence>
-                  {(error || formError) && mode !== 'verify' && (
+                  {(error || formError) && mode !== 'verify' && mode !== 'reset' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -816,16 +816,22 @@ const AuthModal: React.FC<AuthModalProps> = ({
                       <h2 className="text-lg sm:text-xl font-semibold text-theme-primary">Reset Password</h2>
                     </motion.div>
 
-                    <motion.div 
-                      className="mb-6"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.2 }}
-                    >
-                      <p className="text-theme-secondary text-sm mb-2">
-                        Enter your new password below
-                      </p>
-                    </motion.div>
+                    {/* Error Messages for Reset Mode */}
+                    <AnimatePresence>
+                      {(error || formError) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <ErrorMessage
+                            error={error || formError || ''}
+                            className="mb-4"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* New Password Field */}
                     <motion.div 

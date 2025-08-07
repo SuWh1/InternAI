@@ -83,10 +83,10 @@ body.light {
   --shadow-glow: 0 0 20px rgba(199, 0, 255, 0.3);
   
   /* Error colors */
-  --error-bg: #FCA5A5;
-  --error-border: #DC2626;
-  --error-text: #7F1D1D;
-  --error-icon: #B91C1C;
+  --error-bg: rgba(220, 38, 38, 0.1);
+  --error-border: rgba(220, 38, 38, 0.3);
+  --error-text: #DC2626;
+  --error-icon: #DC2626;
 }
 
 .dark {
@@ -118,6 +118,21 @@ body.light {
 /* Error text utility class */
 .text-error {
   color: var(--error-text);
+}
+
+/* Error background utility class */
+.bg-error {
+  background-color: var(--error-bg);
+}
+
+/* Error border utility class */
+.border-error {
+  border-color: var(--error-border);
+}
+
+/* Error icon utility class */
+.text-error-icon {
+  color: var(--error-icon);
 }
 
 /* Modern animated gradient background */

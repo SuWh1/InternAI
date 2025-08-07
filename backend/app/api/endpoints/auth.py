@@ -555,7 +555,7 @@ async def request_password_reset(request: Request, reset_data: PasswordResetRequ
         await db.commit()
         
         # Create reset link
-        reset_link = f"http://localhost:5173/?token={reset_token}"
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
         
         # Send password reset email
         try:

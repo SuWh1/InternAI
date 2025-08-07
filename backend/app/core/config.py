@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # CORS - accept as string, will be converted to list
     BACKEND_CORS_ORIGINS: str = ""
     
+    # Frontend URL
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
     # Google OAuth
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")

@@ -431,9 +431,30 @@ const MyRoadmapPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">Progress Overview</h2>
-                    <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                    <div className="flex items-center justify-between sm:justify-start">
+                      <h2 className="text-xl font-semibold text-theme-primary transition-colors duration-300">Progress Overview</h2>
+                      <motion.button
+                        onClick={handleRegenerateClick}
+                        className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all duration-300 flex items-center space-x-2 shadow-sm sm:hidden"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        <span>Regenerate</span>
+                      </motion.button>
+                    </div>
+                    
+                    {/* Mobile progress stats - centered below title */}
+                    <div className="flex items-center justify-center space-x-2 sm:hidden">
+                      <BarChart3 className="w-5 h-5 text-theme-accent" />
+                      <span className="text-2xl font-bold text-theme-accent">{overallProgress}%</span>
+                      <span className="text-theme-secondary transition-colors duration-300">Complete</span>
+                    </div>
+                    
+                    {/* Desktop layout */}
+                    <div className="hidden sm:flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <BarChart3 className="w-5 h-5 text-theme-accent" />
                         <span className="text-2xl font-bold text-theme-accent">{overallProgress}%</span>
@@ -633,4 +654,4 @@ const MyRoadmapPage = () => {
   );
 };
 
-export default MyRoadmapPage; 
+export default MyRoadmapPage;

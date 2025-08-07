@@ -63,16 +63,36 @@ async def update_user(db: AsyncSession, user_id: str, user_data: UserUpdate) -> 
     
     return db_user
 
-async def authenticate_user(db: AsyncSession, email: str, password: str) -> Optional[User]:
+async def authenticate_user(db: AsyncSession, email: str, password: str) -> tuple[Optional[User], str]:
+    """
+    Authenticate user and return tuple of (user, error_type)
+    error_type can be: 'success', 'user_not_found', 'incorrect_password', 'google_user'
+    """
+    print(f"DEBUG: authenticate_user called with email: {email}")
+    
     user = await get_user_by_email(db, email=email)
+    print(f"DEBUG: get_user_by_email returned: {user is not None}, email: {user.email if user else 'None'}, has_password: {bool(user.hashed_password) if user else 'None'}, google_id: {bool(user.google_id) if user else 'None'}")
     
-    if not user or not user.hashed_password:
-        return None
+    if not user:
+        print(f"DEBUG: User not found for email: {email}")
+        return None, 'user_not_found'
     
-    if not verify_password(password, user.hashed_password):
-        return None
+    if not user.hashed_password:
+        if user.google_id:
+            print(f"DEBUG: User {email} is a Google user without password")
+            return None, 'google_user'
+        else:
+            print(f"DEBUG: User {email} has no hashed_password and no google_id")
+            return None, 'user_not_found'
     
-    return user
+    password_valid = verify_password(password, user.hashed_password)
+    print(f"DEBUG: Password verification for {email}: {password_valid}")
+    
+    if not password_valid:
+        return None, 'incorrect_password'
+    
+    print(f"DEBUG: Authentication successful for {email}")
+    return user, 'success'
 
 async def authenticate_google_user(db: AsyncSession, google_id: str, email: str, name: str, profile_picture: Optional[str] = None) -> User:
     # First check if user exists by Google ID

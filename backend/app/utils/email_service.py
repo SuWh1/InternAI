@@ -1,5 +1,6 @@
 import os
 import random
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -24,9 +25,17 @@ class EmailService:
         """Generate a 6-digit PIN code."""
         return str(random.randint(100000, 999999))
 
+    def generate_reset_token(self) -> str:
+        """Generate a secure password reset token."""
+        return secrets.token_urlsafe(32)
+
     def get_pin_expiration(self) -> datetime:
         """Get PIN expiration time (10 minutes from now)."""
         return datetime.utcnow() + timedelta(minutes=10)
+
+    def get_reset_token_expiration(self) -> datetime:
+        """Get password reset token expiration time (30 minutes from now)."""
+        return datetime.utcnow() + timedelta(minutes=30)
 
     def _extract_first_name(self, full_name: str) -> str:
         """
@@ -99,6 +108,59 @@ class EmailService:
             return False
         except Exception as e:
             print(f"Unexpected error sending verification email: {e}")
+            return False
+
+    async def send_password_reset_email(self, email: str, reset_link: str, user_name: str = None) -> bool:
+        """
+        Send password reset email using Brevo template.
+        
+        Args:
+            email: Recipient's email address
+            reset_link: Password reset link with token
+            user_name: User's full name for personalization (optional)
+            
+        Returns:
+            True if email was sent successfully, False otherwise
+        """
+        try:
+            print(f"Attempting to send password reset email to: {email}")
+            print(f"Using template ID: {settings.BREVO_PASSWORD_RESET_TEMPLATE_ID}")
+            print(f"Using from email: {settings.BREVO_FROM_EMAIL}")
+            
+            # Extract first name for personalization
+            first_name = self._extract_first_name(user_name) if user_name else 'there'
+            print(f"Using first name: {first_name}")
+            
+            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+                to=[sib_api_v3_sdk.SendSmtpEmailTo(email=email)],
+                template_id=settings.BREVO_PASSWORD_RESET_TEMPLATE_ID,
+                params={
+                    "RESET_LINK": reset_link,
+                    "FIRSTNAME": first_name
+                },
+                sender=sib_api_v3_sdk.SendSmtpEmailSender(
+                    name=settings.BREVO_FROM_NAME,
+                    email=settings.BREVO_FROM_EMAIL
+                ),
+                reply_to=sib_api_v3_sdk.SendSmtpEmailReplyTo(
+                    email=settings.BREVO_FROM_EMAIL,
+                    name=settings.BREVO_FROM_NAME
+                )
+            )
+            
+            result = self.api_instance.send_transac_email(send_smtp_email)
+            print(f"Password reset email sent successfully: {result}")
+            return True
+            
+        except ApiException as e:
+            print(f"Error sending password reset email: ({e.status})")
+            print(f"Reason: {e.reason}")
+            print(f"HTTP response headers: {e.headers}")
+            print(f"HTTP response body: {e.body}")
+            print()
+            return False
+        except Exception as e:
+            print(f"Unexpected error sending password reset email: {e}")
             return False
 
     def is_pin_valid(self, pin_code: Optional[str], pin_expires: Optional[datetime], provided_pin: str) -> bool:

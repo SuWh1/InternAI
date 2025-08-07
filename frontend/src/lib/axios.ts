@@ -47,7 +47,7 @@ api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  async (error: AxiosError<{ error?: string; message?: string }>) => {
+  async (error: AxiosError<{ error?: string; message?: string; detail?: string }>) => {
     const originalRequest = error.config as AxiosRequestConfigWithRetry;
     
     // Handle 401 errors - logout user if authentication failed
@@ -64,8 +64,8 @@ api.interceptors.response.use(
     // Transform error to match our ApiError interface
     const apiError: ApiError = {
       success: false,
-      error: error.response?.data?.error || error.message || 'Network error',
-      message: error.response?.data?.message || 'Failed to communicate with server',
+      error: error.response?.data?.detail || error.response?.data?.error || error.message || 'Network error',
+      message: error.response?.data?.message || error.response?.data?.detail || 'Failed to communicate with server',
       statusCode: error.response?.status || 500
     };
 
@@ -73,4 +73,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;

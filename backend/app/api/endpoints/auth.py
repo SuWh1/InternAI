@@ -1,16 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File
 from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from datetime import timedelta
 from typing import Any
 import uuid
 import logging
+import hashlib
+from datetime import datetime, timezone
 
 from app.db.session import get_db
 from app.schemas.user import User as UserSchema, UserCreate, UserLogin, GoogleAuthRequest, UserUpdate, PasswordChange, AccountDeletion, AvatarUploadResponse
-from app.models.user import User as UserModel # Import the SQLAlchemy ORM User model as UserModel
-from app.schemas.auth import AuthResponse, PinVerificationRequest, PinResendRequest
+from app.models.user import User as UserModel, PasswordResetToken # Import the SQLAlchemy ORM User model as UserModel
+from app.schemas.auth import AuthResponse, PinVerificationRequest, PinResendRequest, PasswordResetRequest, PasswordResetConfirm
 from app.schemas.common import GenericResponse
 from app.crud.user import create_user, authenticate_user, authenticate_google_user, get_user_by_id, update_user, delete_user, get_user_by_email, create_pending_user, get_pending_user_by_email, create_user_from_pending
 from app.crud.onboarding import has_completed_onboarding
@@ -168,14 +170,41 @@ async def resend_pin(request: Request, pin_data: PinResendRequest, db: AsyncSess
 @router.post("/login", response_model=UserSchema)
 @limiter.limit(RateLimits.AUTH_LOGIN)
 async def login(request: Request, response: Response, user_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Any:
-    user = await authenticate_user(db, user_data.email, user_data.password)
+    logger.info(f"Login attempt - Email: {user_data.email}")
+    
+    user, error_type = await authenticate_user(db, user_data.email, user_data.password)
+    
+    logger.info(f"Authentication result - Email: {user_data.email}, Error type: {error_type}, User found: {user is not None}")
     
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        if error_type == 'user_not_found':
+            logger.warning(f"User not found for email: {user_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No account found with that email.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        elif error_type == 'google_user':
+            logger.warning(f"Google user trying to login with password: {user_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This account uses Google Sign-In. Please use Google login or reset your password.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        elif error_type == 'incorrect_password':
+            logger.warning(f"Incorrect password for email: {user_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password. Please try again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        else:
+            logger.error(f"Unknown authentication error for email: {user_data.email}, error_type: {error_type}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     
     user = await add_onboarding_status(user, db)
     
@@ -187,6 +216,8 @@ async def login(request: Request, response: Response, user_data: UserLogin, db: 
     
     # Set cookies
     set_auth_cookies(response, access_token, refresh_token)
+    
+    logger.info(f"Login successful for user: {user.email}")
     
     # Return only user data
     return user
@@ -488,3 +519,111 @@ async def debug_google_config(request: Request) -> Any:
         "google_client_secret_configured": bool(settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_CLIENT_SECRET != "your-google-client-secret-here"),
         "redirect_uri": settings.GOOGLE_REDIRECT_URI
     }
+
+@router.post("/request-password-reset", response_model=GenericResponse)
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def request_password_reset(request: Request, reset_data: PasswordResetRequest, db: AsyncSession = Depends(get_db)) -> Any:
+    """
+    Request password reset - sends email with reset link.
+    Always returns success for security (don't reveal if email exists).
+    """
+    logger.info(f"Password reset requested for email: {reset_data.email}")
+    
+    # Look for user by email
+    result = await db.execute(select(UserModel).where(UserModel.email == reset_data.email))
+    user = result.scalar_one_or_none()
+    
+    if user:
+        # Generate secure reset token
+        reset_token = email_service.generate_reset_token()
+        token_expires = email_service.get_reset_token_expiration()
+        
+        # Hash the token for storage
+        hashed_token = hashlib.sha256(reset_token.encode()).hexdigest()
+        
+        # Delete any existing reset tokens for this user
+        await db.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id))
+        
+        # Create new reset token record
+        reset_token_record = PasswordResetToken(
+            user_id=user.id,
+            token=hashed_token,
+            expires_at=token_expires,
+            is_used=False
+        )
+        db.add(reset_token_record)
+        await db.commit()
+        
+        # Create reset link
+        reset_link = f"http://localhost:5173/?token={reset_token}"
+        
+        # Send password reset email
+        try:
+            email_sent = await email_service.send_password_reset_email(
+                user.email, 
+                reset_link, 
+                user.name
+            )
+            
+            if email_sent:
+                logger.info(f"Password reset email sent successfully to {user.email}")
+            else:
+                logger.error(f"Failed to send password reset email to {user.email}")
+                
+        except Exception as e:
+            logger.error(f"Exception sending password reset email to {user.email}: {e}")
+    else:
+        logger.info(f"Password reset requested for non-existent email: {reset_data.email}")
+    
+    # Always return success for security (don't reveal if email exists)
+    return GenericResponse(
+        message="If an account with that email exists, you will receive a password reset link.",
+        success=True
+    )
+
+@router.post("/reset-password", response_model=GenericResponse)
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def reset_password(request: Request, reset_data: PasswordResetConfirm, db: AsyncSession = Depends(get_db)) -> Any:
+    """
+    Reset password using token from email.
+    """
+    logger.info(f"Password reset attempt with token: {reset_data.token[:10]}...")
+    
+    # Hash the provided token to match stored hash
+    hashed_token = hashlib.sha256(reset_data.token.encode()).hexdigest()
+    
+    # Find the reset token record
+    result = await db.execute(
+        select(PasswordResetToken, UserModel)
+        .join(UserModel, PasswordResetToken.user_id == UserModel.id)
+        .where(
+            PasswordResetToken.token == hashed_token,
+            PasswordResetToken.is_used == False,
+            PasswordResetToken.expires_at > datetime.utcnow()
+        )
+    )
+    token_and_user = result.first()
+    
+    if not token_and_user:
+        logger.warning(f"Invalid or expired password reset token: {reset_data.token[:10]}...")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token."
+        )
+    
+    reset_token_record, user = token_and_user
+    
+    # Update user's password
+    user.hashed_password = get_password_hash(reset_data.new_password)
+    
+    # Mark token as used
+    reset_token_record.is_used = True
+    
+    await db.commit()
+    
+    logger.info(f"Password reset successful for user: {user.email}")
+    
+    return GenericResponse(
+        message="Password reset successful. You can now log in with your new password.",
+        success=True
+    )

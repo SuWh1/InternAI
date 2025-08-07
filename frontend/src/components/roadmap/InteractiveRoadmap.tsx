@@ -14,6 +14,7 @@ import ReactFlow, {
 import type { Node, Edge, Viewport } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { throttle } from '../../utils/performance';
+import { Crosshair } from 'lucide-react';
 
 import WeekNode from './WeekNode';
 import TopicDetailsModal from './TopicDetailsModal';
@@ -514,22 +515,22 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
         />
         
         {/* Progress Panel */}
-        <Panel position="top-left" className="bg-theme-secondary/95 backdrop-blur-sm rounded-xl shadow-lg border border-theme p-4 m-4 transition-colors duration-300">
-          <div className="flex items-center space-x-4">
+        <Panel position="top-left" className="bg-theme-secondary/95 backdrop-blur-sm rounded-xl shadow-lg border border-theme p-3 sm:p-4 m-2 sm:m-4 transition-colors duration-300">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <div className="text-sm font-semibold text-theme-primary transition-colors duration-300">{progressStats.overallProgress}% Complete</div>
+                <div className="text-xs sm:text-sm font-semibold text-theme-primary transition-colors duration-300">{progressStats.overallProgress}% Complete</div>
                 <div className="text-xs text-theme-secondary transition-colors duration-300">{progressStats.completedWeeks}/{progressStats.totalWeeks} weeks</div>
               </div>
             </div>
-            <div className="w-20 bg-theme-hover rounded-full h-2.5 transition-colors duration-300">
+            <div className="w-16 sm:w-20 bg-theme-hover rounded-full h-2 sm:h-2.5 transition-colors duration-300">
               <div 
-                className="bg-gradient-to-r from-purple-500 to-purple-600 h-2.5 rounded-full transition-all duration-500 shadow-sm" 
+                className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 sm:h-2.5 rounded-full transition-all duration-500 shadow-sm" 
                 style={{ width: `${progressStats.overallProgress}%` }}
               />
             </div>
@@ -537,17 +538,17 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
         </Panel>
 
         {/* Control Panel */}
-        <Panel position="top-right" className="bg-theme-secondary/95 backdrop-blur-sm rounded-xl shadow-lg border border-theme p-3 m-4 transition-colors duration-300">
-          <div className="flex items-center space-x-2">
+        <Panel position="top-right" className="bg-theme-secondary/95 backdrop-blur-sm rounded-xl shadow-lg border border-theme p-2 sm:p-3 m-2 sm:m-4 transition-colors duration-300">
+          <div className="flex items-center justify-center space-x-1 sm:space-x-2">
             <button
               onClick={resetLayout}
-              className="flex items-center space-x-2 px-3 py-2 bg-theme-hover hover:bg-theme-primary/10 rounded-lg transition-all duration-200 text-sm font-medium text-theme-secondary hover:text-theme-primary border border-theme"
+              className="flex items-center justify-center sm:justify-start sm:space-x-2 px-2 sm:px-3 py-2 bg-theme-hover hover:bg-theme-primary/10 rounded-lg transition-all duration-200 text-sm font-medium text-theme-secondary hover:text-theme-primary border border-theme"
               title="Reset node positions to default layout"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>Reset</span>
+              <span className="hidden sm:inline sm:ml-2">Reset</span>
             </button>
             
             <button
@@ -556,23 +557,15 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                 setFocusTrigger(prev => prev + 1);
               }}
               disabled={isFocusing}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
+              className={`flex items-center justify-center sm:justify-start sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium ${
                 isFocusing 
                   ? 'bg-green-500 text-white cursor-not-allowed opacity-80' 
                   : 'bg-theme-accent hover:opacity-90 text-white hover:shadow-lg'
               }`}
               title={isFocusing ? "Focusing on current step..." : "Focus on current step"}
             >
-              {isFocusing ? (
-                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18l8.5-5L5 8v10z" />
-                </svg>
-              )}
-              <span>{isFocusing ? 'Focusing...' : 'Focus'}</span>
+              <Crosshair className={`w-4 h-4 ${isFocusing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline sm:ml-2">{isFocusing ? 'Focusing...' : 'Focus'}</span>
             </button>
           </div>
         </Panel>
@@ -601,4 +594,4 @@ const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   );
 };
 
-export default InteractiveRoadmap; 
+export default InteractiveRoadmap;

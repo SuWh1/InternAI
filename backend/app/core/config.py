@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "InternAI")
     BREVO_FROM_EMAIL: str = os.getenv("BREVO_FROM_EMAIL", "")
     BREVO_TEMPLATE_ID: int = int(os.getenv("BREVO_TEMPLATE_ID", "1"))
+    BREVO_PASSWORD_RESET_TEMPLATE_ID: int = int(os.getenv("BREVO_PASSWORD_RESET_TEMPLATE_ID", "2"))
 
     ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL")
     
@@ -69,4 +70,4 @@ class Settings(BaseSettings):
             "http://127.0.0.1:4173",  # Vite preview
         ]
 
-settings = Settings() 
+settings = Settings()

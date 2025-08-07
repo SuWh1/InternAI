@@ -19,3 +19,12 @@ class PinVerificationRequest(BaseModel):
 # Schema for PIN resend
 class PinResendRequest(BaseModel):
     email: str
+
+# Schema for password reset request
+class PasswordResetRequest(BaseModel):
+    email: str
+
+# Schema for password reset confirmation
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str

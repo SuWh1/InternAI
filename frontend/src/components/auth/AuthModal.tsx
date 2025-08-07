@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, GitBranch, Eye, EyeOff, Mail, RefreshCw } from 'lucide-react';
+import { X, GitBranch, Eye, EyeOff, Mail, RefreshCw, Lock } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import { GoogleLoginButton } from './GoogleLoginButton';
+import { authService } from '../../services/authService';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultMode?: 'login' | 'register' | 'forgot' | 'verify';
+  defaultMode?: 'login' | 'register' | 'forgot' | 'verify' | 'reset';
+  resetToken?: string;
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ 
   isOpen, 
   onClose, 
-  defaultMode = 'register' 
+  defaultMode = 'register',
+  resetToken 
 }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'verify'>(defaultMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'verify' | 'reset'>(defaultMode);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -259,22 +262,71 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
     if (mode === 'forgot') {
       // Handle password reset request
-      if (!formData.email.includes('@')) {
-        setFormError('Please enter a valid email address');
+      if (!formData.email.trim()) {
+        setFormError('Please enter your email.');
+        return;
+      }
+      if (!validateEmail(formData.email)) {
+        setFormError('Please enter a valid email address.');
         return;
       }
       
-      // Mock password reset functionality
-      // In a real app, you would call an API endpoint
-      setTimeout(() => {
+      console.log('Attempting password reset for:', formData.email);
+      
+      // Call real password reset API
+      try {
+        await authService.requestPasswordReset(formData.email);
+        console.log('Password reset request successful');
         setResetSent(true);
-      }, 1000);
+      } catch (error) {
+        console.error('Password reset error:', error);
+        // Error is handled by the auth service
+      }
+      
+      return;
+    }
+
+    if (mode === 'reset') {
+      // Handle password reset with token
+      if (!formData.password.trim()) {
+        setFormError('Please enter your new password.');
+        return;
+      }
+      if (formData.password.length < 6) {
+        setFormError('Password must be at least 6 characters');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setFormError('Passwords do not match');
+        return;
+      }
+      if (!resetToken) {
+        setFormError('Invalid reset token');
+        return;
+      }
+
+      try {
+        await authService.resetPassword(resetToken, formData.password);
+        console.log('Password reset successful');
+        onClose();
+        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+        // Redirect to login or show success message
+        switchMode('login');
+      } catch (error) {
+        console.error('Password reset error:', error);
+        // Error is handled by the auth service
+      }
       
       return;
     }
@@ -284,24 +336,36 @@ const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    // Validation for both login and register
+    if (!formData.email.trim()) {
+      setFormError('Please enter your email.');
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      setFormError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!formData.password.trim()) {
+      setFormError('Please enter your password.');
+      return;
+    }
+
+    // Additional validation for register mode
     if (mode === 'register') {
-      if (formData.password !== formData.confirmPassword) {
-        setFormError('Passwords do not match');
+      if (!formData.name.trim()) {
+        setFormError('Please enter your name.');
         return;
       }
       if (formData.password.length < 6) {
         setFormError('Password must be at least 6 characters');
         return;
       }
-      if (!formData.name.trim()) {
-        setFormError('Name is required');
+      if (formData.password !== formData.confirmPassword) {
+        setFormError('Passwords do not match');
         return;
       }
-    }
-
-    if (!formData.email.includes('@')) {
-      setFormError('Please enter a valid email address');
-      return;
     }
 
     try {
@@ -347,13 +411,19 @@ const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear errors when user starts typing
+    if (formError || error) {
+      setFormError(null);
+      clearError?.();
+    }
+    
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const switchMode = (newMode: 'login' | 'register' | 'forgot' | 'verify') => {
+  const switchMode = (newMode: 'login' | 'register' | 'forgot' | 'verify' | 'reset') => {
     console.log('Switching to mode:', newMode);
     setMode(newMode);
     setFormError(null);
@@ -420,7 +490,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
               </motion.button>
 
               {/* Header - Drag Handle */}
-              {mode !== 'verify' && (
+              {mode !== 'verify' && mode !== 'reset' && (
                 <motion.div 
                   className="px-6 pt-8 pb-4 text-center cursor-grab active:cursor-grabbing select-none"
                   initial={{ opacity: 0, y: -20 }}
@@ -722,6 +792,148 @@ const AuthModal: React.FC<AuthModalProps> = ({
                         </motion.div>
                       )}
                     </AnimatePresence>
+                  </motion.div>
+                ) : mode === 'reset' ? (
+                  <motion.div 
+                    className="text-center py-4"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                  >
+                    <motion.div 
+                      className="flex items-center justify-center mb-6"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                    >
+                      <motion.div
+                        className="p-3 rounded-full bg-theme-accent/10 mr-3"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      >
+                        <Lock className="h-8 w-8 text-theme-accent" />
+                      </motion.div>
+                      <h2 className="text-lg sm:text-xl font-semibold text-theme-primary">Reset Password</h2>
+                    </motion.div>
+
+                    <motion.div 
+                      className="mb-6"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                    >
+                      <p className="text-theme-secondary text-sm mb-2">
+                        Enter your new password below
+                      </p>
+                    </motion.div>
+
+                    {/* New Password Field */}
+                    <motion.div 
+                      className="mb-4 text-left"
+                      variants={formItemVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                        New Password
+                      </label>
+                      <div className="relative w-full">
+                        <motion.input
+                          type={showPassword ? "text" : "password"}
+                          id="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 bg-theme-primary text-theme-primary pr-10"
+                          placeholder="Enter new password"
+                          disabled={loading}
+                          whileFocus={{ scale: 1.02 }}
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <motion.button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors duration-200 z-10"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Confirm New Password Field */}
+                    <motion.div 
+                      className="mb-6 text-left"
+                      variants={formItemVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm New Password
+                      </label>
+                      <div className="relative w-full">
+                        <motion.input
+                          type={showConfirmPassword ? "text" : "password"}
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-theme rounded-lg focus:ring-2 focus:ring-theme-accent focus:border-transparent transition-all duration-300 bg-theme-primary text-theme-primary pr-10"
+                          placeholder="Confirm new password"
+                          disabled={loading}
+                          whileFocus={{ scale: 1.02 }}
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <motion.button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors duration-200 z-10"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </motion.button>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Reset Password Button */}
+                    <motion.button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-theme-accent text-white py-2.5 px-4 rounded-lg font-medium hover:opacity-90 focus:ring-2 focus:ring-theme-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 mb-4 relative overflow-hidden"
+                      variants={formItemVariants}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {/* Button shimmer effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        initial={{ x: "-100%" }}
+                        whileHover={{ x: "100%" }}
+                        transition={{ duration: 0.5 }}
+                      />
+                      <span className="relative z-10">
+                        {loading ? (
+                          <div className="flex items-center justify-center">
+                            <LoadingSpinner size="small" className="mr-2" />
+                            Resetting Password...
+                          </div>
+                        ) : (
+                          'Reset Password'
+                        )}
+                      </span>
+                    </motion.button>
+
+                    <button
+                      type="button"
+                      onClick={() => switchMode('login')}
+                      className="text-blue-600 hover:text-blue-700 hover:underline font-medium transition-colors duration-200"
+                    >
+                      Back to Sign In
+                    </button>
                   </motion.div>
                 ) : (
                   <>

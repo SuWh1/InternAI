@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -51,3 +52,17 @@ class User(Base):
     
     # Relationship to topics
     topics = relationship("Topic", back_populates="user", cascade="all, delete-orphan")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    
+    # The id, created_at, and updated_at columns are inherited from Base
+    
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    token = Column(String, unique=True, index=True, nullable=False)  # Hashed token
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, default=False)
+    
+    # Relationship to user
+    user = relationship("User")

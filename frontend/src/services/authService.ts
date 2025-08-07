@@ -34,9 +34,12 @@ class AuthService {
       let errorMessage = 'Login failed';
       
       if (error.statusCode === 401) {
-        errorMessage = 'Invalid email or password';
+        errorMessage = 'Incorrect password. Please try again.';
       } else if (error.statusCode === 404) {
-        errorMessage = 'Account not found';
+        errorMessage = 'No account found with that email.';
+      } else if (error.statusCode === 400) {
+        // Handle Google user trying to login with password
+        errorMessage = error.error || 'This account uses Google Sign-In. Please use Google login or reset your password.';
       } else if (error.statusCode === 403) {
         errorMessage = 'Account is disabled or suspended';
       } else if (error.statusCode === 429) {
@@ -319,9 +322,80 @@ class AuthService {
 
     return this.initializationPromise as Promise<User | null>;
   }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const { setLoading, setError } = this.getStore();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await api.post<{message: string; success: boolean}>('/auth/request-password-reset', {
+        email,
+      });
+      
+      // Success message will be handled by the UI
+      
+    } catch (error: any) {
+      // Parse error and provide specific message
+      let errorMessage = 'Failed to send password reset email';
+      
+      if (error.statusCode === 429) {
+        errorMessage = 'Too many password reset attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const { setLoading, setError } = this.getStore();
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await api.post<{message: string; success: boolean}>('/auth/reset-password', {
+        token,
+        new_password: newPassword,
+      });
+      
+      // Success message will be handled by the UI
+      
+    } catch (error: any) {
+      // Parse error and provide specific message
+      let errorMessage = 'Failed to reset password';
+      
+      if (error.statusCode === 400) {
+        errorMessage = 'Invalid or expired password reset token';
+      } else if (error.statusCode === 429) {
+        errorMessage = 'Too many password reset attempts. Please try again later';
+      } else if (error.statusCode >= 500) {
+        errorMessage = 'Server error. Please try again later';
+      } else if (error.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }
 }
 
 
 
 // Create and export a singleton instance
-export const authService = new AuthService(); 
+export const authService = new AuthService();

@@ -9,6 +9,7 @@ import { useAuthStore } from './stores/authStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { PageLoadingSpinner, RoadmapPageLoadingSpinner } from './components/common/LoadingSpinner';
 import CookieBanner from './components/common/CookieBanner';
+import AuthModal from './components/auth/AuthModal';
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -30,6 +31,22 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 // Component to handle routes
 function AppRoutes() {
   const location = useLocation();
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+
+  // Check for password reset token in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const token = urlParams.get('token');
+    
+    if (token && location.pathname === '/') {
+      setResetToken(token);
+      setShowPasswordReset(true);
+    } else {
+      setShowPasswordReset(false);
+      setResetToken('');
+    }
+  }, [location]);
 
   // Scroll to top on route change
   useEffect(() => {
@@ -70,6 +87,14 @@ function AppRoutes() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
       </Routes>
+      
+      {/* Password Reset Modal */}
+      <AuthModal
+        isOpen={showPasswordReset}
+        onClose={() => setShowPasswordReset(false)}
+        defaultMode="reset"
+        resetToken={resetToken}
+      />
     </ErrorBoundary>
   );
 }
